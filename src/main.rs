@@ -1,20 +1,15 @@
-use axum::{response::Html, routing::get, Router};
-use std::net::SocketAddr;
+#![forbid(unsafe_code)]
+
+use std::error::Error;
+use tracing::error;
 
 #[tokio::main]
-async fn main() {
-    // build our application with a route
-    let app = Router::new().route("/", get(handler));
+async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    let result = octopus_server::run();
 
-    // run it
-    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
-    println!("listening on {}", addr);
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
-}
+    if let Err(e) = result.await {
+        error!("Error: {:?}", e);
+    }
 
-async fn handler() -> Html<&'static str> {
-    Html("<h1>Hello, World!</h1>")
+    Ok(())
 }
