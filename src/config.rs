@@ -16,7 +16,7 @@ pub fn load(args: Args) -> Result<Config> {
     let mut openai_api_key: Option<String> = None;
     let mut port = 8080;
 
-    if let Ok(val) = std::env::var("OCTOPUS_SERVER_OPENAI_API_KEY") {
+    if let Ok(val) = std::env::var("OPENAI_API_KEY") {
         openai_api_key = Some(val)
     }
 
