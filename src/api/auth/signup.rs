@@ -2,9 +2,22 @@ use crate::{api::auth, context::Context, error::AppError};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 use std::sync::Arc;
+use utoipa::ToSchema;
 use validator::Validate;
 
 #[axum_macros::debug_handler]
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/signup",
+    request_body = SignupPost,
+    responses(
+        (status = 201, description = "Account created.", body = User),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
+    ),
+    security(
+        ()
+    )
+)]
 pub async fn signup(
     State(context): State<Arc<Context>>,
     Json(input): Json<SignupPost>,
@@ -48,7 +61,7 @@ pub async fn signup(
     }
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct SignupPost {
     #[validate(length(max = 256, min = 1))]
     company_name: String,
