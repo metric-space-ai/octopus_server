@@ -4,10 +4,12 @@ use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::TraceLayer;
 
+mod auth;
 mod chat;
 
 pub async fn router(context: Arc<Context>) -> Router {
     Router::new()
+        .route("/api/v1/auth/signup", post(auth::signup::signup))
         .route("/api/v1/chat", post(chat::create))
         .layer(
             ServiceBuilder::new()

@@ -9,6 +9,7 @@ mod api;
 mod config;
 mod context;
 mod database;
+mod entity;
 mod error;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
