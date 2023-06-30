@@ -1,11 +1,14 @@
+use crate::{context::Context, database::OctopusDatabase};
 use clap::Parser;
-use sqlx::postgres::{PgPool, PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::{error::Error, net::SocketAddr, sync::Arc, time::Duration};
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod api;
 mod config;
+mod context;
+mod database;
 mod error;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
@@ -33,16 +36,18 @@ pub async fn run() -> Result<()> {
         .init();
 
     let args = Args::parse();
-    let config = Arc::new(config::load(args)?);
+    let config = config::load(args)?;
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .acquire_timeout(Duration::from_secs(3))
         .connect(&config.database_url)
         .await?;
+    let octopus_database = OctopusDatabase::new(pool);
+    let context = Arc::new(Context::new(config, octopus_database));
 
-    let router = api::router(config.clone()).await;
+    let router = api::router(context.clone()).await;
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], context.config.port));
     info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(router.into_make_service())

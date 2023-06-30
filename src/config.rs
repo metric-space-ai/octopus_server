@@ -22,7 +22,6 @@ pub fn load(args: Args) -> Result<Config> {
     let mut openai_api_key: Option<String> = None;
     let mut port = 8080;
 
-
     if let Ok(val) = std::env::var("DATABASE_URL") {
         database_url = Some(val)
     }
@@ -43,7 +42,11 @@ pub fn load(args: Args) -> Result<Config> {
         port = val
     }
 
-    let config = Config::new(database_url.expect("Unknown database url"), openai_api_key.expect("OpenAI API key not provided"), port);
+    let config = Config::new(
+        database_url.expect("Unknown database url"),
+        openai_api_key.expect("OpenAI API key not provided"),
+        port,
+    );
 
     Ok(config)
 }

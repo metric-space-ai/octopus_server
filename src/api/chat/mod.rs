@@ -1,4 +1,4 @@
-use crate::{config::Config, error::AppError};
+use crate::{context::Context, error::AppError};
 use async_openai::{
     types::{
         ChatCompletionFunctionsArgs, ChatCompletionRequestMessageArgs,
@@ -15,7 +15,7 @@ use validator::Validate;
 
 #[axum_macros::debug_handler]
 pub async fn create(
-    State(config): State<Arc<Config>>,
+    State(_context): State<Arc<Context>>,
     Json(input): Json<CreateChatMessage>,
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;

@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::context::Context;
 use axum::{error_handling::HandleErrorLayer, http::StatusCode, routing::post, Router};
 use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
@@ -6,7 +6,7 @@ use tower_http::trace::TraceLayer;
 
 mod chat;
 
-pub async fn router(config: Arc<Config>) -> Router {
+pub async fn router(context: Arc<Context>) -> Router {
     Router::new()
         .route("/api/v1/chat", post(chat::create))
         .layer(
@@ -25,5 +25,5 @@ pub async fn router(config: Arc<Config>) -> Router {
                 .layer(TraceLayer::new_for_http())
                 .into_inner(),
         )
-        .with_state(config)
+        .with_state(context)
 }
