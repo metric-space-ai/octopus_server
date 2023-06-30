@@ -1,5 +1,6 @@
 use clap::Parser;
-use std::{error::Error, net::SocketAddr, sync::Arc};
+use sqlx::postgres::{PgPool, PgPoolOptions};
+use std::{error::Error, net::SocketAddr, sync::Arc, time::Duration};
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -33,6 +34,11 @@ pub async fn run() -> Result<()> {
 
     let args = Args::parse();
     let config = Arc::new(config::load(args)?);
+    let pool = PgPoolOptions::new()
+        .max_connections(5)
+        .acquire_timeout(Duration::from_secs(3))
+        .connect(&config.database_url)
+        .await?;
 
     let router = api::router(config.clone()).await;
 
@@ -40,8 +46,7 @@ pub async fn run() -> Result<()> {
     info!("listening on {}", addr);
     axum::Server::bind(&addr)
         .serve(router.into_make_service())
-        .await
-        .unwrap();
+        .await?;
 
     Ok(())
 }

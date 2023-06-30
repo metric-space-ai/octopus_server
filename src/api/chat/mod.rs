@@ -6,16 +6,11 @@ use async_openai::{
     },
     Client,
 };
-use axum::{
-    extract::State,
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
-use tracing::info;
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
+use tracing::info;
 use validator::Validate;
 
 #[axum_macros::debug_handler]

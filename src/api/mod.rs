@@ -1,10 +1,5 @@
 use crate::config::Config;
-use axum::{
-    error_handling::HandleErrorLayer,
-    http::StatusCode,
-    routing::post,
-    Router,
-};
+use axum::{error_handling::HandleErrorLayer, http::StatusCode, routing::post, Router};
 use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::TraceLayer;
