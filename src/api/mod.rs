@@ -1,5 +1,5 @@
 use crate::{
-    api::auth::{signup, signup::SignupPost},
+    api::auth::{login, login::LoginPost, register, register::RegisterPost},
     context::Context,
     entity::User,
     error::ResponseError,
@@ -22,17 +22,19 @@ pub async fn router(context: Arc<Context>) -> Router {
     #[openapi(
         components(
             schemas(
+                LoginPost,
+                RegisterPost,
                 ResponseError,
-                SignupPost,
                 User,
             )
         ),
         modifiers(&SecurityAddon),
         paths(
-            signup::signup,
+            register::register,
         ),
         tags(
-            (name = "signup", description = "Signup API."),
+            (name = "login", description = "Login API."),
+            (name = "register", description = "Register API."),
         )
     )]
     struct ApiDoc;
@@ -52,7 +54,8 @@ pub async fn router(context: Arc<Context>) -> Router {
 
     Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
-        .route("/api/v1/auth/signup", post(signup::signup))
+        .route("/api/v1/auth", post(login::login))
+        .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
         .layer(
             ServiceBuilder::new()

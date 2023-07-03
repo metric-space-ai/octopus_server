@@ -10,6 +10,7 @@ mod context;
 mod database;
 mod entity;
 mod error;
+mod session;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 

@@ -1275,6 +1275,7 @@ dependencies = [
  "chrono",
  "clap",
  "fake",
+ "http",
  "hyper",
  "mime",
  "rand_core",

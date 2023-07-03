@@ -1,7 +1,8 @@
 use crate::{
-    entity::{Company, User},
+    entity::{Company, Session, User},
     Result,
 };
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -29,6 +30,28 @@ impl OctopusDatabase {
         .await?;
 
         Ok(company)
+    }
+
+    pub async fn insert_session(
+        &self,
+        user_id: Uuid,
+        data: &str,
+        expired_at: DateTime<Utc>,
+    ) -> Result<Session> {
+        let session = sqlx::query_as!(
+            Session,
+            "INSERT INTO sessions
+            (user_id, data, expired_at)
+            VALUES ($1, $2, $3)
+            RETURNING id, user_id, data, expired_at",
+            user_id,
+            data,
+            expired_at
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(session)
     }
 
     pub async fn insert_user(
@@ -71,6 +94,30 @@ impl OctopusDatabase {
         Ok(company)
     }
 
+    pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
+        let hash =
+            sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
+                .bind(email)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(hash)
+    }
+
+    pub async fn try_get_session_by_id(&self, id: Uuid) -> Result<Option<Session>> {
+        let session = sqlx::query_as!(
+            Session,
+            "SELECT id, user_id, data, expired_at
+            FROM sessions
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(session)
+    }
+
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
@@ -83,5 +130,14 @@ impl OctopusDatabase {
         .await?;
 
         Ok(user)
+    }
+
+    pub async fn try_get_user_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let user_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?;
+
+        Ok(user_id)
     }
 }

@@ -1,9 +1,10 @@
 use crate::{context::Context, error::AppError};
-use argon2::{password_hash::SaltString, Argon2, PasswordHasher};
+use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use rand_core::OsRng;
 use std::sync::Arc;
 
-pub mod signup;
+pub mod login;
+pub mod register;
 
 pub fn hash_password(context: Arc<Context>, password: String) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
@@ -11,5 +12,25 @@ pub fn hash_password(context: Arc<Context>, password: String) -> Result<String, 
     let hash = Argon2::default()
         .hash_password(peppered.as_bytes(), &salt)?
         .to_string();
+
     Ok(hash)
+}
+
+pub async fn verify_password(
+    context: Arc<Context>,
+    hash: String,
+    password: String,
+) -> Result<bool, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let hash = match PasswordHash::new(&hash) {
+            Ok(hash) => hash,
+            Err(_) => return false,
+        };
+        let peppered = format!("{}{}", context.config.pepper, password);
+        Argon2::default()
+            .verify_password(peppered.as_bytes(), &hash)
+            .is_ok()
+    })
+    .await
+    .map_err(AppError::Concurrency)
 }

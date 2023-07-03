@@ -19,3 +19,10 @@ CREATE TABLE users(
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(email)
 );
+
+CREATE TABLE sessions(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    data TEXT NOT NULL,
+    expired_at TIMESTAMP WITH TIME ZONE NOT NULL
+);

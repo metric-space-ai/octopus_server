@@ -14,6 +14,14 @@ pub struct Company {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Session {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub data: String,
+    pub expired_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct User {
     pub id: Uuid,
     pub company_id: Uuid,

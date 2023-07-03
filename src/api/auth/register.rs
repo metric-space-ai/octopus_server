@@ -8,8 +8,8 @@ use validator::Validate;
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/auth/signup",
-    request_body = SignupPost,
+    path = "/api/v1/auth/register",
+    request_body = RegisterPost,
     responses(
         (status = 201, description = "Account created.", body = User),
         (status = 400, description = "Bad request.", body = ResponseError),
@@ -18,9 +18,9 @@ use validator::Validate;
         ()
     )
 )]
-pub async fn signup(
+pub async fn register(
     State(context): State<Arc<Context>>,
-    Json(input): Json<SignupPost>,
+    Json(input): Json<RegisterPost>,
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
@@ -62,7 +62,7 @@ pub async fn signup(
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct SignupPost {
+pub struct RegisterPost {
     #[validate(length(max = 256, min = 1))]
     company_name: String,
     #[validate(email, length(max = 256))]
@@ -87,7 +87,7 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
-    async fn signup_201() {
+    async fn register_201() {
         let args = Args {
             openai_api_key: None,
             port: None,
@@ -103,7 +103,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/signup")
+                    .uri("/api/v1/auth/register")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -136,7 +136,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn signup_400() {
+    async fn register_400() {
         let args = Args {
             openai_api_key: None,
             port: None,
@@ -153,7 +153,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/signup")
+                    .uri("/api/v1/auth/register")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -182,7 +182,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/signup")
+                    .uri("/api/v1/auth/register")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
