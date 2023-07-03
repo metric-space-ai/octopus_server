@@ -60,6 +60,17 @@ impl OctopusDatabase {
         Ok(user)
     }
 
+    #[allow(dead_code)]
+    pub async fn try_delete_company_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let company =
+            sqlx::query_scalar::<_, Uuid>("DELETE FROM companies WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(company)
+    }
+
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,

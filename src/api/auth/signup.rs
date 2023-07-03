@@ -12,7 +12,7 @@ use validator::Validate;
     request_body = SignupPost,
     responses(
         (status = 201, description = "Account created.", body = User),
-        (status = 409, description = "Conflicting request.", body = ResponseError),
+        (status = 400, description = "Bad request.", body = ResponseError),
     ),
     security(
         ()
@@ -61,7 +61,7 @@ pub async fn signup(
     }
 }
 
-#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct SignupPost {
     #[validate(length(max = 256, min = 1))]
     company_name: String,
@@ -71,4 +71,139 @@ pub struct SignupPost {
     password: String,
     #[validate(length(min = 8))]
     repeat_password: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{app, entity::User, Args};
+    use axum::{
+        body::Body,
+        http::{self, Request, StatusCode},
+    };
+    use fake::{
+        faker::{internet::en::SafeEmail, lorem::en::Word},
+        Fake,
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn signup_201() {
+        let args = Args {
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+
+        let company_name = Word().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/signup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn signup_400() {
+        let args = Args {
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let cloned_router = router.clone();
+
+        let company_name = Word().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/signup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+
+        let response = cloned_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/signup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
 }
