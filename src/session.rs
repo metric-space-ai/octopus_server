@@ -4,13 +4,28 @@ use axum::{
     extract::{FromRef, FromRequestParts},
     http::{request::Parts, HeaderMap},
 };
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr, sync::Arc};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ExtractedSession {
     pub session: Option<Session>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
+pub struct SessionResponse {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub data: SessionResponseData,
+    pub expired_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
+pub struct SessionResponseData {
+    pub roles: Vec<String>,
 }
 
 pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {

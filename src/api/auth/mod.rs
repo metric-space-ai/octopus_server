@@ -4,6 +4,7 @@ use rand_core::OsRng;
 use std::sync::Arc;
 
 pub mod login;
+pub mod logout;
 pub mod register;
 
 pub fn hash_password(context: Arc<Context>, password: String) -> Result<String, AppError> {

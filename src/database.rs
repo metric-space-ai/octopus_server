@@ -94,12 +94,21 @@ impl OctopusDatabase {
         Ok(company)
     }
 
-    pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
-        let hash =
-            sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
-                .bind(email)
+    pub async fn try_delete_session_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let session =
+            sqlx::query_scalar::<_, Uuid>("DELETE FROM sessions WHERE id = $1 RETURNING id")
+                .bind(id)
                 .fetch_optional(&self.pool)
                 .await?;
+
+        Ok(session)
+    }
+
+    pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
+        let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
+            .bind(email)
+            .fetch_optional(&self.pool)
+            .await?;
 
         Ok(hash)
     }

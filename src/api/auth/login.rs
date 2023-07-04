@@ -1,4 +1,9 @@
-use crate::{api::auth, context::Context, error::AppError};
+use crate::{
+    api::auth,
+    context::Context,
+    error::AppError,
+    session::{SessionResponse, SessionResponseData},
+};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use chrono::{Duration, Utc};
 use serde::Deserialize;
@@ -20,7 +25,7 @@ pub struct LoginPost {
     path = "/api/v1/auth",
     request_body = LoginPost,
     responses(
-        (status = 201, description = "Authenticate user", body = Session),
+        (status = 201, description = "Authenticate user", body = SessionResponse),
         (status = 401, description = "Unauthorized", body = ResponseError),
         (status = 404, description = "User not found", body = ResponseError)
     )
@@ -55,7 +60,8 @@ pub async fn login(
         return Err(AppError::Unauthorized);
     }
 
-    let data = serde_json::to_string(&user.roles)?;
+    let session_response_data = SessionResponseData { roles: user.roles };
+    let data = serde_json::to_string(&session_response_data)?;
     let expired_at = Utc::now() + Duration::days(365);
 
     let session = context
@@ -63,5 +69,202 @@ pub async fn login(
         .insert_session(user.id, &data, expired_at)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(session)).into_response())
+    let session_response = SessionResponse {
+        id: session.id,
+        user_id: session.user_id,
+        data: session_response_data,
+        expired_at: session.expired_at,
+    };
+
+    Ok((StatusCode::CREATED, Json(session_response)).into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{app, entity::User, session::SessionResponse, Args};
+    use axum::{
+        body::Body,
+        http::{self, Request, StatusCode},
+    };
+    use fake::{
+        faker::{internet::en::SafeEmail, lorem::en::Word},
+        Fake,
+    };
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn login_201() {
+        let args = Args {
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+
+        let company_name = Word().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/register")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn login_401() {
+        let args = Args {
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+
+        let company_name = Word().fake::<String>();
+        let email = SafeEmail().fake::<String>();
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/register")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": "wrong_password",
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn login_404() {
+        let args = Args {
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": "wrong@email.com",
+                            "password": "wrong_password",
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    }
 }

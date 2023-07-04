@@ -1,10 +1,16 @@
 use crate::{
-    api::auth::{login, login::LoginPost, register, register::RegisterPost},
+    api::auth::{login, login::LoginPost, logout, register, register::RegisterPost},
     context::Context,
     entity::User,
     error::ResponseError,
+    session::SessionResponse,
 };
-use axum::{error_handling::HandleErrorLayer, http::StatusCode, routing::post, Router};
+use axum::{
+    error_handling::HandleErrorLayer,
+    http::StatusCode,
+    routing::{delete, post},
+    Router,
+};
 use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::trace::TraceLayer;
@@ -25,6 +31,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 LoginPost,
                 RegisterPost,
                 ResponseError,
+                SessionResponse,
                 User,
             )
         ),
@@ -54,7 +61,7 @@ pub async fn router(context: Arc<Context>) -> Router {
 
     Router::new()
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
-        .route("/api/v1/auth", post(login::login))
+        .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
         .layer(
