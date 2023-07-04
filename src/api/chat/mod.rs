@@ -1,4 +1,8 @@
-use crate::{context::Context, error::AppError};
+use crate::{
+    context::Context,
+    error::AppError,
+    session::{require_authenticated_session, ExtractedSession},
+};
 use async_openai::{
     types::{
         ChatCompletionFunctionsArgs, ChatCompletionRequestMessageArgs,
@@ -16,8 +20,11 @@ use validator::Validate;
 #[axum_macros::debug_handler]
 pub async fn create(
     State(_context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
     Json(input): Json<CreateChatMessage>,
 ) -> Result<impl IntoResponse, AppError> {
+    require_authenticated_session(extracted_session.session).await?;
+
     input.validate()?;
 
     let client = Client::new();

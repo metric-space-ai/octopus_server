@@ -28,6 +28,13 @@ pub struct SessionResponseData {
     pub roles: Vec<String>,
 }
 
+pub async fn require_authenticated_session(session: Option<Session>) -> Result<Session, AppError> {
+    match session {
+        Some(session) => Ok(session),
+        None => Err(AppError::Unauthorized),
+    }
+}
+
 pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {
     let token_header = headers.get("X-Auth-Token");
 
