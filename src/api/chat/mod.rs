@@ -23,7 +23,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<CreateChatMessage>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session.session).await?;
+    require_authenticated_session(extracted_session).await?;
 
     input.validate()?;
 

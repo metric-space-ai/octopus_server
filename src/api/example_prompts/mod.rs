@@ -47,7 +47,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<ExamplePromptPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session.session, "ROLE_ADMIN").await?;
+    ensure_secured(context.clone(), extracted_session, "ROLE_ADMIN").await?;
     input.validate()?;
 
     let example_prompt = context
@@ -79,7 +79,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session.session, "ROLE_ADMIN").await?;
+    ensure_secured(context.clone(), extracted_session, "ROLE_ADMIN").await?;
 
     let example_prompt = context
         .octopus_database
@@ -108,7 +108,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session.session).await?;
+    require_authenticated_session(extracted_session).await?;
 
     let example_prompts = context.octopus_database.get_example_prompts().await?;
 
@@ -136,7 +136,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session.session).await?;
+    require_authenticated_session(extracted_session).await?;
 
     let example_prompt = context
         .octopus_database
@@ -172,17 +172,17 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<ExamplePromptPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session.session, "ROLE_ADMIN").await?;
+    ensure_secured(context.clone(), extracted_session, "ROLE_ADMIN").await?;
     input.validate()?;
 
-    let example_prompt = context
+    let example_prompt_id = context
         .octopus_database
-        .try_get_example_prompt_by_id(id)
+        .try_get_example_prompt_id_by_id(id)
         .await?;
 
-    match example_prompt {
+    match example_prompt_id {
         None => Err(AppError::NotFound),
-        Some(_example_prompt) => {
+        Some(_example_prompt_id) => {
             let example_prompt = context
                 .octopus_database
                 .update_example_prompt(id, input.is_visible, input.priority, &input.prompt)

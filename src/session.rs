@@ -30,10 +30,10 @@ pub struct SessionResponseData {
 
 pub async fn ensure_secured(
     context: Arc<Context>,
-    session: Option<Session>,
+    extracted_session: ExtractedSession,
     role: &str,
 ) -> Result<bool, AppError> {
-    let secured = secured(context, session, &role.to_owned()).await;
+    let secured = secured(context, extracted_session, &role.to_owned()).await;
 
     if let Ok(secured) = secured {
         return Ok(secured);
@@ -42,8 +42,10 @@ pub async fn ensure_secured(
     Err(AppError::Unauthorized)
 }
 
-pub async fn require_authenticated_session(session: Option<Session>) -> Result<Session, AppError> {
-    match session {
+pub async fn require_authenticated_session(
+    extracted_session: ExtractedSession,
+) -> Result<Session, AppError> {
+    match extracted_session.session {
         Some(session) => Ok(session),
         None => Err(AppError::Unauthorized),
     }
@@ -51,19 +53,19 @@ pub async fn require_authenticated_session(session: Option<Session>) -> Result<S
 
 pub async fn secured(
     context: Arc<Context>,
-    session: Option<Session>,
+    extracted_session: ExtractedSession,
     role: &String,
 ) -> Result<bool, AppError> {
-    let session = require_authenticated_session(session).await;
+    let session = require_authenticated_session(extracted_session).await;
 
     if let Ok(session) = session {
-        let user = context
+        let user_roles = context
             .octopus_database
-            .try_get_user_by_id(session.user_id)
+            .try_get_user_roles_by_id(session.user_id)
             .await?;
 
-        if let Some(user) = user {
-            if user.roles.contains(role) {
+        if let Some(user_roles) = user_roles {
+            if user_roles.contains(role) {
                 return Ok(true);
             }
         }
@@ -111,21 +113,9 @@ where
                         extracted_session = ExtractedSession { session: None };
                     }
                     Some(session) => {
-                        let user = context
-                            .octopus_database
-                            .try_get_user_id_by_id(session.user_id)
-                            .await?;
-
-                        match user {
-                            None => {
-                                extracted_session = ExtractedSession { session: None };
-                            }
-                            Some(_user) => {
-                                extracted_session = ExtractedSession {
-                                    session: Some(session),
-                                };
-                            }
-                        }
+                        extracted_session = ExtractedSession {
+                            session: Some(session),
+                        };
                     }
                 }
             }

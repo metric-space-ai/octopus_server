@@ -4,16 +4,19 @@ use crate::{
 };
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
 pub struct OctopusDatabase {
-    pool: PgPool,
+    pool: Arc<PgPool>,
 }
 
 impl OctopusDatabase {
     pub fn new(pool: PgPool) -> Self {
-        Self { pool }
+        Self {
+            pool: Arc::new(pool),
+        }
     }
 
     pub async fn get_example_prompts(&self) -> Result<Vec<ExamplePrompt>> {
@@ -22,7 +25,7 @@ impl OctopusDatabase {
             "SELECT id, is_visible, priority, prompt, created_at, updated_at
             FROM example_prompts"
         )
-        .fetch_all(&self.pool)
+        .fetch_all(&*self.pool)
         .await?;
 
         Ok(example_prompts)
@@ -38,7 +41,7 @@ impl OctopusDatabase {
             address,
             name
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(company)
@@ -60,7 +63,7 @@ impl OctopusDatabase {
             priority,
             prompt
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(example_prompt)
@@ -82,7 +85,7 @@ impl OctopusDatabase {
             data,
             expired_at
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(session)
@@ -111,7 +114,7 @@ impl OctopusDatabase {
             password,
             roles
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(user)
@@ -122,7 +125,7 @@ impl OctopusDatabase {
         let company =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM companies WHERE id = $1 RETURNING id")
                 .bind(id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&*self.pool)
                 .await?;
 
         Ok(company)
@@ -132,7 +135,7 @@ impl OctopusDatabase {
         let example_prompt =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM example_prompts WHERE id = $1 RETURNING id")
                 .bind(id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&*self.pool)
                 .await?;
 
         Ok(example_prompt)
@@ -142,7 +145,7 @@ impl OctopusDatabase {
         let session =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM sessions WHERE id = $1 RETURNING id")
                 .bind(id)
-                .fetch_optional(&self.pool)
+                .fetch_optional(&*self.pool)
                 .await?;
 
         Ok(session)
@@ -151,7 +154,7 @@ impl OctopusDatabase {
     pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
         let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
             .bind(email)
-            .fetch_optional(&self.pool)
+            .fetch_optional(&*self.pool)
             .await?;
 
         Ok(hash)
@@ -165,10 +168,20 @@ impl OctopusDatabase {
             WHERE id = $1",
             id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(&*self.pool)
         .await?;
 
         Ok(example_prompt)
+    }
+
+    pub async fn try_get_example_prompt_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let example_prompt_id =
+            sqlx::query_scalar::<_, Uuid>("SELECT id FROM example_prompts WHERE id = $1")
+                .bind(id)
+                .fetch_optional(&*self.pool)
+                .await?;
+
+        Ok(example_prompt_id)
     }
 
     pub async fn try_get_session_by_id(&self, id: Uuid) -> Result<Option<Session>> {
@@ -179,7 +192,7 @@ impl OctopusDatabase {
             WHERE id = $1",
             id
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(&*self.pool)
         .await?;
 
         Ok(session)
@@ -193,33 +206,20 @@ impl OctopusDatabase {
             WHERE email = $1",
             email
         )
-        .fetch_optional(&self.pool)
+        .fetch_optional(&*self.pool)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
-        let user = sqlx::query_as!(
-            User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
-            FROM users
-            WHERE id = $1",
-            id
-        )
-        .fetch_optional(&self.pool)
-        .await?;
+    pub async fn try_get_user_roles_by_id(&self, id: Uuid) -> Result<Option<Vec<String>>> {
+        let user_roles =
+            sqlx::query_scalar::<_, Vec<String>>("SELECT roles FROM users WHERE id = $1")
+                .bind(id)
+                .fetch_optional(&*self.pool)
+                .await?;
 
-        Ok(user)
-    }
-
-    pub async fn try_get_user_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let user_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?;
-
-        Ok(user_id)
+        Ok(user_roles)
     }
 
     pub async fn update_example_prompt(
@@ -240,7 +240,7 @@ impl OctopusDatabase {
             priority,
             prompt
         )
-        .fetch_one(&self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(example_prompt)
