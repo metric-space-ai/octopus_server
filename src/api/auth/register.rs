@@ -51,7 +51,11 @@ pub async fn register(
                     true,
                     context.config.pepper_id,
                     &pw_hash,
-                    &["ROLE_COMPANY_ADMIN".to_string()],
+                    &[
+                        "ROLE_COMPANY_ADMIN".to_string(),
+                        "ROLE_PRIVATE_USER".to_string(),
+                        "ROLE_PUBLIC_USER".to_string(),
+                    ],
                 )
                 .await?;
 

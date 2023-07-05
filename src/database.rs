@@ -1,5 +1,5 @@
 use crate::{
-    entity::{Company, Session, User},
+    entity::{Company, ExamplePrompt, Session, User},
     Result,
 };
 use chrono::{DateTime, Utc};
@@ -16,6 +16,18 @@ impl OctopusDatabase {
         Self { pool }
     }
 
+    pub async fn get_example_prompts(&self) -> Result<Vec<ExamplePrompt>> {
+        let example_prompts = sqlx::query_as!(
+            ExamplePrompt,
+            "SELECT id, is_visible, priority, prompt, created_at, updated_at
+            FROM example_prompts"
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        Ok(example_prompts)
+    }
+
     pub async fn insert_company(&self, address: Option<String>, name: &str) -> Result<Company> {
         let company = sqlx::query_as!(
             Company,
@@ -30,6 +42,28 @@ impl OctopusDatabase {
         .await?;
 
         Ok(company)
+    }
+
+    pub async fn insert_example_prompt(
+        &self,
+        is_visible: bool,
+        priority: i32,
+        prompt: &str,
+    ) -> Result<ExamplePrompt> {
+        let example_prompt = sqlx::query_as!(
+            ExamplePrompt,
+            "INSERT INTO example_prompts
+            (is_visible, priority, prompt)
+            VALUES ($1, $2, $3)
+            RETURNING id, is_visible, priority, prompt, created_at, updated_at",
+            is_visible,
+            priority,
+            prompt
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(example_prompt)
     }
 
     pub async fn insert_session(
@@ -94,6 +128,16 @@ impl OctopusDatabase {
         Ok(company)
     }
 
+    pub async fn try_delete_example_prompt_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let example_prompt =
+            sqlx::query_scalar::<_, Uuid>("DELETE FROM example_prompts WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(example_prompt)
+    }
+
     pub async fn try_delete_session_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let session =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM sessions WHERE id = $1 RETURNING id")
@@ -111,6 +155,20 @@ impl OctopusDatabase {
             .await?;
 
         Ok(hash)
+    }
+
+    pub async fn try_get_example_prompt_by_id(&self, id: Uuid) -> Result<Option<ExamplePrompt>> {
+        let example_prompt = sqlx::query_as!(
+            ExamplePrompt,
+            "SELECT id, is_visible, priority, prompt, created_at, updated_at
+            FROM example_prompts
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(example_prompt)
     }
 
     pub async fn try_get_session_by_id(&self, id: Uuid) -> Result<Option<Session>> {
@@ -141,6 +199,20 @@ impl OctopusDatabase {
         Ok(user)
     }
 
+    pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
+            FROM users
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn try_get_user_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let user_id = sqlx::query_scalar::<_, Uuid>("SELECT id FROM users WHERE id = $1")
             .bind(id)
@@ -148,5 +220,29 @@ impl OctopusDatabase {
             .await?;
 
         Ok(user_id)
+    }
+
+    pub async fn update_example_prompt(
+        &self,
+        id: Uuid,
+        is_visible: bool,
+        priority: i32,
+        prompt: &str,
+    ) -> Result<ExamplePrompt> {
+        let example_prompt = sqlx::query_as!(
+            ExamplePrompt,
+            "UPDATE example_prompts
+            SET is_visible = $2, priority = $3, prompt = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, is_visible, priority, prompt, created_at, updated_at",
+            id,
+            is_visible,
+            priority,
+            prompt
+        )
+        .fetch_one(&self.pool)
+        .await?;
+
+        Ok(example_prompt)
     }
 }

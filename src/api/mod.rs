@@ -1,14 +1,17 @@
 use crate::{
-    api::auth::{login, login::LoginPost, logout, register, register::RegisterPost},
+    api::{
+        auth::{login, login::LoginPost, logout, register, register::RegisterPost},
+        example_prompts::{ExamplePromptPost, ExamplePromptPut},
+    },
     context::Context,
-    entity::User,
+    entity::{ExamplePrompt, User},
     error::ResponseError,
-    session::SessionResponse,
+    session::{SessionResponse, SessionResponseData},
 };
 use axum::{
     error_handling::HandleErrorLayer,
     http::StatusCode,
-    routing::{delete, post},
+    routing::{delete, get, post},
     Router,
 };
 use std::{sync::Arc, time::Duration};
@@ -22,25 +25,39 @@ use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
 mod chat;
+mod example_prompts;
 
 pub async fn router(context: Arc<Context>) -> Router {
     #[derive(OpenApi)]
     #[openapi(
         components(
             schemas(
+                ExamplePrompt,
+                ExamplePromptPost,
+                ExamplePromptPut,
                 LoginPost,
                 RegisterPost,
                 ResponseError,
                 SessionResponse,
+                SessionResponseData,
                 User,
             )
         ),
         modifiers(&SecurityAddon),
         paths(
+            example_prompts::create,
+            example_prompts::delete,
+            example_prompts::list,
+            example_prompts::read,
+            example_prompts::update,
+            login::login,
+            logout::logout,
             register::register,
         ),
         tags(
+            (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
+            (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
         )
     )]
@@ -64,6 +81,16 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
+        .route(
+            "/api/v1/example-prompts",
+            get(example_prompts::list).post(example_prompts::create),
+        )
+        .route(
+            "/api/v1/example-prompts/:id",
+            delete(example_prompts::delete)
+                .get(example_prompts::read)
+                .put(example_prompts::update),
+        )
         .layer(
             ServiceBuilder::new()
                 .layer(HandleErrorLayer::new(|error: BoxError| async move {

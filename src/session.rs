@@ -28,11 +28,48 @@ pub struct SessionResponseData {
     pub roles: Vec<String>,
 }
 
+pub async fn ensure_secured(
+    context: Arc<Context>,
+    session: Option<Session>,
+    role: &str,
+) -> Result<bool, AppError> {
+    let secured = secured(context, session, &role.to_owned()).await;
+
+    if let Ok(secured) = secured {
+        return Ok(secured);
+    }
+
+    Err(AppError::Unauthorized)
+}
+
 pub async fn require_authenticated_session(session: Option<Session>) -> Result<Session, AppError> {
     match session {
         Some(session) => Ok(session),
         None => Err(AppError::Unauthorized),
     }
+}
+
+pub async fn secured(
+    context: Arc<Context>,
+    session: Option<Session>,
+    role: &String,
+) -> Result<bool, AppError> {
+    let session = require_authenticated_session(session).await;
+
+    if let Ok(session) = session {
+        let user = context
+            .octopus_database
+            .try_get_user_by_id(session.user_id)
+            .await?;
+
+        if let Some(user) = user {
+            if user.roles.contains(role) {
+                return Ok(true);
+            }
+        }
+    }
+
+    Err(AppError::Unauthorized)
 }
 
 pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {

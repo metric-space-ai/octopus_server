@@ -14,6 +14,16 @@ pub struct Company {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ExamplePrompt {
+    pub id: Uuid,
+    pub is_visible: bool,
+    pub priority: i32,
+    pub prompt: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,

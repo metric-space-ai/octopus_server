@@ -1,0 +1,55 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE example_prompts\n            SET is_visible = $2, priority = $3, prompt = $4, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, is_visible, priority, prompt, created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 2,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 3,
+        "name": "prompt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1e3d1c144d3dc26231d007f79bec72ba53ac1f2cd92a88b249727758a2298277"
+}

@@ -17,6 +17,7 @@ pub enum AppError {
     Generic(Box<dyn Error + Send + Sync>),
     Header(ToStrError),
     Json(serde_json::Error),
+    NotFound,
     NotRegistered,
     PasswordHash(argon2::password_hash::Error),
     OpenAI(OpenAIError),
@@ -35,6 +36,7 @@ impl IntoResponse for AppError {
             AppError::Generic(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Generic error."),
             AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header"),
             AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Not found"),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered"),
             AppError::PasswordHash(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem")
