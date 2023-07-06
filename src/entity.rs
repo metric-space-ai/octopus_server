@@ -1,8 +1,52 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::FromRow;
+use sqlx::{FromRow, Type};
 use utoipa::ToSchema;
 use uuid::Uuid;
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Chat {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub name: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[sqlx(type_name = "chat_message_statuses", rename_all = "snake_case")]
+pub enum ChatMessageStatus {
+    Answered,
+    Asked,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatMessage {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub estimated_response_at: DateTime<Utc>,
+    pub message: String,
+    pub response: Option<String>,
+    pub status: ChatMessageStatus,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatMessageFile {
+    pub id: Uuid,
+    pub chat_message_id: Uuid,
+    pub file_name: String,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatPicture {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub file_name: String,
+    pub created_at: DateTime<Utc>,
+}
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Company {

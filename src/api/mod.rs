@@ -1,10 +1,11 @@
 use crate::{
     api::{
         auth::{login, login::LoginPost, logout, register, register::RegisterPost},
+        chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
     },
     context::Context,
-    entity::{ExamplePrompt, User},
+    entity::{Chat, ExamplePrompt, User},
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
 };
@@ -25,6 +26,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
 mod chat;
+mod chats;
 mod example_prompts;
 
 pub async fn router(context: Arc<Context>) -> Router {
@@ -32,6 +34,8 @@ pub async fn router(context: Arc<Context>) -> Router {
     #[openapi(
         components(
             schemas(
+                Chat,
+                ChatPut,
                 ExamplePrompt,
                 ExamplePromptPost,
                 ExamplePromptPut,
@@ -45,6 +49,11 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
+            chats::create,
+            chats::delete,
+            chats::list,
+            chats::read,
+            chats::update,
             example_prompts::create,
             example_prompts::delete,
             example_prompts::list,
@@ -55,6 +64,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             register::register,
         ),
         tags(
+            (name = "chats", description = "Chats API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -81,6 +91,11 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
+        .route("/api/v1/chats", get(chats::list).post(chats::create))
+        .route(
+            "/api/v1/chats/:id",
+            delete(chats::delete).get(chats::read).put(chats::update),
+        )
         .route(
             "/api/v1/example-prompts",
             get(example_prompts::list).post(example_prompts::create),
