@@ -60,6 +60,7 @@ CREATE TABLE chat_pictures(
     chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(chat_id)
 );
 

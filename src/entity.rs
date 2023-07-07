@@ -46,6 +46,7 @@ pub struct ChatPicture {
     pub chat_id: Uuid,
     pub file_name: String,
     pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

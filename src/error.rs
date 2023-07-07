@@ -1,5 +1,6 @@
 use async_openai::error::OpenAIError;
 use axum::{
+    extract::multipart::MultipartError,
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -13,10 +14,15 @@ use validator::ValidationErrors;
 
 #[derive(Debug)]
 pub enum AppError {
+    BadRequest,
     Concurrency(tokio::task::JoinError),
+    Conflict,
+    File,
     Generic(Box<dyn Error + Send + Sync>),
     Header(ToStrError),
+    Io(std::io::Error),
     Json(serde_json::Error),
+    Multipart(MultipartError),
     NotFound,
     NotRegistered,
     PasswordHash(argon2::password_hash::Error),
@@ -30,19 +36,24 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
+            AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad request."),
             AppError::Concurrency(_error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Concurrency problem")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Concurrency problem.")
             }
+            AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
+            AppError::File => (StatusCode::BAD_REQUEST, "File error."),
             AppError::Generic(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Generic error."),
-            AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header"),
-            AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON"),
-            AppError::NotFound => (StatusCode::NOT_FOUND, "Not found"),
-            AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered"),
+            AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header."),
+            AppError::Io(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Filesystem error."),
+            AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON."),
+            AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
+            AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
+            AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
             AppError::PasswordHash(_error) => {
-                (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem")
+                (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
             AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
-            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized"),
+            AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => (
                 StatusCode::BAD_REQUEST,
                 "User with such email already exists.",
@@ -68,6 +79,18 @@ impl From<argon2::password_hash::Error> for AppError {
 impl From<Box<dyn Error + Send + Sync>> for AppError {
     fn from(inner: Box<dyn Error + Send + Sync>) -> Self {
         AppError::Generic(inner)
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(inner: std::io::Error) -> Self {
+        AppError::Io(inner)
+    }
+}
+
+impl From<MultipartError> for AppError {
+    fn from(inner: MultipartError) -> Self {
+        AppError::Multipart(inner)
     }
 }
 

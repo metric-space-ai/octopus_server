@@ -25,9 +25,9 @@ pub struct LoginPost {
     path = "/api/v1/auth",
     request_body = LoginPost,
     responses(
-        (status = 201, description = "Authenticate user", body = SessionResponse),
-        (status = 401, description = "Unauthorized", body = ResponseError),
-        (status = 404, description = "User not found", body = ResponseError)
+        (status = 201, description = "User authenticated.", body = SessionResponse),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "User not found.", body = ResponseError)
     )
 )]
 pub async fn login(

@@ -12,7 +12,7 @@ use uuid::Uuid;
     delete,
     path = "/api/v1/auth",
     responses(
-        (status = 204, description = "Logout user")
+        (status = 204, description = "User logged out.")
     ),
     security(
         ("api_key" = [])

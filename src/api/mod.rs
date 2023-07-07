@@ -5,7 +5,7 @@ use crate::{
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
     },
     context::Context,
-    entity::{Chat, ExamplePrompt, User},
+    entity::{Chat, ChatPicture, ExamplePrompt, User},
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
 };
@@ -26,6 +26,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
 mod chat;
+mod chat_pictures;
 mod chats;
 mod example_prompts;
 
@@ -35,6 +36,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         components(
             schemas(
                 Chat,
+                ChatPicture,
                 ChatPut,
                 ExamplePrompt,
                 ExamplePromptPost,
@@ -49,6 +51,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
+            chat_pictures::create,
+            chat_pictures::delete,
+            chat_pictures::read,
+            chat_pictures::update,
             chats::create,
             chats::delete,
             chats::list,
@@ -65,6 +71,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         tags(
             (name = "chats", description = "Chats API."),
+            (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -92,6 +99,13 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
         .route("/api/v1/chats", get(chats::list).post(chats::create))
+        .route(
+            "/api/v1/chat-pictures/:id",
+            delete(chat_pictures::delete)
+                .get(chat_pictures::read)
+                .post(chat_pictures::create)
+                .put(chat_pictures::update),
+        )
         .route(
             "/api/v1/chats/:id",
             delete(chats::delete).get(chats::read).put(chats::update),

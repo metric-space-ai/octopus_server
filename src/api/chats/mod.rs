@@ -25,8 +25,8 @@ pub struct ChatPut {
     post,
     path = "/api/v1/chats",
     responses(
-        (status = 201, description = "Create chat", body = Chat),
-        (status = 401, description = "Unauthorized", body = ResponseError)
+        (status = 201, description = "Chat created.", body = Chat),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -51,9 +51,9 @@ pub async fn create(
     delete,
     path = "/api/v1/chats/:id",
     responses(
-        (status = 204, description = "Chat delete"),
-        (status = 401, description = "Unauthorized", body = ResponseError),
-        (status = 404, description = "Chat not found", body = ResponseError)
+        (status = 204, description = "Chat deleted."),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "Chat id")
@@ -93,8 +93,8 @@ pub async fn delete(
     get,
     path = "/api/v1/chats",
     responses(
-        (status = 200, description = "List all chats", body = [Chat]),
-        (status = 401, description = "Unauthorized", body = ResponseError)
+        (status = 200, description = "List of chats.", body = [Chat]),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -119,9 +119,9 @@ pub async fn list(
     get,
     path = "/api/v1/chats/:id",
     responses(
-        (status = 200, description = "Chat details", body = Chat),
-        (status = 401, description = "Unauthorized", body = ResponseError),
-        (status = 404, description = "Chat not found", body = ResponseError)
+        (status = 200, description = "Chat read.", body = Chat),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "Chat id")
@@ -157,9 +157,9 @@ pub async fn read(
     path = "/api/v1/chats/:id",
     request_body = ChatPut,
     responses(
-        (status = 200, description = "Update chat", body = Chat),
-        (status = 401, description = "Unauthorized", body = ResponseError),
-        (status = 404, description = "Chat not found", body = ResponseError)
+        (status = 200, description = "Chat updated.", body = Chat),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "Chat id")
