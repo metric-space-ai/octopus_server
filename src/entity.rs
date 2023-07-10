@@ -13,7 +13,7 @@ pub struct Chat {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "chat_message_statuses", rename_all = "snake_case")]
 pub enum ChatMessageStatus {
     Answered,

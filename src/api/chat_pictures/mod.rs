@@ -9,6 +9,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use serde::Deserialize;
 use std::{
     fs::{remove_file, File},
     io::Write,
@@ -18,10 +19,16 @@ use uuid::Uuid;
 
 pub const PUBLIC_DIR: &str = "public";
 
+#[derive(Deserialize)]
+pub struct Params {
+    chat_id: Uuid,
+    chat_picture_id: Uuid,
+}
+
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/chat-pictures/:id",
+    path = "/api/v1/chat-pictures/:chat_id",
     responses(
         (status = 201, description = "Chat picture created.", body = ChatPicture),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
@@ -29,7 +36,7 @@ pub const PUBLIC_DIR: &str = "public";
         (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Chat id")
+        ("chat_id" = String, Path, description = "Chat id"),
     ),
     security(
         ("api_key" = [])
@@ -38,12 +45,12 @@ pub const PUBLIC_DIR: &str = "public";
 pub async fn create(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(id): Path<Uuid>,
+    Path(chat_id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(id).await?;
+    let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
 
     match chat {
         None => Err(AppError::NotFound),
@@ -54,7 +61,7 @@ pub async fn create(
 
             let chat_picture = context
                 .octopus_database
-                .try_get_chat_picture_by_chat_id(id)
+                .try_get_chat_picture_by_chat_id(chat_id)
                 .await?;
 
             match chat_picture {
@@ -90,7 +97,7 @@ pub async fn create(
 
                             let chat_picture = context
                                 .octopus_database
-                                .insert_chat_picture(id, &file_name)
+                                .insert_chat_picture(chat_id, &file_name)
                                 .await?;
 
                             return Ok((StatusCode::CREATED, Json(chat_picture)).into_response());
@@ -108,14 +115,15 @@ pub async fn create(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     delete,
-    path = "/api/v1/chat-pictures/:id",
+    path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 204, description = "Chat picture deleted."),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Chat picture id")
+        ("chat_id" = String, Path, description = "Chat id"),
+        ("chat_picture_id" = String, Path, description = "Chat picture id")
     ),
     security(
         ("api_key" = [])
@@ -124,16 +132,23 @@ pub async fn create(
 pub async fn delete(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(id): Path<Uuid>,
+    Path(Params {
+        chat_id,
+        chat_picture_id,
+    }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
     let chat_picture = context
         .octopus_database
-        .try_get_chat_picture_by_id(id)
+        .try_get_chat_picture_by_id(chat_picture_id)
         .await?;
 
     if let Some(chat_picture) = chat_picture {
+        if chat_id != chat_picture.chat_id {
+            return Err(AppError::Unauthorized);
+        }
+
         let chat = context
             .octopus_database
             .try_get_chat_by_id(chat_picture.chat_id)
@@ -146,7 +161,7 @@ pub async fn delete(
 
             let chat_picture_id = context
                 .octopus_database
-                .try_delete_chat_picture_by_id(id)
+                .try_delete_chat_picture_by_id(chat_picture_id)
                 .await?;
 
             if let Some(_chat_picture_id) = chat_picture_id {
@@ -164,14 +179,15 @@ pub async fn delete(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/chat-pictures/:id",
+    path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 200, description = "Chat picture read.", body = ChatPicture),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Chat picture id")
+        ("chat_id" = String, Path, description = "Chat id"),
+        ("chat_picture_id" = String, Path, description = "Chat picture id")
     ),
     security(
         ("api_key" = [])
@@ -180,16 +196,23 @@ pub async fn delete(
 pub async fn read(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(id): Path<Uuid>,
+    Path(Params {
+        chat_id,
+        chat_picture_id,
+    }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
     let chat_picture = context
         .octopus_database
-        .try_get_chat_picture_by_id(id)
+        .try_get_chat_picture_by_id(chat_picture_id)
         .await?;
 
     if let Some(chat_picture) = chat_picture {
+        if chat_id != chat_picture.chat_id {
+            return Err(AppError::Unauthorized);
+        }
+
         let chat = context
             .octopus_database
             .try_get_chat_by_id(chat_picture.chat_id)
@@ -210,14 +233,15 @@ pub async fn read(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     put,
-    path = "/api/v1/chat-pictures/:id",
+    path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 200, description = "Chat picture updated.", body = ChatPicture),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Chat picture id")
+        ("chat_id" = String, Path, description = "Chat id"),
+        ("chat_picture_id" = String, Path, description = "Chat picture id")
     ),
     security(
         ("api_key" = [])
@@ -226,17 +250,24 @@ pub async fn read(
 pub async fn update(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(id): Path<Uuid>,
+    Path(Params {
+        chat_id,
+        chat_picture_id,
+    }): Path<Params>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
     let chat_picture = context
         .octopus_database
-        .try_get_chat_picture_by_id(id)
+        .try_get_chat_picture_by_id(chat_picture_id)
         .await?;
 
     if let Some(chat_picture) = chat_picture {
+        if chat_id != chat_picture.chat_id {
+            return Err(AppError::Unauthorized);
+        }
+
         let chat = context
             .octopus_database
             .try_get_chat_by_id(chat_picture.chat_id)
@@ -280,7 +311,7 @@ pub async fn update(
 
                     let chat_picture = context
                         .octopus_database
-                        .update_chat_picture(id, &file_name)
+                        .update_chat_picture(chat_picture_id, &file_name)
                         .await?;
 
                     remove_file(old_file)?;

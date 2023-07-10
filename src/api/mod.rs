@@ -1,11 +1,12 @@
 use crate::{
     api::{
         auth::{login, login::LoginPost, logout, register, register::RegisterPost},
+        chat_messages::ChatMessagePost,
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
     },
     context::Context,
-    entity::{Chat, ChatPicture, ExamplePrompt, User},
+    entity::{Chat, ChatMessage, ChatMessageStatus, ChatPicture, ExamplePrompt, User},
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
 };
@@ -26,6 +27,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
 mod chat;
+mod chat_messages;
 mod chat_pictures;
 mod chats;
 mod example_prompts;
@@ -36,6 +38,9 @@ pub async fn router(context: Arc<Context>) -> Router {
         components(
             schemas(
                 Chat,
+                ChatMessage,
+                ChatMessagePost,
+                ChatMessageStatus,
                 ChatPicture,
                 ChatPut,
                 ExamplePrompt,
@@ -51,6 +56,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
+            chat_messages::create,
+            chat_messages::delete,
+            chat_messages::list,
+            chat_messages::read,
             chat_pictures::create,
             chat_pictures::delete,
             chat_pictures::read,
@@ -71,6 +80,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         tags(
             (name = "chats", description = "Chats API."),
+            (name = "chat_messages", description = "Chat messages API."),
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
@@ -98,14 +108,25 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route("/api/v1/chat", post(chat::create))
-        .route("/api/v1/chats", get(chats::list).post(chats::create))
         .route(
-            "/api/v1/chat-pictures/:id",
+            "/api/v1/chat-messages/:chat_id",
+            get(chat_messages::list).post(chat_messages::create),
+        )
+        .route(
+            "/api/v1/chat-messages/:chat_id/:chat_message_id",
+            delete(chat_messages::delete).get(chat_messages::read),
+        )
+        .route(
+            "/api/v1/chat-pictures/:chat_id",
+            post(chat_pictures::create),
+        )
+        .route(
+            "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
             delete(chat_pictures::delete)
                 .get(chat_pictures::read)
-                .post(chat_pictures::create)
                 .put(chat_pictures::update),
         )
+        .route("/api/v1/chats", get(chats::list).post(chats::create))
         .route(
             "/api/v1/chats/:id",
             delete(chats::delete).get(chats::read).put(chats::update),

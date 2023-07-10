@@ -1,0 +1,74 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, chat_id, estimated_response_at, message, response, status AS \"status: _\", created_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "chat_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "estimated_response_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "message",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "response",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "status: _",
+        "type_info": {
+          "Custom": {
+            "name": "chat_message_statuses",
+            "kind": {
+              "Enum": [
+                "answered",
+                "asked"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "568be98c54703c0e01d92c94bcb9476fa121f4eb9a00c910ee54c9ccaa5f2e94"
+}
