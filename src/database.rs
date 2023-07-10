@@ -1,5 +1,7 @@
 use crate::{
-    entity::{Chat, ChatMessage, ChatPicture, Company, ExamplePrompt, Session, User},
+    entity::{
+        Chat, ChatMessage, ChatMessageStatus, ChatPicture, Company, ExamplePrompt, Session, User,
+    },
     Result,
 };
 use chrono::{DateTime, Utc};
@@ -38,7 +40,8 @@ impl OctopusDatabase {
             ChatMessage,
             r#"SELECT id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
             FROM chat_messages
-            WHERE chat_id = $1"#,
+            WHERE chat_id = $1
+            ORDER BY created_at ASC"#,
             chat_id
         )
         .fetch_all(&*self.pool)
@@ -405,6 +408,40 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat)
+    }
+
+    pub async fn update_chat_message(
+        &self,
+        id: Uuid,
+        response: &str,
+        status: ChatMessageStatus,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET response = $2, status = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, estimated_response_at, message, response, status, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(response)
+        .bind(status)
+        .fetch_one(&*self.pool)
+        .await?;
+        /*
+                let chat_message = sqlx::query_as!(
+                    ChatMessage,
+                    r#"UPDATE chat_messages
+                    SET response = $2, status = $3, updated_at = current_timestamp(0)
+                    WHERE id = $1
+                    RETURNING id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
+                    id,
+                    response,
+                    status
+                )
+                .fetch_one(&*self.pool)
+                .await?;
+        */
+        Ok(chat_message)
     }
 
     pub async fn update_chat_picture(&self, id: Uuid, file_name: &str) -> Result<ChatPicture> {

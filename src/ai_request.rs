@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
+    entity::{ChatMessage, ChatMessageStatus},
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
 };
 use async_openai::{
     types::{
@@ -10,32 +10,36 @@ use async_openai::{
     },
     Client,
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
 use tracing::info;
-use validator::Validate;
 
-#[axum_macros::debug_handler]
-pub async fn create(
-    State(_context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Json(input): Json<CreateChatMessage>,
-) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
-
-    input.validate()?;
-
+pub async fn open_ai_request(
+    context: Arc<Context>,
+    chat_message: ChatMessage,
+) -> Result<ChatMessage, AppError> {
     let client = Client::new();
+
+    let mut messages = vec![];
+
+    let chat_messages = context
+        .octopus_database
+        .get_chat_messages_by_chat_id(chat_message.chat_id)
+        .await?;
+
+    for chat_message_tmp in chat_messages {
+        let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+            .role(Role::User)
+            .content(chat_message_tmp.message.clone())
+            .build()?;
+
+        messages.append(&mut vec![chat_completion_request_message]);
+    }
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
         .model("gpt-3.5-turbo-0613")
-        .messages([ChatCompletionRequestMessageArgs::default()
-            .role(Role::User)
-            .content(input.message.clone())
-            .build()?])
+        .messages(messages)
         .functions([ChatCompletionFunctionsArgs::default()
             .name("get_current_weather")
             .description("Get the current weather in a given location")
@@ -98,16 +102,28 @@ pub async fn create(
 
         let response = client.chat().create(request).await?;
 
-        info!("\nResponse:\n");
         for choice in response.choices {
-            info!(
-                "{}: Role: {}  Content: {:?}",
-                choice.index, choice.message.role, choice.message.content
-            );
+            if let Some(content) = choice.message.content {
+                let chat_message = context
+                    .octopus_database
+                    .update_chat_message(chat_message.id, &content, ChatMessageStatus::Answered)
+                    .await?;
+
+                return Ok(chat_message);
+            }
         }
     }
 
-    Ok((StatusCode::CREATED, Json(input)).into_response())
+    if let Some(content) = response_message.content {
+        let chat_message = context
+            .octopus_database
+            .update_chat_message(chat_message.id, &content, ChatMessageStatus::Answered)
+            .await?;
+
+        return Ok(chat_message);
+    }
+
+    Ok(chat_message)
 }
 
 fn get_current_weather(location: &str, unit: &str) -> serde_json::Value {
@@ -119,9 +135,4 @@ fn get_current_weather(location: &str, unit: &str) -> serde_json::Value {
     });
 
     weather_info
-}
-
-#[derive(Debug, Deserialize, Serialize, Validate)]
-pub struct CreateChatMessage {
-    message: String,
 }

@@ -26,7 +26,6 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
-mod chat;
 mod chat_messages;
 mod chat_pictures;
 mod chats;
@@ -107,7 +106,6 @@ pub async fn router(context: Arc<Context>) -> Router {
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
-        .route("/api/v1/chat", post(chat::create))
         .route(
             "/api/v1/chat-messages/:chat_id",
             get(chat_messages::list).post(chat_messages::create),

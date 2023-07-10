@@ -1,4 +1,5 @@
 use crate::{
+    ai_request,
     context::Context,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
@@ -12,6 +13,7 @@ use axum::{
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
+use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -68,6 +70,17 @@ pub async fn create(
                 .octopus_database
                 .insert_chat_message(chat.id, estimated_response_at, &input.message)
                 .await?;
+
+            let cloned_context = context.clone();
+            let cloned_chat_message = chat_message.clone();
+            tokio::spawn(async move {
+                let chat_message =
+                    ai_request::open_ai_request(cloned_context, cloned_chat_message).await;
+
+                if let Err(e) = chat_message {
+                    debug!("Error: {:?}", e);
+                }
+            });
 
             Ok((StatusCode::CREATED, Json(chat_message)).into_response())
         }

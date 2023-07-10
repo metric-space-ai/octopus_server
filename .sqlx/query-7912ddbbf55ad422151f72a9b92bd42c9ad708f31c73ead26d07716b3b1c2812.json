@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_id, estimated_response_at, message, response, status AS \"status: _\", created_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1",
+  "query": "SELECT id, chat_id, estimated_response_at, message, response, status AS \"status: _\", created_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -70,5 +70,5 @@
       false
     ]
   },
-  "hash": "568be98c54703c0e01d92c94bcb9476fa121f4eb9a00c910ee54c9ccaa5f2e94"
+  "hash": "7912ddbbf55ad422151f72a9b92bd42c9ad708f31c73ead26d07716b3b1c2812"
 }
