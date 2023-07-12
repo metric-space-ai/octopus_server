@@ -15,11 +15,12 @@ use std::{
     io::Write,
     sync::Arc,
 };
+use utoipa::IntoParams;
 use uuid::Uuid;
 
 pub const PUBLIC_DIR: &str = "public";
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 pub struct Params {
     chat_id: Uuid,
     chat_picture_id: Uuid,

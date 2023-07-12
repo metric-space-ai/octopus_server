@@ -6,7 +6,9 @@ use crate::{
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
     },
     context::Context,
-    entity::{Chat, ChatMessage, ChatMessageStatus, ChatPicture, ExamplePrompt, User},
+    entity::{
+        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, ExamplePrompt, User,
+    },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
 };
@@ -26,6 +28,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
+mod chat_message_files;
 mod chat_messages;
 mod chat_pictures;
 mod chats;
@@ -38,6 +41,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             schemas(
                 Chat,
                 ChatMessage,
+                ChatMessageFile,
                 ChatMessagePost,
                 ChatMessageStatus,
                 ChatPicture,
@@ -59,6 +63,9 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_messages::delete,
             chat_messages::list,
             chat_messages::read,
+            chat_message_files::delete,
+            chat_message_files::list,
+            chat_message_files::read,
             chat_pictures::create,
             chat_pictures::delete,
             chat_pictures::read,
@@ -80,6 +87,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         tags(
             (name = "chats", description = "Chats API."),
             (name = "chat_messages", description = "Chat messages API."),
+            (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
@@ -113,6 +121,14 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/chat-messages/:chat_id/:chat_message_id",
             delete(chat_messages::delete).get(chat_messages::read),
+        )
+        .route(
+            "/api/v1/chat-message-files/:chat_message_id",
+            get(chat_message_files::list),
+        )
+        .route(
+            "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
+            delete(chat_message_files::delete).get(chat_message_files::read),
         )
         .route(
             "/api/v1/chat-pictures/:chat_id",

@@ -12,7 +12,6 @@ use async_openai::{
 };
 use serde_json::json;
 use std::{collections::HashMap, sync::Arc};
-use tracing::info;
 
 pub async fn open_ai_request(
     context: Arc<Context>,
@@ -67,8 +66,6 @@ pub async fn open_ai_request(
         .unwrap()
         .message
         .clone();
-
-    info!("{:?}", response_message);
 
     if let Some(function_call) = response_message.function_call {
         let mut available_functions: HashMap<&str, fn(&str, &str) -> serde_json::Value> =

@@ -1,5 +1,4 @@
 use crate::{
-    ai_request,
     context::Context,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
@@ -10,95 +9,29 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use chrono::{Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
-use tracing::debug;
-use utoipa::{IntoParams, ToSchema};
+use utoipa::IntoParams;
 use uuid::Uuid;
-use validator::Validate;
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct ChatMessagePost {
-    pub message: String,
-}
 
 #[derive(Deserialize, IntoParams)]
 pub struct Params {
-    chat_id: Uuid,
     chat_message_id: Uuid,
-}
-
-#[axum_macros::debug_handler]
-#[utoipa::path(
-    post,
-    path = "/api/v1/chat-messages/:chat_id",
-    request_body = ChatMessagePost,
-    responses(
-        (status = 201, description = "Chat message created.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Chat not found.", body = ResponseError),
-    ),
-    params(
-        ("chat_id" = String, Path, description = "Chat id")
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn create(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Path(chat_id): Path<Uuid>,
-    Json(input): Json<ChatMessagePost>,
-) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
-    input.validate()?;
-
-    let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
-
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let estimated_response_at = Utc::now() + Duration::seconds(5);
-
-            let chat_message = context
-                .octopus_database
-                .insert_chat_message(chat.id, estimated_response_at, &input.message)
-                .await?;
-
-            let cloned_context = context.clone();
-            let cloned_chat_message = chat_message.clone();
-            tokio::spawn(async move {
-                let chat_message =
-                    ai_request::open_ai_request(cloned_context, cloned_chat_message).await;
-
-                if let Err(e) = chat_message {
-                    debug!("Error: {:?}", e);
-                }
-            });
-
-            Ok((StatusCode::CREATED, Json(chat_message)).into_response())
-        }
-    }
+    chat_message_file_id: Uuid,
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     delete,
-    path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
+    path = "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
     responses(
-        (status = 204, description = "Chat message deleted."),
+        (status = 204, description = "Chat message file deleted."),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Chat message not found.", body = ResponseError),
+        (status = 404, description = "Chat message file not found.", body = ResponseError),
     ),
     params(
-        ("chat_id" = String, Path, description = "Chat id"),
-        ("chat_message_id" = String, Path, description = "Chat message id")
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("chat_message_file_id" = String, Path, description = "Chat message file id")
     ),
     security(
         ("api_key" = [])
@@ -108,39 +41,46 @@ pub async fn delete(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
     Path(Params {
-        chat_id,
         chat_message_id,
+        chat_message_file_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat_message = context
+    let chat_message_file = context
         .octopus_database
-        .try_get_chat_message_by_id(chat_message_id)
+        .try_get_chat_message_file_by_id(chat_message_file_id)
         .await?;
 
-    if let Some(chat_message) = chat_message {
-        if chat_id != chat_message.chat_id {
+    if let Some(chat_message_file) = chat_message_file {
+        if chat_message_id != chat_message_file.chat_message_id {
             return Err(AppError::Unauthorized);
         }
 
-        let chat = context
+        let chat_message = context
             .octopus_database
-            .try_get_chat_by_id(chat_message.chat_id)
+            .try_get_chat_message_by_id(chat_message_file.chat_message_id)
             .await?;
 
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let chat_message_id = context
+        if let Some(chat_message) = chat_message {
+            let chat = context
                 .octopus_database
-                .try_delete_chat_message_by_id(chat_message_id)
+                .try_get_chat_by_id(chat_message.chat_id)
                 .await?;
 
-            if let Some(_chat_message_id) = chat_message_id {
-                return Ok((StatusCode::NO_CONTENT, ()).into_response());
+            if let Some(chat) = chat {
+                if chat.user_id != session.user_id {
+                    return Err(AppError::Unauthorized);
+                }
+
+                let chat_message_file_id = context
+                    .octopus_database
+                    .try_delete_chat_message_file_by_id(chat_message_file_id)
+                    .await?;
+
+                if let Some(_chat_message_file_id) = chat_message_file_id {
+                    return Ok((StatusCode::NO_CONTENT, ()).into_response());
+                }
             }
         }
     }
@@ -151,9 +91,9 @@ pub async fn delete(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/chat-messages/:chat_id",
+    path = "/api/v1/chat-message-files/:chat_message_id",
     responses(
-        (status = 200, description = "List of chat messages.", body = [ChatMessage]),
+        (status = 200, description = "List of chat message files.", body = [ChatMessageFile]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
@@ -163,52 +103,7 @@ pub async fn delete(
 pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(chat_id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
-
-    let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
-
-    if let Some(chat) = chat {
-        if chat.user_id != session.user_id {
-            return Err(AppError::Unauthorized);
-        }
-
-        let chat_messages = context
-            .octopus_database
-            .get_chat_messages_by_chat_id(chat_id)
-            .await?;
-
-        return Ok((StatusCode::OK, Json(chat_messages)).into_response());
-    }
-
-    Ok((StatusCode::OK, Json(())).into_response())
-}
-
-#[axum_macros::debug_handler]
-#[utoipa::path(
-    get,
-    path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
-    responses(
-        (status = 200, description = "Chat message read.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Chat message not found.", body = ResponseError),
-    ),
-    params(
-        ("chat_id" = String, Path, description = "Chat id"),
-        ("chat_message_id" = String, Path, description = "Chat message id")
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn read(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Path(Params {
-        chat_id,
-        chat_message_id,
-    }): Path<Params>,
+    Path(chat_message_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
@@ -218,10 +113,6 @@ pub async fn read(
         .await?;
 
     if let Some(chat_message) = chat_message {
-        if chat_id != chat_message.chat_id {
-            return Err(AppError::Unauthorized);
-        }
-
         let chat = context
             .octopus_database
             .try_get_chat_by_id(chat_message.chat_id)
@@ -232,7 +123,73 @@ pub async fn read(
                 return Err(AppError::Unauthorized);
             }
 
-            return Ok((StatusCode::OK, Json(chat_message)).into_response());
+            let chat_message_files = context
+                .octopus_database
+                .get_chat_message_files_by_chat_message_id(chat_message_id)
+                .await?;
+
+            return Ok((StatusCode::OK, Json(chat_message_files)).into_response());
+        }
+    }
+
+    Ok((StatusCode::OK, Json(())).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
+    responses(
+        (status = 200, description = "Chat message file read.", body = ChatMessageFile),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Chat message file not found.", body = ResponseError),
+    ),
+    params(
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("chat_message_file_id" = String, Path, description = "Chat message file id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn read(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(Params {
+        chat_message_id,
+        chat_message_file_id,
+    }): Path<Params>,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated_session(extracted_session).await?;
+
+    let chat_message_file = context
+        .octopus_database
+        .try_get_chat_message_file_by_id(chat_message_file_id)
+        .await?;
+
+    if let Some(chat_message_file) = chat_message_file {
+        if chat_message_id != chat_message_file.chat_message_id {
+            return Err(AppError::Unauthorized);
+        }
+
+        let chat_message = context
+            .octopus_database
+            .try_get_chat_message_by_id(chat_message_file.chat_message_id)
+            .await?;
+
+        if let Some(chat_message) = chat_message {
+            let chat = context
+                .octopus_database
+                .try_get_chat_by_id(chat_message.chat_id)
+                .await?;
+
+            if let Some(chat) = chat {
+                if chat.user_id != session.user_id {
+                    return Err(AppError::Unauthorized);
+                }
+
+                return Ok((StatusCode::OK, Json(chat_message_file)).into_response());
+            }
         }
     }
 
@@ -244,7 +201,7 @@ mod tests {
     use crate::{
         app,
         entity::User,
-        entity::{Chat, ChatMessage},
+        entity::{Chat, ChatMessage, ChatMessageFile},
         session::SessionResponse,
         Args,
     };
@@ -257,451 +214,6 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
-
-    #[tokio::test]
-    async fn create_201() {
-        let args = Args {
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/chats")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Chat = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let chat_id = body.id;
-
-        let message = "test message";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_chat_by_id(chat_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(chat_message_id)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn create_401() {
-        let args = Args {
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/chats")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Chat = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let chat_id = body.id;
-
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
-        let password = "password123";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company2_id = body.company_id;
-        let user_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let message = "test message";
-
-        let response = sixth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company2_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_chat_by_id(chat_id)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn create_404() {
-        let args = Args {
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let chat_id = "33847746-0030-4964-a496-f75d04499160";
-
-        let message = "test message";
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-    }
 
     #[tokio::test]
     async fn delete_204() {
@@ -828,13 +340,21 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file.id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -855,6 +375,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_by_id(chat_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
     }
@@ -986,6 +512,14 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = "password123";
@@ -1052,8 +586,8 @@ mod tests {
                 Request::builder()
                     .method(http::Method::DELETE)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file.id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -1088,6 +622,12 @@ mod tests {
             .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_file_by_id(chat_message_file.id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -1101,6 +641,7 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
+        let fifth_router = router.clone();
 
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -1185,15 +726,44 @@ mod tests {
 
         let chat_id = body.id;
 
-        let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
+        let message = "test message";
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "message": &message,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.message, message);
+
+        let chat_message_id = body.id;
+
+        let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
                     .method(http::Method::DELETE)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file_id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -1214,6 +784,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_by_id(chat_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
     }
@@ -1343,11 +919,19 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-message-files/{}", chat_message_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1359,7 +943,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Vec<ChatMessage> = serde_json::from_slice(&body).unwrap();
+        let body: Vec<ChatMessageFile> = serde_json::from_slice(&body).unwrap();
 
         assert!(body.len() > 0);
 
@@ -1378,6 +962,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_message_by_id(chat_message_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
     }
@@ -1509,6 +1099,14 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = "password123";
@@ -1574,7 +1172,10 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!(
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file.id
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1606,6 +1207,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_message_by_id(chat_message_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
     }
@@ -1735,13 +1342,21 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file.id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -1754,9 +1369,9 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
+        let body: ChatMessageFile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.message, message);
+        assert_eq!(body.file_name, file_name);
 
         app.context
             .octopus_database
@@ -1773,6 +1388,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_message_by_id(chat_message_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
     }
@@ -1904,6 +1525,14 @@ mod tests {
 
         let chat_message_id = body.id;
 
+        let file_name = "33847746-0030-4964-a496-f75d04499160.png";
+        let chat_message_file = app
+            .context
+            .octopus_database
+            .insert_chat_message_file(chat_message_id, &file_name)
+            .await
+            .unwrap();
+
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
         let password = "password123";
@@ -1970,8 +1599,8 @@ mod tests {
                 Request::builder()
                     .method(http::Method::GET)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file.id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -2006,6 +1635,12 @@ mod tests {
             .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_file_by_id(chat_message_file.id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -2019,6 +1654,7 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
+        let fifth_router = router.clone();
 
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -2103,15 +1739,44 @@ mod tests {
 
         let chat_id = body.id;
 
-        let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
+        let message = "test message";
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "message": &message,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.message, message);
+
+        let chat_message_id = body.id;
+
+        let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
                     .method(http::Method::GET)
                     .uri(format!(
-                        "/api/v1/chat-messages/{}/{}",
-                        chat_id, chat_message_id
+                        "/api/v1/chat-message-files/{}/{}",
+                        chat_message_id, chat_message_file_id
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -2132,6 +1797,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_by_id(chat_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
     }
