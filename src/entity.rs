@@ -82,6 +82,8 @@ pub struct User {
     pub company_id: Uuid,
     pub email: String,
     pub is_enabled: bool,
+    pub job_title: Option<String>,
+    pub name: Option<String>,
     pub roles: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

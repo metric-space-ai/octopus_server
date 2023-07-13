@@ -31,6 +31,10 @@ pub async fn register(
 
     match user_exists {
         None => {
+            if input.password != input.repeat_password {
+                return Err(AppError::PasswordDoesNotMatch);
+            }
+
             let cloned_context = context.clone();
             let cloned_password = input.password.clone();
             let pw_hash = tokio::task::spawn_blocking(move || {
@@ -38,28 +42,28 @@ pub async fn register(
             })
             .await??;
 
-            let company = context
-                .octopus_database
-                .insert_company(None, &input.company_name)
-                .await?;
+            let company = context.octopus_database.try_get_company_primary().await?;
 
-            let user = context
-                .octopus_database
-                .insert_user(
-                    company.id,
-                    &input.email,
-                    true,
-                    context.config.pepper_id,
-                    &pw_hash,
-                    &[
-                        "ROLE_COMPANY_ADMIN".to_string(),
-                        "ROLE_PRIVATE_USER".to_string(),
-                        "ROLE_PUBLIC_USER".to_string(),
-                    ],
-                )
-                .await?;
+            match company {
+                None => Err(AppError::CompanyNotFound),
+                Some(company) => {
+                    let user = context
+                        .octopus_database
+                        .insert_user(
+                            company.id,
+                            &input.email,
+                            true,
+                            context.config.pepper_id,
+                            &pw_hash,
+                            &["ROLE_PUBLIC_USER".to_string()],
+                            Some(input.job_title),
+                            Some(input.name),
+                        )
+                        .await?;
 
-            Ok((StatusCode::CREATED, Json(user)).into_response())
+                    Ok((StatusCode::CREATED, Json(user)).into_response())
+                }
+            }
         }
         Some(_user_exists) => Err(AppError::UserAlreadyExists),
     }
@@ -67,10 +71,12 @@ pub async fn register(
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct RegisterPost {
-    #[validate(length(max = 256, min = 1))]
-    company_name: String,
     #[validate(email, length(max = 256))]
     email: String,
+    #[validate(length(max = 256, min = 1))]
+    job_title: String,
+    #[validate(length(max = 256, min = 1))]
+    name: String,
     #[validate(length(min = 8))]
     password: String,
     #[validate(length(min = 8))]
@@ -98,6 +104,7 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
+        let second_router = router.clone();
 
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -107,7 +114,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri("/api/v1/auth/register-company")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -131,6 +138,39 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company_id = body.company_id;
+
+        let email = SafeEmail().fake::<String>();
+        let job_title = Word().fake::<String>();
+        let name = Word().fake::<String>();
+        let password = "password123";
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/register")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
 
         app.context
             .octopus_database
@@ -147,7 +187,8 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let cloned_router = router.clone();
+        let second_router = router.clone();
+        let third_router = router.clone();
 
         let company_name = Word().fake::<String>();
         let email = SafeEmail().fake::<String>();
@@ -157,7 +198,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri("/api/v1/auth/register-company")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -182,7 +223,12 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let response = cloned_router
+        let email = SafeEmail().fake::<String>();
+        let job_title = Word().fake::<String>();
+        let name = Word().fake::<String>();
+        let password = "password123";
+
+        let response = second_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -190,8 +236,37 @@ mod tests {
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
-                            "company_name": &company_name,
                             "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth/register")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
                             "password": &password,
                             "repeat_password": &password,
                         })

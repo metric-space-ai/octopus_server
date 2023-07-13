@@ -12,6 +12,8 @@ CREATE TABLE users(
     company_id UUID NOT NULL REFERENCES companies ON DELETE CASCADE,
     email VARCHAR(256) NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT true,
+    job_title VARCHAR(256),
+    name VARCHAR(256),
     pepper_id INT NOT NULL,
     password VARCHAR(256) NOT NULL,
     roles VARCHAR(1024) [] NOT NULL DEFAULT '{}',

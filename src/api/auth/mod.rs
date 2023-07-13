@@ -6,6 +6,7 @@ use std::sync::Arc;
 pub mod login;
 pub mod logout;
 pub mod register;
+pub mod register_company;
 
 pub fn hash_password(context: Arc<Context>, password: String) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);

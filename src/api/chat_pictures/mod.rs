@@ -367,7 +367,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri("/api/v1/auth/register-company")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({

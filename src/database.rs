@@ -215,6 +215,7 @@ impl OctopusDatabase {
         Ok(session)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_user(
         &self,
         company_id: Uuid,
@@ -223,20 +224,24 @@ impl OctopusDatabase {
         pepper_id: i32,
         password: &str,
         roles: &[String],
+        job_title: Option<String>,
+        name: Option<String>,
     ) -> Result<User> {
         let user = sqlx::query_as!(
             User,
             "INSERT INTO users
-            (company_id, email, is_enabled, pepper_id, password, roles)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            (company_id, email, is_enabled, pepper_id, password, roles, job_title, name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (email) DO NOTHING
-            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at",
             company_id,
             email,
             is_enabled,
             pepper_id,
             password,
-            roles
+            roles,
+            job_title,
+            name
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -400,6 +405,20 @@ impl OctopusDatabase {
         Ok(chat_picture)
     }
 
+    pub async fn try_get_company_primary(&self) -> Result<Option<Company>> {
+        let company = sqlx::query_as!(
+            Company,
+            "SELECT id, address, name, created_at, updated_at
+            FROM companies
+            ORDER BY created_at ASC
+            LIMIT 1"
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(company)
+    }
+
     pub async fn try_get_example_prompt_by_id(&self, id: Uuid) -> Result<Option<ExamplePrompt>> {
         let example_prompt = sqlx::query_as!(
             ExamplePrompt,
@@ -441,7 +460,7 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
+            "SELECT id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at
             FROM users
             WHERE email = $1",
             email

@@ -1,6 +1,9 @@
 use crate::{
     api::{
-        auth::{login, login::LoginPost, logout, register, register::RegisterPost},
+        auth::{
+            login, login::LoginPost, logout, register, register::RegisterPost, register_company,
+            register_company::RegisterCompanyPost,
+        },
         chat_messages::ChatMessagePost,
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
@@ -50,6 +53,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ExamplePromptPost,
                 ExamplePromptPut,
                 LoginPost,
+                RegisterCompanyPost,
                 RegisterPost,
                 ResponseError,
                 SessionResponse,
@@ -83,6 +87,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             login::login,
             logout::logout,
             register::register,
+            register_company::register_company,
         ),
         tags(
             (name = "chats", description = "Chats API."),
@@ -93,6 +98,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
+            (name = "register_company", description = "Register company API."),
         )
     )]
     struct ApiDoc;
@@ -114,6 +120,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
+        .route(
+            "/api/v1/auth/register-company",
+            post(register_company::register_company),
+        )
         .route(
             "/api/v1/chat-messages/:chat_id",
             get(chat_messages::list).post(chat_messages::create),

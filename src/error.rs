@@ -15,6 +15,7 @@ use validator::ValidationErrors;
 #[derive(Debug)]
 pub enum AppError {
     BadRequest,
+    CompanyNotFound,
     Concurrency(tokio::task::JoinError),
     Conflict,
     File,
@@ -25,6 +26,7 @@ pub enum AppError {
     Multipart(MultipartError),
     NotFound,
     NotRegistered,
+    PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
     OpenAI(OpenAIError),
     Unauthorized,
@@ -37,6 +39,9 @@ impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
             AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad request."),
+            AppError::CompanyNotFound => {
+                (StatusCode::BAD_REQUEST, "Main company is not registered.")
+            }
             AppError::Concurrency(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Concurrency problem.")
             }
@@ -49,6 +54,7 @@ impl IntoResponse for AppError {
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
+            AppError::PasswordDoesNotMatch => (StatusCode::BAD_REQUEST, "Password does not match."),
             AppError::PasswordHash(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
