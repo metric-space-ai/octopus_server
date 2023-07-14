@@ -29,6 +29,18 @@ CREATE TABLE sessions(
     expired_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+CREATE TYPE workspaces_types AS ENUM('private', 'public');
+
+CREATE TABLE workspaces(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    company_id UUID NOT NULL REFERENCES companies ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    name VARCHAR(256) NOT NULL,
+    type workspaces_types NOT NULL DEFAULT 'public',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+);
+
 CREATE TABLE chats(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,

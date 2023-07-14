@@ -88,3 +88,21 @@ pub struct User {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "workspaces_types", rename_all = "snake_case")]
+pub enum WorkspacesType {
+    Private,
+    Public,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Workspace {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub user_id: Uuid,
+    pub name: String,
+    pub r#type: WorkspacesType,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}

@@ -1,7 +1,7 @@
 use crate::{
     entity::{
         Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, Company, ExamplePrompt,
-        Session, User,
+        Session, User, Workspace, WorkspacesType,
     },
     Result,
 };
@@ -79,6 +79,44 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompts)
+    }
+
+    pub async fn get_workspaces_by_company_id_and_type(
+        &self,
+        company_id: Uuid,
+        r#type: WorkspacesType,
+    ) -> Result<Vec<Workspace>> {
+        let workspaces = sqlx::query_as::<_, Workspace>(
+            "SELECT id, company_id, user_id, name, type, created_at, updated_at
+            FROM workspaces
+            WHERE company_id = $1
+            AND type = $2",
+        )
+        .bind(company_id)
+        .bind(r#type)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(workspaces)
+    }
+
+    pub async fn get_workspaces_by_user_id_and_type(
+        &self,
+        user_id: Uuid,
+        r#type: WorkspacesType,
+    ) -> Result<Vec<Workspace>> {
+        let workspaces = sqlx::query_as::<_, Workspace>(
+            "SELECT id, company_id, user_id, name, type, created_at, updated_at
+            FROM workspaces
+            WHERE user_id = $1
+            AND type = $2",
+        )
+        .bind(user_id)
+        .bind(r#type)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(workspaces)
     }
 
     pub async fn insert_chat(&self, user_id: Uuid) -> Result<Chat> {
@@ -249,6 +287,29 @@ impl OctopusDatabase {
         Ok(user)
     }
 
+    pub async fn insert_workspace(
+        &self,
+        company_id: Uuid,
+        user_id: Uuid,
+        name: &str,
+        r#type: WorkspacesType,
+    ) -> Result<Workspace> {
+        let workspace = sqlx::query_as::<_, Workspace>(
+            "INSERT INTO workspaces
+            (company_id, user_id, name, type)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, company_id, user_id, name, type, created_at, updated_at",
+        )
+        .bind(company_id)
+        .bind(user_id)
+        .bind(name)
+        .bind(r#type)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(workspace)
+    }
+
     pub async fn try_delete_chat_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat = sqlx::query_scalar::<_, Uuid>("DELETE FROM chats WHERE id = $1 RETURNING id")
             .bind(id)
@@ -318,6 +379,16 @@ impl OctopusDatabase {
                 .await?;
 
         Ok(session)
+    }
+
+    pub async fn try_delete_workspace_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let workspace =
+            sqlx::query_scalar::<_, Uuid>("DELETE FROM workspaces WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&*self.pool)
+                .await?;
+
+        Ok(workspace)
     }
 
     pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
@@ -471,6 +542,20 @@ impl OctopusDatabase {
         Ok(user)
     }
 
+    pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at
+            FROM users
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn try_get_user_roles_by_id(&self, id: Uuid) -> Result<Option<Vec<String>>> {
         let user_roles =
             sqlx::query_scalar::<_, Vec<String>>("SELECT roles FROM users WHERE id = $1")
@@ -479,6 +564,20 @@ impl OctopusDatabase {
                 .await?;
 
         Ok(user_roles)
+    }
+
+    pub async fn try_get_workspace_by_id(&self, id: Uuid) -> Result<Option<Workspace>> {
+        let workspace = sqlx::query_as!(
+            Workspace,
+            r#"SELECT id, company_id, user_id, name, type AS "type: _", created_at, updated_at
+            FROM workspaces
+            WHERE id = $1"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(workspace)
     }
 
     pub async fn update_chat(&self, id: Uuid, name: &str) -> Result<Chat> {
@@ -569,5 +668,43 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt)
+    }
+
+    #[allow(dead_code)]
+    pub async fn update_user_roles(&self, id: Uuid, roles: &[String]) -> Result<User> {
+        let user = sqlx::query_as!(
+            User,
+            "UPDATE users
+            SET roles = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at",
+            id,
+            roles
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
+    pub async fn update_workspace(
+        &self,
+        id: Uuid,
+        name: &str,
+        r#type: WorkspacesType,
+    ) -> Result<Workspace> {
+        let workspace = sqlx::query_as::<_, Workspace>(
+            "UPDATE workspaces
+            SET name = $2, type = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, user_id, name, type, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(name)
+        .bind(r#type)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(workspace)
     }
 }

@@ -7,10 +7,12 @@ use crate::{
         chat_messages::ChatMessagePost,
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
+        workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
     entity::{
         Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, ExamplePrompt, User,
+        Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -36,6 +38,7 @@ mod chat_messages;
 mod chat_pictures;
 mod chats;
 mod example_prompts;
+mod workspaces;
 
 pub async fn router(context: Arc<Context>) -> Router {
     #[derive(OpenApi)]
@@ -59,6 +62,10 @@ pub async fn router(context: Arc<Context>) -> Router {
                 SessionResponse,
                 SessionResponseData,
                 User,
+                Workspace,
+                WorkspacePost,
+                WorkspacePut,
+                WorkspacesType,
             )
         ),
         modifiers(&SecurityAddon),
@@ -88,6 +95,11 @@ pub async fn router(context: Arc<Context>) -> Router {
             logout::logout,
             register::register,
             register_company::register_company,
+            workspaces::create,
+            workspaces::delete,
+            workspaces::list,
+            workspaces::read,
+            workspaces::update,
         ),
         tags(
             (name = "chats", description = "Chats API."),
@@ -95,6 +107,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
+            (name = "workspaces", description = "Workspaces API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
@@ -164,6 +177,16 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
+        )
+        .route(
+            "/api/v1/workspaces",
+            get(workspaces::list).post(workspaces::create),
+        )
+        .route(
+            "/api/v1/workspaces/:id",
+            delete(workspaces::delete)
+                .get(workspaces::read)
+                .put(workspaces::update),
         )
         .layer(
             ServiceBuilder::new()
