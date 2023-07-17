@@ -253,7 +253,10 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use fake::{
-        faker::{internet::en::SafeEmail, lorem::en::Word},
+        faker::{
+            internet::en::SafeEmail,
+            lorem::en::{Paragraph, Word},
+        },
         Fake,
     };
     use tower::ServiceExt;
@@ -270,8 +273,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -415,8 +423,13 @@ mod tests {
         let fifth_router = router.clone();
         let sixth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -498,8 +511,13 @@ mod tests {
 
         let chat_id = body.id;
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = fourth_router
@@ -611,8 +629,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -716,8 +739,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -874,8 +902,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -986,8 +1019,13 @@ mod tests {
 
         let chat_message_id = body.id;
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = fifth_router
@@ -1102,8 +1140,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1231,8 +1274,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1397,8 +1445,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1509,8 +1562,13 @@ mod tests {
 
         let chat_message_id = body.id;
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = fifth_router
@@ -1623,8 +1681,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1792,8 +1855,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1904,8 +1972,13 @@ mod tests {
 
         let chat_message_id = body.id;
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = fifth_router
@@ -2020,8 +2093,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router

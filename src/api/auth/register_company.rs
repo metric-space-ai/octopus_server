@@ -91,7 +91,10 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use fake::{
-        faker::{internet::en::SafeEmail, lorem::en::Word},
+        faker::{
+            internet::en::SafeEmail,
+            lorem::en::{Paragraph, Word},
+        },
         Fake,
     };
     use tower::ServiceExt;
@@ -105,8 +108,13 @@ mod tests {
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -155,8 +163,13 @@ mod tests {
         let router = app.router;
         let cloned_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router

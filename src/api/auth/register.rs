@@ -91,7 +91,11 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use fake::{
-        faker::{internet::en::SafeEmail, lorem::en::Word},
+        faker::{
+            internet::en::SafeEmail,
+            lorem::en::{Paragraph, Word},
+            name::en::Name,
+        },
         Fake,
     };
     use tower::ServiceExt;
@@ -106,8 +110,13 @@ mod tests {
         let router = app.router;
         let second_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -139,9 +148,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -190,8 +204,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -223,9 +242,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router

@@ -305,7 +305,11 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use fake::{
-        faker::{internet::en::SafeEmail, lorem::en::Word},
+        faker::{
+            internet::en::SafeEmail,
+            lorem::en::{Paragraph, Word},
+            name::en::Name,
+        },
         Fake,
     };
     use tower::ServiceExt;
@@ -321,8 +325,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -382,7 +391,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -439,8 +448,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -472,9 +486,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -544,7 +563,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -601,8 +620,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -634,9 +658,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -692,7 +721,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -735,8 +764,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -796,7 +830,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -863,8 +897,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -896,9 +935,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -968,7 +1012,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -1036,8 +1080,13 @@ mod tests {
         let fifth_router = router.clone();
         let sixth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1097,7 +1146,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -1129,9 +1178,14 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = fourth_router
@@ -1244,8 +1298,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1277,9 +1336,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -1349,7 +1413,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -1381,9 +1445,14 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = fifth_router
@@ -1492,8 +1561,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1589,8 +1663,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1650,7 +1729,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -1728,8 +1807,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1761,9 +1845,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -1833,7 +1922,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -1910,8 +1999,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -1971,7 +2065,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -2042,8 +2136,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2103,7 +2202,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -2182,8 +2281,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2215,9 +2319,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -2287,7 +2396,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -2365,8 +2474,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2426,7 +2540,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -2500,8 +2614,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2533,9 +2652,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -2605,7 +2729,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -2637,9 +2761,14 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = fifth_router
@@ -2748,8 +2877,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2845,8 +2979,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -2906,7 +3045,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -2938,7 +3077,7 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let name = "workspace name 2";
+        let name = format!("workspace {}", Word().fake::<String>());
 
         let response = fourth_router
             .oneshot(
@@ -2993,8 +3132,13 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -3026,9 +3170,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -3098,7 +3247,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -3130,7 +3279,7 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let name = "workspace name 2";
+        let name = format!("workspace {}", Word().fake::<String>());
 
         let response = fifth_router
             .oneshot(
@@ -3184,8 +3333,13 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -3245,7 +3399,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let response = third_router
@@ -3277,7 +3431,7 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let name = "workspace name 2";
+        let name = format!("workspace {}", Word().fake::<String>());
 
         let response = fourth_router
             .oneshot(
@@ -3327,8 +3481,13 @@ mod tests {
         let sixth_router = router.clone();
         let seventh_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -3360,9 +3519,14 @@ mod tests {
 
         let company_id = body.company_id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = second_router
@@ -3432,7 +3596,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = fourth_router
@@ -3464,9 +3628,14 @@ mod tests {
 
         let workspace_id = body.id;
 
-        let email = SafeEmail().fake::<String>();
-        let job_title = Word().fake::<String>();
-        let name = Word().fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
         let password = "password123";
 
         let response = fifth_router
@@ -3536,7 +3705,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let name = "workspace name 2";
+        let name = format!("workspace {}", Word().fake::<String>());
 
         let response = seventh_router
             .oneshot(
@@ -3583,8 +3752,13 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
 
-        let company_name = Word().fake::<String>();
-        let email = SafeEmail().fake::<String>();
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
         let password = "password123";
 
         let response = router
@@ -3646,7 +3820,7 @@ mod tests {
 
         let workspace_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let name = "workspace name 2";
+        let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
         let response = third_router
