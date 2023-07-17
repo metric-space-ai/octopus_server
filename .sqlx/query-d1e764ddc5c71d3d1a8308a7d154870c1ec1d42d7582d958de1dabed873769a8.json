@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chats\n            (user_id)\n            VALUES ($1)\n            RETURNING id, user_id, name, created_at, updated_at",
+  "query": "SELECT id, user_id, workspace_id, name, created_at, updated_at\n            FROM chats\n            WHERE user_id = $1",
   "describe": {
     "columns": [
       {
@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "workspace_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -37,10 +42,11 @@
     "nullable": [
       false,
       false,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "0d0911c6d85eae4548c1e2ca52c83845db307f279075521e49b6951f86c0bb9c"
+  "hash": "d1e764ddc5c71d3d1a8308a7d154870c1ec1d42d7582d958de1dabed873769a8"
 }

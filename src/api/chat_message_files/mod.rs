@@ -190,7 +190,7 @@ mod tests {
     use crate::{
         app,
         entity::User,
-        entity::{Chat, ChatMessage, ChatMessageFile},
+        entity::{Chat, ChatMessage, ChatMessageFile, Workspace},
         session::SessionResponse,
         Args,
     };
@@ -219,6 +219,7 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
         let fifth_router = router.clone();
+        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -286,11 +287,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -310,7 +343,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -345,7 +378,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -380,6 +413,12 @@ mod tests {
             .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -396,6 +435,7 @@ mod tests {
         let fifth_router = router.clone();
         let sixth_router = router.clone();
         let seventh_router = router.clone();
+        let eighth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -463,11 +503,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -487,7 +559,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -531,7 +603,7 @@ mod tests {
         );
         let password = "password123";
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -561,7 +633,7 @@ mod tests {
         let company2_id = body.company_id;
         let user_id = body.id;
 
-        let response = sixth_router
+        let response = seventh_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -588,7 +660,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let response = seventh_router
+        let response = eighth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -635,6 +707,12 @@ mod tests {
             .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -649,6 +727,7 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
         let fifth_router = router.clone();
+        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -716,11 +795,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -740,7 +851,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -769,7 +880,7 @@ mod tests {
 
         let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -804,6 +915,12 @@ mod tests {
             .try_delete_chat_message_by_id(chat_message_id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -818,6 +935,7 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
         let fifth_router = router.clone();
+        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -885,11 +1003,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -909,7 +1059,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -944,7 +1094,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -987,6 +1137,12 @@ mod tests {
             .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -1003,6 +1159,7 @@ mod tests {
         let fifth_router = router.clone();
         let sixth_router = router.clone();
         let seventh_router = router.clone();
+        let eighth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1070,11 +1227,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1094,7 +1283,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1138,7 +1327,7 @@ mod tests {
         );
         let password = "password123";
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1168,7 +1357,7 @@ mod tests {
         let company2_id = body.company_id;
         let user_id = body.id;
 
-        let response = sixth_router
+        let response = seventh_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1195,7 +1384,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let response = seventh_router
+        let response = eighth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1242,6 +1431,12 @@ mod tests {
             .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -1256,6 +1451,7 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
         let fifth_router = router.clone();
+        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1323,11 +1519,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1347,7 +1575,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1382,7 +1610,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1428,6 +1656,12 @@ mod tests {
             .try_delete_chat_message_file_by_id(chat_message_file.id)
             .await
             .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
     }
 
     #[tokio::test]
@@ -1444,6 +1678,7 @@ mod tests {
         let fifth_router = router.clone();
         let sixth_router = router.clone();
         let seventh_router = router.clone();
+        let eighth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1511,11 +1746,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1535,7 +1802,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1579,7 +1846,7 @@ mod tests {
         );
         let password = "password123";
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1609,7 +1876,7 @@ mod tests {
         let company2_id = body.company_id;
         let user_id = body.id;
 
-        let response = sixth_router
+        let response = seventh_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1636,7 +1903,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let response = seventh_router
+        let response = eighth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1697,6 +1964,7 @@ mod tests {
         let third_router = router.clone();
         let fourth_router = router.clone();
         let fifth_router = router.clone();
+        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1764,11 +2032,43 @@ mod tests {
 
         let session_id = body.id;
 
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/chats")
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{}", workspace_id))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1788,7 +2088,7 @@ mod tests {
 
         let message = "test message";
 
-        let response = fourth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1817,7 +2117,7 @@ mod tests {
 
         let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fifth_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1850,6 +2150,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_message_by_id(chat_message_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
             .await
             .unwrap();
     }

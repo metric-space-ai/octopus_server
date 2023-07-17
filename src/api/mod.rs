@@ -163,9 +163,12 @@ pub async fn router(context: Arc<Context>) -> Router {
                 .get(chat_pictures::read)
                 .put(chat_pictures::update),
         )
-        .route("/api/v1/chats", get(chats::list).post(chats::create))
         .route(
-            "/api/v1/chats/:id",
+            "/api/v1/chats/:workspace_id",
+            get(chats::list).post(chats::create),
+        )
+        .route(
+            "/api/v1/chats/:workspace_id/:chat_id",
             delete(chats::delete).get(chats::read).put(chats::update),
         )
         .route(

@@ -8,6 +8,7 @@ use uuid::Uuid;
 pub struct Chat {
     pub id: Uuid,
     pub user_id: Uuid,
+    pub workspace_id: Uuid,
     pub name: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,

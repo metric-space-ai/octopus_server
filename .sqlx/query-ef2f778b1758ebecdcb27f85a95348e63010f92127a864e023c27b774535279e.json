@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE chats\n            SET name = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, user_id, name, created_at, updated_at",
+  "query": "UPDATE chats\n            SET name = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, user_id, workspace_id, name, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "workspace_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -38,10 +43,11 @@
     "nullable": [
       false,
       false,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "9bbb79eca4d7b7e4dff8f3af0bb80bfa72a5a437caa89a28e3d9bd4cdb82eb98"
+  "hash": "ef2f778b1758ebecdcb27f85a95348e63010f92127a864e023c27b774535279e"
 }

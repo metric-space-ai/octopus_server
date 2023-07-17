@@ -44,6 +44,7 @@ CREATE TABLE workspaces(
 CREATE TABLE chats(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    workspace_id UUID NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     name TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)

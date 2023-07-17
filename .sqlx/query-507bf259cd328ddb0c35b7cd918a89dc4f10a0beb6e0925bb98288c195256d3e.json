@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, name, created_at, updated_at\n            FROM chats\n            WHERE user_id = $1",
+  "query": "SELECT id, user_id, workspace_id, name, created_at, updated_at\n            FROM chats\n            WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "workspace_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "name",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -37,10 +42,11 @@
     "nullable": [
       false,
       false,
+      false,
       true,
       false,
       false
     ]
   },
-  "hash": "28cf7d53f2bc62a16aded92f139f397c184b62347a2e4f939349e4268ef355e0"
+  "hash": "507bf259cd328ddb0c35b7cd918a89dc4f10a0beb6e0925bb98288c195256d3e"
 }

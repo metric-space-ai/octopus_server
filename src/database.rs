@@ -25,7 +25,7 @@ impl OctopusDatabase {
     pub async fn get_chats_by_user_id(&self, user_id: Uuid) -> Result<Vec<Chat>> {
         let chats = sqlx::query_as!(
             Chat,
-            "SELECT id, user_id, name, created_at, updated_at
+            "SELECT id, user_id, workspace_id, name, created_at, updated_at
             FROM chats
             WHERE user_id = $1",
             user_id
@@ -119,14 +119,15 @@ impl OctopusDatabase {
         Ok(workspaces)
     }
 
-    pub async fn insert_chat(&self, user_id: Uuid) -> Result<Chat> {
+    pub async fn insert_chat(&self, user_id: Uuid, workspace_id: Uuid) -> Result<Chat> {
         let chat = sqlx::query_as!(
             Chat,
             "INSERT INTO chats
-            (user_id)
-            VALUES ($1)
-            RETURNING id, user_id, name, created_at, updated_at",
-            user_id
+            (user_id, workspace_id)
+            VALUES ($1, $2)
+            RETURNING id, user_id, workspace_id, name, created_at, updated_at",
+            user_id,
+            workspace_id
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -403,7 +404,7 @@ impl OctopusDatabase {
     pub async fn try_get_chat_by_id(&self, id: Uuid) -> Result<Option<Chat>> {
         let chat = sqlx::query_as!(
             Chat,
-            "SELECT id, user_id, name, created_at, updated_at
+            "SELECT id, user_id, workspace_id, name, created_at, updated_at
             FROM chats
             WHERE id = $1",
             id
@@ -586,7 +587,7 @@ impl OctopusDatabase {
             "UPDATE chats
             SET name = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, name, created_at, updated_at",
+            RETURNING id, user_id, workspace_id, name, created_at, updated_at",
             id,
             name
         )
