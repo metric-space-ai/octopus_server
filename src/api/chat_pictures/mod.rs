@@ -51,66 +51,61 @@ pub async fn create(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    context
+        .octopus_database
+        .try_get_chat_picture_by_chat_id(chat_id)
+        .await?
+        .ok_or(AppError::Conflict)?;
+
+    while let Some(field) = multipart.next_field().await? {
+        let extension = field
+            .file_name()
+            .ok_or(AppError::File)?
+            .to_string()
+            .split('.')
+            .collect::<Vec<&str>>()
+            .last()
+            .ok_or(AppError::File)?
+            .to_string();
+        let content_image = field
+            .content_type()
+            .ok_or(AppError::File)?
+            .to_string()
+            .split('/')
+            .collect::<Vec<&str>>()
+            .first()
+            .ok_or(AppError::File)?
+            .to_string();
+
+        if content_image == "image" {
+            let data = field.bytes().await?;
+
+            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
+            let path = format!("{PUBLIC_DIR}/{file_name}");
+
+            let mut file = File::create(path)?;
+            file.write_all(&data)?;
 
             let chat_picture = context
                 .octopus_database
-                .try_get_chat_picture_by_chat_id(chat_id)
+                .insert_chat_picture(chat_id, &file_name)
                 .await?;
 
-            match chat_picture {
-                None => {
-                    while let Some(field) = multipart.next_field().await? {
-                        let extension = field
-                            .file_name()
-                            .ok_or(AppError::File)?
-                            .to_string()
-                            .split('.')
-                            .collect::<Vec<&str>>()
-                            .last()
-                            .ok_or(AppError::File)?
-                            .to_string();
-                        let content_image = field
-                            .content_type()
-                            .ok_or(AppError::File)?
-                            .to_string()
-                            .split('/')
-                            .collect::<Vec<&str>>()
-                            .first()
-                            .ok_or(AppError::File)?
-                            .to_string();
-
-                        if content_image == "image" {
-                            let data = field.bytes().await?;
-
-                            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
-                            let path = format!("{PUBLIC_DIR}/{file_name}");
-
-                            let mut file = File::create(path)?;
-                            file.write_all(&data)?;
-
-                            let chat_picture = context
-                                .octopus_database
-                                .insert_chat_picture(chat_id, &file_name)
-                                .await?;
-
-                            return Ok((StatusCode::CREATED, Json(chat_picture)).into_response());
-                        }
-                    }
-
-                    Err(AppError::BadRequest)
-                }
-                Some(_chat_picture) => Err(AppError::Conflict),
-            }
+            return Ok((StatusCode::CREATED, Json(chat_picture)).into_response());
         }
     }
+
+    Err(AppError::BadRequest)
 }
 
 #[axum_macros::debug_handler]
@@ -143,38 +138,33 @@ pub async fn delete(
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    if let Some(chat_picture) = chat_picture {
-        if chat_id != chat_picture.chat_id {
-            return Err(AppError::Unauthorized);
-        }
+    if chat_id != chat_picture.chat_id {
+        return Err(AppError::Unauthorized);
+    }
 
-        let chat = context
-            .octopus_database
-            .try_get_chat_by_id(chat_picture.chat_id)
-            .await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_picture.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
 
-            let chat_picture_id = context
-                .octopus_database
-                .try_delete_chat_picture_by_id(chat_picture_id)
-                .await?;
+    context
+        .octopus_database
+        .try_delete_chat_picture_by_id(chat_picture_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-            if let Some(_chat_picture_id) = chat_picture_id {
-                let path = format!("{PUBLIC_DIR}/{}", chat_picture.file_name);
-                remove_file(path)?;
+    let path = format!("{PUBLIC_DIR}/{}", chat_picture.file_name);
+    remove_file(path)?;
 
-                return Ok((StatusCode::NO_CONTENT, ()).into_response());
-            };
-        };
-    };
-
-    Err(AppError::NotFound)
+    Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -207,28 +197,24 @@ pub async fn read(
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    if let Some(chat_picture) = chat_picture {
-        if chat_id != chat_picture.chat_id {
-            return Err(AppError::Unauthorized);
-        }
+    if chat_id != chat_picture.chat_id {
+        return Err(AppError::Unauthorized);
+    }
 
-        let chat = context
-            .octopus_database
-            .try_get_chat_by_id(chat_picture.chat_id)
-            .await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_picture.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
 
-            return Ok((StatusCode::OK, Json(chat_picture)).into_response());
-        };
-    };
-
-    Err(AppError::NotFound)
+    Ok((StatusCode::OK, Json(chat_picture)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -262,70 +248,66 @@ pub async fn update(
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    if let Some(chat_picture) = chat_picture {
-        if chat_id != chat_picture.chat_id {
-            return Err(AppError::Unauthorized);
+    if chat_id != chat_picture.chat_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_picture.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    while let Some(field) = multipart.next_field().await? {
+        let extension = field
+            .file_name()
+            .ok_or(AppError::File)?
+            .to_string()
+            .split('.')
+            .collect::<Vec<&str>>()
+            .last()
+            .ok_or(AppError::File)?
+            .to_string();
+        let content_image = field
+            .content_type()
+            .ok_or(AppError::File)?
+            .to_string()
+            .split('/')
+            .collect::<Vec<&str>>()
+            .first()
+            .ok_or(AppError::File)?
+            .to_string();
+
+        if content_image == "image" {
+            let data = field.bytes().await?;
+
+            let old_file = format!("{PUBLIC_DIR}/{}", chat_picture.file_name);
+
+            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
+            let path = format!("{PUBLIC_DIR}/{file_name}");
+
+            let mut file = File::create(path)?;
+            file.write_all(&data)?;
+
+            let chat_picture = context
+                .octopus_database
+                .update_chat_picture(chat_picture_id, &file_name)
+                .await?;
+
+            remove_file(old_file)?;
+
+            return Ok((StatusCode::CREATED, Json(chat_picture)).into_response());
         }
+    }
 
-        let chat = context
-            .octopus_database
-            .try_get_chat_by_id(chat_picture.chat_id)
-            .await?;
-
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            while let Some(field) = multipart.next_field().await? {
-                let extension = field
-                    .file_name()
-                    .ok_or(AppError::File)?
-                    .to_string()
-                    .split('.')
-                    .collect::<Vec<&str>>()
-                    .last()
-                    .ok_or(AppError::File)?
-                    .to_string();
-                let content_image = field
-                    .content_type()
-                    .ok_or(AppError::File)?
-                    .to_string()
-                    .split('/')
-                    .collect::<Vec<&str>>()
-                    .first()
-                    .ok_or(AppError::File)?
-                    .to_string();
-
-                if content_image == "image" {
-                    let data = field.bytes().await?;
-
-                    let old_file = format!("{PUBLIC_DIR}/{}", chat_picture.file_name);
-
-                    let file_name = format!("{}.{}", Uuid::new_v4(), extension);
-                    let path = format!("{PUBLIC_DIR}/{file_name}");
-
-                    let mut file = File::create(path)?;
-                    file.write_all(&data)?;
-
-                    let chat_picture = context
-                        .octopus_database
-                        .update_chat_picture(chat_picture_id, &file_name)
-                        .await?;
-
-                    remove_file(old_file)?;
-
-                    return Ok((StatusCode::CREATED, Json(chat_picture)).into_response());
-                }
-            }
-
-            return Err(AppError::BadRequest);
-        };
-    };
-
-    Err(AppError::NotFound)
+    Err(AppError::BadRequest)
 }
 /*
 #[cfg(test)]

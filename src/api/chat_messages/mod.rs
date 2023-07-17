@@ -55,36 +55,34 @@ pub async fn create(
     let session = require_authenticated_session(extracted_session).await?;
     input.validate()?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let estimated_response_at = Utc::now() + Duration::seconds(5);
-
-            let chat_message = context
-                .octopus_database
-                .insert_chat_message(chat.id, estimated_response_at, &input.message)
-                .await?;
-
-            let cloned_context = context.clone();
-            let cloned_chat_message = chat_message.clone();
-            tokio::spawn(async move {
-                let chat_message =
-                    ai_request::open_ai_request(cloned_context, cloned_chat_message).await;
-
-                if let Err(e) = chat_message {
-                    debug!("Error: {:?}", e);
-                }
-            });
-
-            Ok((StatusCode::CREATED, Json(chat_message)).into_response())
-        }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
     }
+
+    let estimated_response_at = Utc::now() + Duration::seconds(5);
+
+    let chat_message = context
+        .octopus_database
+        .insert_chat_message(chat.id, estimated_response_at, &input.message)
+        .await?;
+
+    let cloned_context = context.clone();
+    let cloned_chat_message = chat_message.clone();
+    tokio::spawn(async move {
+        let chat_message = ai_request::open_ai_request(cloned_context, cloned_chat_message).await;
+
+        if let Err(e) = chat_message {
+            debug!("Error: {:?}", e);
+        }
+    });
+
+    Ok((StatusCode::CREATED, Json(chat_message)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -117,35 +115,30 @@ pub async fn delete(
     let chat_message = context
         .octopus_database
         .try_get_chat_message_by_id(chat_message_id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    if let Some(chat_message) = chat_message {
-        if chat_id != chat_message.chat_id {
-            return Err(AppError::Unauthorized);
-        }
-
-        let chat = context
-            .octopus_database
-            .try_get_chat_by_id(chat_message.chat_id)
-            .await?;
-
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let chat_message_id = context
-                .octopus_database
-                .try_delete_chat_message_by_id(chat_message_id)
-                .await?;
-
-            if let Some(_chat_message_id) = chat_message_id {
-                return Ok((StatusCode::NO_CONTENT, ()).into_response());
-            }
-        }
+    if chat_id != chat_message.chat_id {
+        return Err(AppError::Unauthorized);
     }
 
-    Err(AppError::NotFound)
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_message.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    context
+        .octopus_database
+        .try_delete_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -215,28 +208,24 @@ pub async fn read(
     let chat_message = context
         .octopus_database
         .try_get_chat_message_by_id(chat_message_id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    if let Some(chat_message) = chat_message {
-        if chat_id != chat_message.chat_id {
-            return Err(AppError::Unauthorized);
-        }
-
-        let chat = context
-            .octopus_database
-            .try_get_chat_by_id(chat_message.chat_id)
-            .await?;
-
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            return Ok((StatusCode::OK, Json(chat_message)).into_response());
-        }
+    if chat_id != chat_message.chat_id {
+        return Err(AppError::Unauthorized);
     }
 
-    Err(AppError::NotFound)
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_message.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
+    }
+
+    Ok((StatusCode::OK, Json(chat_message)).into_response())
 }
 
 #[cfg(test)]

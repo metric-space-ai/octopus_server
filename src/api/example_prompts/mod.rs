@@ -81,15 +81,13 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, "ROLE_COMPANY_ADMIN").await?;
 
-    let example_prompt = context
+    context
         .octopus_database
         .try_delete_example_prompt_by_id(id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match example_prompt {
-        None => Err(AppError::NotFound),
-        Some(_example_prompt) => Ok((StatusCode::NO_CONTENT, ()).into_response()),
-    }
+    Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -141,12 +139,10 @@ pub async fn read(
     let example_prompt = context
         .octopus_database
         .try_get_example_prompt_by_id(id)
-        .await?;
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match example_prompt {
-        None => Err(AppError::NotFound),
-        Some(example_prompt) => Ok((StatusCode::OK, Json(example_prompt)).into_response()),
-    }
+    Ok((StatusCode::OK, Json(example_prompt)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -175,22 +171,18 @@ pub async fn update(
     ensure_secured(context.clone(), extracted_session, "ROLE_COMPANY_ADMIN").await?;
     input.validate()?;
 
-    let example_prompt_id = context
+    context
         .octopus_database
         .try_get_example_prompt_id_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let example_prompt = context
+        .octopus_database
+        .update_example_prompt(id, input.is_visible, input.priority, &input.prompt)
         .await?;
 
-    match example_prompt_id {
-        None => Err(AppError::NotFound),
-        Some(_example_prompt_id) => {
-            let example_prompt = context
-                .octopus_database
-                .update_example_prompt(id, input.is_visible, input.priority, &input.prompt)
-                .await?;
-
-            Ok((StatusCode::OK, Json(example_prompt)).into_response())
-        }
-    }
+    Ok((StatusCode::OK, Json(example_prompt)).into_response())
 }
 
 #[cfg(test)]

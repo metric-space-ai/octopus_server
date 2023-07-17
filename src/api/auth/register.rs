@@ -42,28 +42,27 @@ pub async fn register(
             })
             .await??;
 
-            let company = context.octopus_database.try_get_company_primary().await?;
+            let company = context
+                .octopus_database
+                .try_get_company_primary()
+                .await?
+                .ok_or(AppError::CompanyNotFound)?;
 
-            match company {
-                None => Err(AppError::CompanyNotFound),
-                Some(company) => {
-                    let user = context
-                        .octopus_database
-                        .insert_user(
-                            company.id,
-                            &input.email,
-                            true,
-                            context.config.pepper_id,
-                            &pw_hash,
-                            &["ROLE_PUBLIC_USER".to_string()],
-                            Some(input.job_title),
-                            Some(input.name),
-                        )
-                        .await?;
+            let user = context
+                .octopus_database
+                .insert_user(
+                    company.id,
+                    &input.email,
+                    true,
+                    context.config.pepper_id,
+                    &pw_hash,
+                    &["ROLE_PUBLIC_USER".to_string()],
+                    Some(input.job_title),
+                    Some(input.name),
+                )
+                .await?;
 
-                    Ok((StatusCode::CREATED, Json(user)).into_response())
-                }
-            }
+            Ok((StatusCode::CREATED, Json(user)).into_response())
         }
         Some(_user_exists) => Err(AppError::UserAlreadyExists),
     }

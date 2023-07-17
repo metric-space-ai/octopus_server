@@ -69,23 +69,23 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(id).await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let chat = context.octopus_database.try_delete_chat_by_id(id).await?;
-
-            match chat {
-                None => Err(AppError::NotFound),
-                Some(_chat) => Ok((StatusCode::NO_CONTENT, ()).into_response()),
-            }
-        }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
     }
+
+    context
+        .octopus_database
+        .try_delete_chat_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -137,18 +137,17 @@ pub async fn read(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(id).await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            Ok((StatusCode::OK, Json(chat)).into_response())
-        }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
     }
+
+    Ok((StatusCode::OK, Json(chat)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -177,23 +176,22 @@ pub async fn update(
     let session = require_authenticated_session(extracted_session).await?;
     input.validate()?;
 
-    let chat = context.octopus_database.try_get_chat_by_id(id).await?;
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
-    match chat {
-        None => Err(AppError::NotFound),
-        Some(chat) => {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let chat = context
-                .octopus_database
-                .update_chat(id, &input.name)
-                .await?;
-
-            Ok((StatusCode::OK, Json(chat)).into_response())
-        }
+    if chat.user_id != session.user_id {
+        return Err(AppError::Unauthorized);
     }
+
+    let chat = context
+        .octopus_database
+        .update_chat(id, &input.name)
+        .await?;
+
+    Ok((StatusCode::OK, Json(chat)).into_response())
 }
 
 #[cfg(test)]
