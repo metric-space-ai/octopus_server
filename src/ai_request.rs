@@ -33,6 +33,15 @@ pub async fn open_ai_request(
             .build()?;
 
         messages.append(&mut vec![chat_completion_request_message]);
+
+        if let Some(response) = chat_message_tmp.response {
+            let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+                .role(Role::Assistant)
+                .content(response)
+                .build()?;
+
+            messages.append(&mut vec![chat_completion_request_message]);
+        }
     }
 
     let request = CreateChatCompletionRequestArgs::default()
