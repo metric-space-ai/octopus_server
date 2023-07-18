@@ -1,4 +1,4 @@
-use crate::{api::auth, context::Context, error::AppError};
+use crate::{api::auth, context::Context, entity::ROLE_PUBLIC_USER, error::AppError};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -56,7 +56,7 @@ pub async fn register(
                     true,
                     context.config.pepper_id,
                     &pw_hash,
-                    &["ROLE_PUBLIC_USER".to_string()],
+                    &[ROLE_PUBLIC_USER.to_string()],
                     Some(input.job_title),
                     Some(input.name),
                 )

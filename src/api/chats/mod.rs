@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::WorkspacesType,
+    entity::{WorkspacesType, ROLE_PRIVATE_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -63,8 +63,7 @@ pub async fn create(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -125,8 +124,7 @@ pub async fn delete(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -197,8 +195,7 @@ pub async fn list(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -259,8 +256,7 @@ pub async fn read(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -333,8 +329,7 @@ pub async fn update(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -372,7 +367,7 @@ pub async fn update(
 mod tests {
     use crate::{
         app,
-        entity::{Chat, User, Workspace},
+        entity::{Chat, User, Workspace, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
         session::SessionResponse,
         Args,
     };
@@ -662,10 +657,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();

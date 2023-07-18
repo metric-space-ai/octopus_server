@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::WorkspacesType,
+    entity::{WorkspacesType, ROLE_COMPANY_ADMIN, ROLE_PRIVATE_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -57,8 +57,8 @@ pub async fn create(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    if !(user.roles.contains(&"ROLE_COMPANY_ADMIN".to_string())
-        || user.roles.contains(&"ROLE_PRIVATE_USER".to_string()))
+    if !(user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        || user.roles.contains(&ROLE_PRIVATE_USER.to_string()))
     {
         return Err(AppError::Unauthorized);
     }
@@ -108,14 +108,13 @@ pub async fn delete(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if !user.roles.contains(&"ROLE_COMPANY_ADMIN".to_string())
+            if !user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
                 || workspace.company_id != user.company_id
             {
                 return Err(AppError::Unauthorized);
@@ -164,7 +163,7 @@ pub async fn list(
 
     result.append(&mut public_workspaces);
 
-    if user.roles.contains(&"ROLE_PRIVATE_USER".to_string()) {
+    if user.roles.contains(&ROLE_PRIVATE_USER.to_string()) {
         let mut private_workspaces = context
             .octopus_database
             .get_workspaces_by_user_id_and_type(user.id, WorkspacesType::Private)
@@ -213,8 +212,7 @@ pub async fn read(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -269,14 +267,13 @@ pub async fn update(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&"ROLE_PRIVATE_USER".to_string())
-                || workspace.user_id != user.id
+            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if !user.roles.contains(&"ROLE_COMPANY_ADMIN".to_string())
+            if !user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
                 || workspace.company_id != user.company_id
             {
                 return Err(AppError::Unauthorized);
@@ -296,7 +293,7 @@ pub async fn update(
 mod tests {
     use crate::{
         app,
-        entity::{User, Workspace},
+        entity::{User, Workspace, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
         session::SessionResponse,
         Args,
     };
@@ -530,10 +527,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -979,10 +973,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -1222,10 +1213,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -1380,10 +1368,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -1489,10 +1474,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -1889,10 +1871,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -2363,10 +2342,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -2696,10 +2672,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -2805,10 +2778,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -3214,10 +3184,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -3563,10 +3530,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
@@ -3672,10 +3636,7 @@ mod tests {
             .octopus_database
             .update_user_roles(
                 user_id,
-                &[
-                    "ROLE_PRIVATE_USER".to_string(),
-                    "ROLE_PUBLIC_USER".to_string(),
-                ],
+                &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
