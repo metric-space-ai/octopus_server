@@ -1,4 +1,4 @@
-use crate::{api::auth, context::Context, error::AppError};
+use crate::{api::auth, context::Context, entity::WorkspacesType, error::AppError};
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -62,6 +62,16 @@ pub async fn register_company(
                     ],
                     None,
                     None,
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .insert_workspace(
+                    user.company_id,
+                    user.id,
+                    "Public Group",
+                    WorkspacesType::Public,
                 )
                 .await?;
 
