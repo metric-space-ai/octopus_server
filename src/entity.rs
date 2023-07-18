@@ -59,6 +59,11 @@ pub struct Company {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
+pub struct EstimatedSeconds {
+    pub ceiling: i64,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ExamplePrompt {
     pub id: Uuid,

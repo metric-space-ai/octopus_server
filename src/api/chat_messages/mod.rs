@@ -65,7 +65,15 @@ pub async fn create(
         return Err(AppError::Unauthorized);
     }
 
-    let estimated_response_at = Utc::now() + Duration::seconds(5);
+    let estimated_seconds = context
+        .octopus_database
+        .get_chat_messages_estimated_response_at()
+        .await?;
+
+    let estimated_response_at = match estimated_seconds {
+        None => Utc::now() + Duration::seconds(5),
+        Some(estimated_seconds) => Utc::now() + Duration::seconds(estimated_seconds.ceiling + 1),
+    };
 
     let chat_message = context
         .octopus_database

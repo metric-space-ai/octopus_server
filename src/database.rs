@@ -1,7 +1,7 @@
 use crate::{
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, Company, ExamplePrompt,
-        Session, User, Workspace, WorkspacesType,
+        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, Company,
+        EstimatedSeconds, ExamplePrompt, Session, User, Workspace, WorkspacesType,
     },
     Result,
 };
@@ -34,6 +34,18 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chats)
+    }
+
+    pub async fn get_chat_messages_estimated_response_at(
+        &self,
+    ) -> Result<Option<EstimatedSeconds>> {
+        let estimated_seconds = sqlx::query_as::<_, EstimatedSeconds>(
+            "SELECT CAST(CEILING(EXTRACT(SECONDS FROM AVG(updated_at - created_at))) AS INT8) AS ceiling FROM chat_messages",
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(estimated_seconds)
     }
 
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
