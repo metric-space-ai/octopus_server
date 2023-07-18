@@ -27,7 +27,7 @@ use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::{
     cors::{Any, CorsLayer},
-    trace::TraceLayer
+    trace::TraceLayer,
 };
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
@@ -77,6 +77,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_messages::delete,
             chat_messages::list,
             chat_messages::read,
+            chat_messages::regenerate,
             chat_message_files::delete,
             chat_message_files::list,
             chat_message_files::read,
@@ -146,7 +147,9 @@ pub async fn router(context: Arc<Context>) -> Router {
         )
         .route(
             "/api/v1/chat-messages/:chat_id/:chat_message_id",
-            delete(chat_messages::delete).get(chat_messages::read),
+            delete(chat_messages::delete)
+                .get(chat_messages::read)
+                .post(chat_messages::regenerate),
         )
         .route(
             "/api/v1/chat-message-files/:chat_message_id",

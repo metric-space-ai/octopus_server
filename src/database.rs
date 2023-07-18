@@ -36,13 +36,11 @@ impl OctopusDatabase {
         Ok(chats)
     }
 
-    pub async fn get_chat_messages_estimated_response_at(
-        &self,
-    ) -> Result<Option<EstimatedSeconds>> {
+    pub async fn get_chat_messages_estimated_response_at(&self) -> Result<EstimatedSeconds> {
         let estimated_seconds = sqlx::query_as::<_, EstimatedSeconds>(
             "SELECT CAST(CEILING(EXTRACT(SECONDS FROM AVG(updated_at - created_at))) AS INT8) AS ceiling FROM chat_messages",
         )
-        .fetch_optional(&*self.pool)
+        .fetch_one(&*self.pool)
         .await?;
 
         Ok(estimated_seconds)
@@ -640,6 +638,31 @@ impl OctopusDatabase {
                 .fetch_one(&*self.pool)
                 .await?;
         */
+        Ok(chat_message)
+    }
+
+    pub async fn update_chat_message_full(
+        &self,
+        id: Uuid,
+        estimated_response_at: DateTime<Utc>,
+        message: &str,
+        status: ChatMessageStatus,
+        response: Option<String>,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET estimated_response_at = $2, message = $3, status = $4, response = $5, created_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, estimated_response_at, message, response, status, created_at, updated_at",
+        )
+        .bind(id)
+        .bind(estimated_response_at)
+        .bind(message)
+        .bind(status)
+        .bind(response)
+        .fetch_one(&*self.pool)
+        .await?;
+
         Ok(chat_message)
     }
 

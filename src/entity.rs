@@ -61,7 +61,7 @@ pub struct Company {
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
 pub struct EstimatedSeconds {
-    pub ceiling: i64,
+    pub ceiling: Option<i64>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
