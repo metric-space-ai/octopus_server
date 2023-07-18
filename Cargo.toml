@@ -29,7 +29,7 @@ sqlx = { version = "0.7", features = [
 ] }
 tokio = { version = "1.29", features = ["full"] }
 tower = { version = "0.4", features = ["timeout", "util"] }
-tower-http = { version = "0.4", features = ["add-extension", "trace"] }
+tower-http = { version = "0.4", features = ["add-extension", "cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "3.3", features = ["axum_extras", "chrono", "uuid"] }

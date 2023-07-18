@@ -19,13 +19,16 @@ use crate::{
 };
 use axum::{
     error_handling::HandleErrorLayer,
-    http::StatusCode,
+    http::{header, Method, StatusCode},
     routing::{delete, get, post},
     Router,
 };
 use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer
+};
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
@@ -190,6 +193,21 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(workspaces::delete)
                 .get(workspaces::read)
                 .put(workspaces::update),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(vec![
+                    Method::DELETE,
+                    Method::GET,
+                    Method::OPTIONS,
+                    Method::POST,
+                    Method::PUT,
+                ])
+                .allow_headers(vec![
+                    header::CONTENT_TYPE,
+                    header::HeaderName::from_lowercase(b"x-auth-token").unwrap(),
+                ]),
         )
         .layer(
             ServiceBuilder::new()
