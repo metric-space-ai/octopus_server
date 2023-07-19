@@ -33,26 +33,26 @@ pub fn load(args: Args) -> Result<Config> {
     let mut port = 8080;
 
     if let Ok(val) = std::env::var("DATABASE_URL") {
-        database_url = Some(val)
+        database_url = Some(val);
     }
 
     if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-        openai_api_key = Some(val)
+        openai_api_key = Some(val);
     }
 
     if let Some(val) = args.openai_api_key {
-        openai_api_key = Some(val)
+        openai_api_key = Some(val);
     }
 
     let pepper = std::env::var("OCTOPUS_PEPPER")?;
     let pepper_id = std::env::var("OCTOPUS_PEPPER_ID")?.parse::<i32>()?;
 
     if let Ok(val) = std::env::var("OCTOPUS_SERVER_PORT") {
-        port = val.parse::<u16>()?
+        port = val.parse::<u16>()?;
     }
 
     if let Some(val) = args.port {
-        port = val
+        port = val;
     }
 
     let config = Config::new(

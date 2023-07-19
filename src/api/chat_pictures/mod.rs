@@ -68,24 +68,22 @@ pub async fn create(
         .ok_or(AppError::Conflict)?;
 
     while let Some(field) = multipart.next_field().await? {
-        let extension = field
+        let extension = (*field
             .file_name()
             .ok_or(AppError::File)?
             .to_string()
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?
-            .to_string();
-        let content_image = field
+            .ok_or(AppError::File)?).to_string();
+        let content_image = (*field
             .content_type()
             .ok_or(AppError::File)?
             .to_string()
             .split('/')
             .collect::<Vec<&str>>()
             .first()
-            .ok_or(AppError::File)?
-            .to_string();
+            .ok_or(AppError::File)?).to_string();
 
         if content_image == "image" {
             let data = field.bytes().await?;
@@ -266,24 +264,22 @@ pub async fn update(
     }
 
     while let Some(field) = multipart.next_field().await? {
-        let extension = field
+        let extension = (*field
             .file_name()
             .ok_or(AppError::File)?
             .to_string()
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?
-            .to_string();
-        let content_image = field
+            .ok_or(AppError::File)?).to_string();
+        let content_image = (*field
             .content_type()
             .ok_or(AppError::File)?
             .to_string()
             .split('/')
             .collect::<Vec<&str>>()
             .first()
-            .ok_or(AppError::File)?
-            .to_string();
+            .ok_or(AppError::File)?).to_string();
 
         if content_image == "image" {
             let data = field.bytes().await?;

@@ -323,7 +323,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -347,7 +347,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -374,7 +374,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -545,7 +545,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -569,7 +569,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -596,7 +596,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -849,7 +849,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -873,7 +873,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -903,8 +903,7 @@ mod tests {
                 Request::builder()
                     .method(http::Method::DELETE)
                     .uri(format!(
-                        "/api/v1/chat-message-files/{}/{}",
-                        chat_message_id, chat_message_file_id
+                        "/api/v1/chat-message-files/{chat_message_id}/{chat_message_file_id}"
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
@@ -1063,7 +1062,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1087,7 +1086,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -1114,7 +1113,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -1122,7 +1121,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/chat-message-files/{}", chat_message_id))
+                    .uri(format!("/api/v1/chat-message-files/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1136,7 +1135,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Vec<ChatMessageFile> = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.len() > 0);
+        assert!(!body.is_empty());
 
         app.context
             .octopus_database
@@ -1293,7 +1292,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1317,7 +1316,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -1344,7 +1343,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -1597,7 +1596,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1621,7 +1620,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -1648,7 +1647,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -1830,7 +1829,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1854,7 +1853,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -1881,7 +1880,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, &file_name)
+            .insert_chat_message_file(chat_message_id, file_name)
             .await
             .unwrap();
 
@@ -2128,7 +2127,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chats/{}", workspace_id))
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2152,7 +2151,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{}", chat_id))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -2182,8 +2181,7 @@ mod tests {
                 Request::builder()
                     .method(http::Method::GET)
                     .uri(format!(
-                        "/api/v1/chat-message-files/{}/{}",
-                        chat_message_id, chat_message_file_id
+                        "/api/v1/chat-message-files/{chat_message_id}/{chat_message_file_id}"
                     ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())

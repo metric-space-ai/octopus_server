@@ -130,7 +130,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 components.add_security_scheme(
                     "api_key",
                     SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Auth-Token"))),
-                )
+                );
             }
         }
     }
