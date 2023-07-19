@@ -4,7 +4,7 @@ use crate::{
             login, login::LoginPost, logout, register, register::RegisterPost, register_company,
             register_company::RegisterCompanyPost,
         },
-        chat_messages::ChatMessagePost,
+        chat_messages::{ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         workspaces::{WorkspacePost, WorkspacePut},
@@ -52,6 +52,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ChatMessage,
                 ChatMessageFile,
                 ChatMessagePost,
+                ChatMessagePut,
                 ChatMessageStatus,
                 ChatPicture,
                 ChatPut,
@@ -78,6 +79,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_messages::list,
             chat_messages::read,
             chat_messages::regenerate,
+            chat_messages::update,
             chat_message_files::delete,
             chat_message_files::list,
             chat_message_files::read,
@@ -149,7 +151,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/chat-messages/:chat_id/:chat_message_id",
             delete(chat_messages::delete)
                 .get(chat_messages::read)
-                .post(chat_messages::regenerate),
+                .post(chat_messages::regenerate)
+                .put(chat_messages::update),
         )
         .route(
             "/api/v1/chat-message-files/:chat_message_id",
