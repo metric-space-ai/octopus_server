@@ -162,6 +162,12 @@ mod tests {
 
         app.context
             .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();

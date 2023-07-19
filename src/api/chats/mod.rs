@@ -519,6 +519,12 @@ mod tests {
 
         app.context
             .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
@@ -587,6 +593,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company_id = body.company_id;
+        let user_id = body.id;
 
         let response = second_router
             .oneshot(
@@ -651,12 +658,12 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user_id = body.id;
+        let user2_id = body.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user_id,
+                user2_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
@@ -714,7 +721,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
         assert_eq!(body.name, name);
 
         let workspace_id = body.id;
@@ -733,6 +740,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -894,6 +913,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -1078,7 +1103,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company2_id = body.company_id;
-        let user_id = body.id;
+        let user2_id = body.id;
 
         let response = sixth_router
             .oneshot(
@@ -1103,7 +1128,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SessionResponse = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
 
         let session_id = body.id;
 
@@ -1121,6 +1146,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -1273,6 +1310,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -1439,6 +1482,12 @@ mod tests {
         let body: Vec<Chat> = serde_json::from_slice(&body).unwrap();
 
         assert!(body.len() > 0);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -1631,7 +1680,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company2_id = body.company_id;
-        let user_id = body.id;
+        let user2_id = body.id;
 
         let response = sixth_router
             .oneshot(
@@ -1656,7 +1705,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SessionResponse = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
 
         let session_id = body.id;
 
@@ -1674,6 +1723,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -1852,6 +1913,12 @@ mod tests {
         let body: Chat = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, user_id);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -2044,7 +2111,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company2_id = body.company_id;
-        let user_id = body.id;
+        let user2_id = body.id;
 
         let response = sixth_router
             .oneshot(
@@ -2069,7 +2136,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SessionResponse = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
 
         let session_id = body.id;
 
@@ -2087,6 +2154,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -2239,6 +2318,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -2412,6 +2497,12 @@ mod tests {
         let body: Chat = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.name.unwrap(), name);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -2598,7 +2689,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company2_id = body.company_id;
-        let user_id = body.id;
+        let user2_id = body.id;
 
         let response = sixth_router
             .oneshot(
@@ -2623,7 +2714,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SessionResponse = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
 
         let session_id = body.id;
 
@@ -2648,6 +2739,18 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -2807,6 +2910,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database

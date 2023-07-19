@@ -160,6 +160,13 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company_id = body.company_id;
+        let user_id = body.id;
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
@@ -215,6 +222,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company_id = body.company_id;
+        let user_id = body.id;
 
         let response = cloned_router
             .oneshot(
@@ -237,6 +245,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database

@@ -392,6 +392,17 @@ impl OctopusDatabase {
         Ok(session)
     }
 
+    #[allow(dead_code)]
+    pub async fn try_delete_user_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let user =
+            sqlx::query_scalar::<_, Uuid>("DELETE FROM users WHERE id = $1 RETURNING id")
+                .bind(id)
+                .fetch_optional(&*self.pool)
+                .await?;
+
+        Ok(user)
+    }
+
     pub async fn try_delete_workspace_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let workspace =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM workspaces WHERE id = $1 RETURNING id")

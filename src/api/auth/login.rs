@@ -171,6 +171,12 @@ mod tests {
 
         app.context
             .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
@@ -223,6 +229,7 @@ mod tests {
         assert_eq!(body.email, email);
 
         let company_id = body.company_id;
+        let user_id = body.id;
 
         let response = second_router
             .oneshot(
@@ -243,6 +250,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
 
         app.context
             .octopus_database
