@@ -21,6 +21,19 @@ pub async fn open_ai_request(
 
     let mut messages = vec![];
 
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_message.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat.name.is_none() {
+        context
+            .octopus_database
+            .update_chat(chat.id, &chat_message.message)
+            .await?;
+    }
+
     let chat_messages = context
         .octopus_database
         .get_chat_messages_by_chat_id(chat_message.chat_id)
