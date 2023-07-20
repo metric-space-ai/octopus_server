@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users\n            SET roles = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at",
+  "query": "UPDATE profiles\n            SET job_title = $2, language = $3, name = $4, text_size = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -10,33 +10,33 @@
       },
       {
         "ordinal": 1,
-        "name": "company_id",
+        "name": "user_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 2,
-        "name": "email",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 3,
-        "name": "is_enabled",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
         "name": "job_title",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 3,
+        "name": "language",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
+        "ordinal": 5,
+        "name": "photo_file_name",
+        "type_info": "Varchar"
+      },
+      {
         "ordinal": 6,
-        "name": "roles",
-        "type_info": "VarcharArray"
+        "name": "text_size",
+        "type_info": "Int4"
       },
       {
         "ordinal": 7,
@@ -52,13 +52,16 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "VarcharArray"
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4"
       ]
     },
     "nullable": [
       false,
       false,
-      false,
+      true,
       false,
       true,
       true,
@@ -67,5 +70,5 @@
       false
     ]
   },
-  "hash": "7dcabbdfddb36fa7a57c906425266991ca3f3c7acde53a0f46d25ece2329f3a1"
+  "hash": "bf6f1adecced8663793e9995d1e198dc8f0c415e796bd6a3539d96569c272cfd"
 }

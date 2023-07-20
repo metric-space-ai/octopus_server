@@ -12,14 +12,25 @@ CREATE TABLE users(
     company_id UUID NOT NULL REFERENCES companies ON DELETE CASCADE,
     email VARCHAR(256) NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT true,
-    job_title VARCHAR(256),
-    name VARCHAR(256),
     pepper_id INT NOT NULL,
     password VARCHAR(256) NOT NULL,
     roles VARCHAR(1024) [] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(email)
+);
+
+CREATE TABLE profiles(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    job_title VARCHAR(256),
+    language VARCHAR(5) NOT NULL DEFAULT 'en_GB',
+    name VARCHAR(256),
+    photo_file_name VARCHAR(256),
+    text_size INT NOT NULL DEFAULT 16,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    UNIQUE(user_id)
 );
 
 CREATE TABLE sessions(

@@ -92,9 +92,20 @@ pub struct User {
     pub company_id: Uuid,
     pub email: String,
     pub is_enabled: bool,
-    pub job_title: Option<String>,
-    pub name: Option<String>,
     pub roles: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Profile {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub job_title: Option<String>,
+    pub language: String,
+    pub name: Option<String>,
+    pub photo_file_name: Option<String>,
+    pub text_size: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

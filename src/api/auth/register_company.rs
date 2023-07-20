@@ -65,9 +65,12 @@ pub async fn register_company(
                         ROLE_PRIVATE_USER.to_string(),
                         ROLE_PUBLIC_USER.to_string(),
                     ],
-                    None,
-                    None,
                 )
+                .await?;
+
+            context
+                .octopus_database
+                .insert_profile(user.id, None, None)
                 .await?;
 
             context

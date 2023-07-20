@@ -57,9 +57,12 @@ pub async fn register(
                     context.config.pepper_id,
                     &pw_hash,
                     &[ROLE_PUBLIC_USER.to_string()],
-                    Some(input.job_title),
-                    Some(input.name),
                 )
+                .await?;
+
+            context
+                .octopus_database
+                .insert_profile(user.id, Some(input.job_title), Some(input.name))
                 .await?;
 
             Ok((StatusCode::CREATED, Json(user)).into_response())

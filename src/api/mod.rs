@@ -7,12 +7,13 @@ use crate::{
         chat_messages::{ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
+        profiles::ProfilePut,
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, ExamplePrompt, User,
-        Workspace, WorkspacesType,
+        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, ExamplePrompt, Profile,
+        User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -42,6 +43,7 @@ mod chat_messages;
 mod chat_pictures;
 mod chats;
 mod example_prompts;
+mod profiles;
 mod workspaces;
 
 pub async fn router(context: Arc<Context>) -> Router {
@@ -61,6 +63,8 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ExamplePromptPost,
                 ExamplePromptPut,
                 LoginPost,
+                Profile,
+                ProfilePut,
                 RegisterCompanyPost,
                 RegisterPost,
                 ResponseError,
@@ -100,6 +104,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             example_prompts::update,
             login::login,
             logout::logout,
+            profiles::read,
+            profiles::update,
             register::register,
             register_company::register_company,
             workspaces::create,
@@ -115,6 +121,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "workspaces", description = "Workspaces API."),
+            (name = "profiles", description = "Profiles API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
@@ -191,6 +198,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
+        )
+        .route(
+            "/api/v1/profiles/:user_id",
+            get(profiles::read).put(profiles::update),
         )
         .route(
             "/api/v1/workspaces",

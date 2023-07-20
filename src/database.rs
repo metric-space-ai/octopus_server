@@ -1,7 +1,7 @@
 use crate::{
     entity::{
         Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, Session, User, Workspace, WorkspacesType,
+        EstimatedSeconds, ExamplePrompt, Profile, Session, User, Workspace, WorkspacesType,
     },
     Result,
 };
@@ -242,6 +242,28 @@ impl OctopusDatabase {
         Ok(example_prompt)
     }
 
+    pub async fn insert_profile(
+        &self,
+        user_id: Uuid,
+        job_title: Option<String>,
+        name: Option<String>,
+    ) -> Result<Profile> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "INSERT INTO profiles
+            (user_id, job_title, name)
+            VALUES ($1, $2, $3)
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            user_id,
+            job_title,
+            name
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(profile)
+    }
+
     pub async fn insert_session(
         &self,
         user_id: Uuid,
@@ -264,7 +286,6 @@ impl OctopusDatabase {
         Ok(session)
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub async fn insert_user(
         &self,
         company_id: Uuid,
@@ -273,24 +294,20 @@ impl OctopusDatabase {
         pepper_id: i32,
         password: &str,
         roles: &[String],
-        job_title: Option<String>,
-        name: Option<String>,
     ) -> Result<User> {
         let user = sqlx::query_as!(
             User,
             "INSERT INTO users
-            (company_id, email, is_enabled, pepper_id, password, roles, job_title, name)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            (company_id, email, is_enabled, pepper_id, password, roles)
+            VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (email) DO NOTHING
-            RETURNING id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
             company_id,
             email,
             is_enabled,
             pepper_id,
             password,
-            roles,
-            job_title,
-            name
+            roles
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -535,6 +552,20 @@ impl OctopusDatabase {
         Ok(example_prompt_id)
     }
 
+    pub async fn try_get_profile_by_user_id(&self, user_id: Uuid) -> Result<Option<Profile>> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "SELECT id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at
+            FROM profiles
+            WHERE user_id = $1",
+            user_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(profile)
+    }
+
     pub async fn try_get_session_by_id(&self, id: Uuid) -> Result<Option<Session>> {
         let session = sqlx::query_as!(
             Session,
@@ -552,7 +583,7 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at
+            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
             FROM users
             WHERE email = $1",
             email
@@ -566,7 +597,7 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at
+            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
             FROM users
             WHERE id = $1",
             id
@@ -716,6 +747,32 @@ impl OctopusDatabase {
         Ok(example_prompt)
     }
 
+    pub async fn update_profile(
+        &self,
+        id: Uuid,
+        job_title: Option<String>,
+        language: &str,
+        name: Option<String>,
+        text_size: i32,
+    ) -> Result<Profile> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "UPDATE profiles
+            SET job_title = $2, language = $3, name = $4, text_size = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            id,
+            job_title,
+            language,
+            name,
+            text_size
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(profile)
+    }
+
     #[allow(dead_code)]
     pub async fn update_user_roles(&self, id: Uuid, roles: &[String]) -> Result<User> {
         let user = sqlx::query_as!(
@@ -723,7 +780,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET roles = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, job_title, name, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
             id,
             roles
         )
