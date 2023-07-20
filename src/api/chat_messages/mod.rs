@@ -1163,9 +1163,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1436,9 +1434,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1631,9 +1627,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2339,9 +2333,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2623,9 +2615,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2818,9 +2808,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -3023,9 +3011,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -3308,9 +3294,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -3503,9 +3487,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -3710,9 +3692,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -4002,9 +3982,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -4202,9 +4180,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!(
-                        "/api/v1/chat-messages/{chat_id}/{chat_message_id}"
-                    ))
+                    .uri(format!("/api/v1/chat-messages/{chat_id}/{chat_message_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())

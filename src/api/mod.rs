@@ -27,6 +27,7 @@ use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::{
     cors::{Any, CorsLayer},
+    services::ServeDir,
     trace::TraceLayer,
 };
 use utoipa::{
@@ -136,6 +137,7 @@ pub async fn router(context: Arc<Context>) -> Router {
     }
 
     Router::new()
+        .nest_service("/public", ServeDir::new("public"))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
