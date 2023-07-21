@@ -55,6 +55,9 @@ mod tests {
     #[tokio::test]
     async fn logout_204() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -176,6 +179,9 @@ mod tests {
     #[tokio::test]
     async fn logout_204_no_authentication() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };

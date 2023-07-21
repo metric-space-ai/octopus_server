@@ -1,8 +1,14 @@
 use crate::{api::auth, context::Context, entity::ROLE_PUBLIC_USER, error::AppError};
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
+};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 #[axum_macros::debug_handler]
@@ -71,6 +77,54 @@ pub async fn register(
     }
 }
 
+pub async fn register_with_company_id(
+    State(context): State<Arc<Context>>,
+    Path(company_id): Path<Uuid>,
+    Json(input): Json<RegisterPost>,
+) -> Result<impl IntoResponse, AppError> {
+    input.validate()?;
+
+    let user_exists = context
+        .octopus_database
+        .try_get_user_by_email(&input.email)
+        .await?;
+
+    match user_exists {
+        None => {
+            if input.password != input.repeat_password {
+                return Err(AppError::PasswordDoesNotMatch);
+            }
+
+            let cloned_context = context.clone();
+            let cloned_password = input.password.clone();
+            let pw_hash = tokio::task::spawn_blocking(move || {
+                auth::hash_password(cloned_context, cloned_password)
+            })
+            .await??;
+
+            let user = context
+                .octopus_database
+                .insert_user(
+                    company_id,
+                    &input.email,
+                    true,
+                    context.config.pepper_id,
+                    &pw_hash,
+                    &[ROLE_PUBLIC_USER.to_string()],
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .insert_profile(user.id, Some(input.job_title), Some(input.name))
+                .await?;
+
+            Ok((StatusCode::CREATED, Json(user)).into_response())
+        }
+        Some(_user_exists) => Err(AppError::UserAlreadyExists),
+    }
+}
+
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct RegisterPost {
     #[validate(email, length(max = 256))]
@@ -105,6 +159,9 @@ mod tests {
     #[tokio::test]
     async fn register_201() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -165,7 +222,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -205,6 +262,9 @@ mod tests {
     #[tokio::test]
     async fn register_400() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -266,7 +326,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -294,7 +354,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({

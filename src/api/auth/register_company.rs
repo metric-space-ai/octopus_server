@@ -120,6 +120,9 @@ mod tests {
     #[tokio::test]
     async fn register_201() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -181,6 +184,9 @@ mod tests {
     #[tokio::test]
     async fn register_400() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };

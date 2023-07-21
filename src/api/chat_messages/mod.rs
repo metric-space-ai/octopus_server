@@ -432,6 +432,9 @@ mod tests {
     #[tokio::test]
     async fn create_201() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -625,6 +628,9 @@ mod tests {
     #[tokio::test]
     async fn create_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -885,6 +891,9 @@ mod tests {
     #[tokio::test]
     async fn create_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -999,6 +1008,9 @@ mod tests {
     #[tokio::test]
     async fn delete_204() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1202,6 +1214,9 @@ mod tests {
     #[tokio::test]
     async fn delete_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1491,6 +1506,9 @@ mod tests {
     #[tokio::test]
     async fn delete_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1666,6 +1684,9 @@ mod tests {
     #[tokio::test]
     async fn list_200() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1880,6 +1901,9 @@ mod tests {
     #[tokio::test]
     async fn list_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2169,6 +2193,9 @@ mod tests {
     #[tokio::test]
     async fn read_200() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2383,6 +2410,9 @@ mod tests {
     #[tokio::test]
     async fn read_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2672,6 +2702,9 @@ mod tests {
     #[tokio::test]
     async fn read_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2847,6 +2880,9 @@ mod tests {
     #[tokio::test]
     async fn regenerate_200() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3062,6 +3098,9 @@ mod tests {
     #[tokio::test]
     async fn regenerate_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3351,6 +3390,9 @@ mod tests {
     #[tokio::test]
     async fn regenerate_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3526,6 +3568,9 @@ mod tests {
     #[tokio::test]
     async fn update_200() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3748,6 +3793,9 @@ mod tests {
     #[tokio::test]
     async fn update_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -4044,6 +4092,9 @@ mod tests {
     #[tokio::test]
     async fn update_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };

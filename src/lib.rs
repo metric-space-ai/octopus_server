@@ -18,6 +18,10 @@ type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    /// Database url
+    #[arg(short, long)]
+    pub database_url: Option<String>,
+
     /// OpenAI API key
     #[arg(short, long)]
     pub openai_api_key: Option<String>,

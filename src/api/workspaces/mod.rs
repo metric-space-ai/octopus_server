@@ -314,6 +314,9 @@ mod tests {
     #[tokio::test]
     async fn create_201_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -442,6 +445,9 @@ mod tests {
     #[tokio::test]
     async fn create_201_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -504,7 +510,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -624,6 +630,9 @@ mod tests {
     #[tokio::test]
     async fn create_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -686,7 +695,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -775,6 +784,9 @@ mod tests {
     #[tokio::test]
     async fn delete_204_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -913,6 +925,9 @@ mod tests {
     #[tokio::test]
     async fn delete_204_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -976,7 +991,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -1105,6 +1120,9 @@ mod tests {
     #[tokio::test]
     async fn delete_401_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1228,7 +1246,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -1331,6 +1349,9 @@ mod tests {
     #[tokio::test]
     async fn delete_401_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1396,7 +1417,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -1502,7 +1523,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -1605,6 +1626,9 @@ mod tests {
     #[tokio::test]
     async fn delete_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1712,6 +1736,9 @@ mod tests {
     #[tokio::test]
     async fn list_200_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1861,6 +1888,9 @@ mod tests {
     #[tokio::test]
     async fn list_200_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -1924,7 +1954,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -2064,6 +2094,9 @@ mod tests {
     #[tokio::test]
     async fn list_401() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2207,6 +2240,9 @@ mod tests {
     #[tokio::test]
     async fn read_200_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2357,6 +2393,9 @@ mod tests {
     #[tokio::test]
     async fn read_200_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2420,7 +2459,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -2561,6 +2600,9 @@ mod tests {
     #[tokio::test]
     async fn read_401_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2704,6 +2746,9 @@ mod tests {
     #[tokio::test]
     async fn read_401_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -2768,7 +2813,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -2874,7 +2919,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -2977,6 +3022,9 @@ mod tests {
     #[tokio::test]
     async fn read_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3084,6 +3132,9 @@ mod tests {
     #[tokio::test]
     async fn update_200_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3242,6 +3293,9 @@ mod tests {
     #[tokio::test]
     async fn update_200_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3304,7 +3358,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -3447,6 +3501,9 @@ mod tests {
     #[tokio::test]
     async fn update_401_public() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3598,6 +3655,9 @@ mod tests {
     #[tokio::test]
     async fn update_401_private() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };
@@ -3662,7 +3722,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -3768,7 +3828,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register")
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -3879,6 +3939,9 @@ mod tests {
     #[tokio::test]
     async fn update_404() {
         let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
             openai_api_key: None,
             port: None,
         };

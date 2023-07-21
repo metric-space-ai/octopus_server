@@ -36,6 +36,10 @@ pub fn load(args: Args) -> Result<Config> {
         database_url = Some(val);
     }
 
+    if let Some(val) = args.database_url {
+        database_url = Some(val);
+    }
+
     if let Ok(val) = std::env::var("OPENAI_API_KEY") {
         openai_api_key = Some(val);
     }
