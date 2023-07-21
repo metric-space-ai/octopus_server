@@ -51,21 +51,26 @@ pub async fn create(
     let session = require_authenticated_session(extracted_session).await?;
     input.validate()?;
 
-    let user = context
+    let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    if !(user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
-        || user.roles.contains(&ROLE_PRIVATE_USER.to_string()))
+    if !(session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        || session_user.roles.contains(&ROLE_PRIVATE_USER.to_string()))
     {
         return Err(AppError::Unauthorized);
     }
 
     let workspace = context
         .octopus_database
-        .insert_workspace(user.company_id, user.id, &input.name, input.r#type)
+        .insert_workspace(
+            session_user.company_id,
+            session_user.id,
+            &input.name,
+            input.r#type,
+        )
         .await?;
 
     Ok((StatusCode::CREATED, Json(workspace)).into_response())
@@ -94,7 +99,7 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let user = context
+    let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
@@ -108,14 +113,15 @@ pub async fn delete(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
+            if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
+                || workspace.user_id != session_user.id
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if !user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
-                || workspace.company_id != user.company_id
+            if !session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+                || workspace.company_id != session_user.company_id
             {
                 return Err(AppError::Unauthorized);
             }
@@ -149,7 +155,7 @@ pub async fn list(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let user = context
+    let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
@@ -158,15 +164,15 @@ pub async fn list(
     let mut result = vec![];
     let mut public_workspaces = context
         .octopus_database
-        .get_workspaces_by_company_id_and_type(user.company_id, WorkspacesType::Public)
+        .get_workspaces_by_company_id_and_type(session_user.company_id, WorkspacesType::Public)
         .await?;
 
     result.append(&mut public_workspaces);
 
-    if user.roles.contains(&ROLE_PRIVATE_USER.to_string()) {
+    if session_user.roles.contains(&ROLE_PRIVATE_USER.to_string()) {
         let mut private_workspaces = context
             .octopus_database
-            .get_workspaces_by_user_id_and_type(user.id, WorkspacesType::Private)
+            .get_workspaces_by_user_id_and_type(session_user.id, WorkspacesType::Private)
             .await?;
 
         result.append(&mut private_workspaces);
@@ -198,7 +204,7 @@ pub async fn read(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let user = context
+    let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
@@ -212,13 +218,14 @@ pub async fn read(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
+            if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
+                || workspace.user_id != session_user.id
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if workspace.company_id != user.company_id {
+            if workspace.company_id != session_user.company_id {
                 return Err(AppError::Unauthorized);
             }
         }
@@ -253,7 +260,7 @@ pub async fn update(
     let session = require_authenticated_session(extracted_session).await?;
     input.validate()?;
 
-    let user = context
+    let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
@@ -267,14 +274,15 @@ pub async fn update(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if !user.roles.contains(&ROLE_PRIVATE_USER.to_string()) || workspace.user_id != user.id
+            if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
+                || workspace.user_id != session_user.id
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if !user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
-                || workspace.company_id != user.company_id
+            if !session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+                || workspace.company_id != session_user.company_id
             {
                 return Err(AppError::Unauthorized);
             }

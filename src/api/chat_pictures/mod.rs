@@ -1,5 +1,6 @@
 use crate::{
     context::Context,
+    entity::ROLE_COMPANY_ADMIN,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -139,6 +140,12 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
@@ -155,7 +162,16 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if chat.user_id != session.user_id {
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(chat.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.id != chat.user_id
+        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+            || session_user.company_id != user.company_id)
+    {
         return Err(AppError::Unauthorized);
     }
 
@@ -198,6 +214,12 @@ pub async fn read(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
@@ -214,7 +236,13 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if chat.user_id != session.user_id {
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(chat.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
         return Err(AppError::Unauthorized);
     }
 
@@ -249,6 +277,12 @@ pub async fn update(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
     let chat_picture = context
         .octopus_database
         .try_get_chat_picture_by_id(chat_picture_id)
@@ -265,7 +299,16 @@ pub async fn update(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if chat.user_id != session.user_id {
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(chat.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.id != chat.user_id
+        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+            || session_user.company_id != user.company_id)
+    {
         return Err(AppError::Unauthorized);
     }
 
