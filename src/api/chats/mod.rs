@@ -221,7 +221,7 @@ pub async fn list(
 
     let chats = context
         .octopus_database
-        .get_chats_by_user_id(session.user_id)
+        .get_chats_by_workspace_id(workspace.id)
         .await?;
 
     Ok((StatusCode::OK, Json(chats)).into_response())

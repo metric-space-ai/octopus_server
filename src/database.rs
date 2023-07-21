@@ -22,13 +22,13 @@ impl OctopusDatabase {
         }
     }
 
-    pub async fn get_chats_by_user_id(&self, user_id: Uuid) -> Result<Vec<Chat>> {
+    pub async fn get_chats_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Chat>> {
         let chats = sqlx::query_as!(
             Chat,
             "SELECT id, user_id, workspace_id, name, created_at, updated_at
             FROM chats
-            WHERE user_id = $1",
-            user_id
+            WHERE workspace_id = $1",
+            workspace_id
         )
         .fetch_all(&*self.pool)
         .await?;
