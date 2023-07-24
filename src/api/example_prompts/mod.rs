@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN,
+    entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
@@ -48,7 +48,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<ExamplePromptPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     let example_prompt = context
@@ -80,7 +80,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
     context
         .octopus_database
@@ -169,7 +169,7 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<ExamplePromptPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     context

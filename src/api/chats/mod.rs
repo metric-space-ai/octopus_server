@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::{WorkspacesType, ROLE_COMPANY_ADMIN, ROLE_PRIVATE_USER},
+    entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -151,7 +151,9 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id
-        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        && (!session_user
+            .roles
+            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Unauthorized);
@@ -374,7 +376,9 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id
-        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        && (!session_user
+            .roles
+            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Unauthorized);

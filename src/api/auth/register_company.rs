@@ -1,7 +1,7 @@
 use crate::{
     api::auth,
     context::Context,
-    entity::{WorkspacesType, ROLE_COMPANY_ADMIN, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+    entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
@@ -62,7 +62,7 @@ pub async fn register_company(
                     context.config.pepper_id,
                     &pw_hash,
                     &[
-                        ROLE_COMPANY_ADMIN.to_string(),
+                        ROLE_COMPANY_ADMIN_USER.to_string(),
                         ROLE_PRIVATE_USER.to_string(),
                         ROLE_PUBLIC_USER.to_string(),
                     ],

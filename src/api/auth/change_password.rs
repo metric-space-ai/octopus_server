@@ -1,7 +1,7 @@
 use crate::{
     api::auth,
     context::Context,
-    entity::ROLE_COMPANY_ADMIN,
+    entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -64,7 +64,9 @@ pub async fn change_password(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != user_id
-        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        && (!session_user
+            .roles
+            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Unauthorized);
@@ -99,7 +101,10 @@ pub async fn change_password(
             .await?;
 
         Ok((StatusCode::OK, Json(user)).into_response())
-    } else if session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string()) {
+    } else if session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
         let user = context
             .octopus_database
             .update_user_password(user_id, &pw_hash)

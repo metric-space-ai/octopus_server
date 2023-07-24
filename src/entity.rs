@@ -83,7 +83,7 @@ pub struct Session {
 }
 
 //pub const ROLE_ADMIN: &str = "ROLE_ADMIN";
-pub const ROLE_COMPANY_ADMIN: &str = "ROLE_COMPANY_ADMIN";
+pub const ROLE_COMPANY_ADMIN_USER: &str = "ROLE_COMPANY_ADMIN_USER";
 pub const ROLE_PRIVATE_USER: &str = "ROLE_PRIVATE_USER";
 pub const ROLE_PUBLIC_USER: &str = "ROLE_PUBLIC_USER";
 

@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::{WorkspacesType, ROLE_COMPANY_ADMIN, ROLE_PRIVATE_USER},
+    entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -57,7 +57,9 @@ pub async fn create(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    if !(session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+    if !(session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
         || session_user.roles.contains(&ROLE_PRIVATE_USER.to_string()))
     {
         return Err(AppError::Unauthorized);
@@ -120,7 +122,9 @@ pub async fn delete(
             }
         }
         WorkspacesType::Public => {
-            if !session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+            if !session_user
+                .roles
+                .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
                 || workspace.company_id != session_user.company_id
             {
                 return Err(AppError::Unauthorized);
@@ -281,7 +285,9 @@ pub async fn update(
             }
         }
         WorkspacesType::Public => {
-            if !session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+            if !session_user
+                .roles
+                .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
                 || workspace.company_id != session_user.company_id
             {
                 return Err(AppError::Unauthorized);

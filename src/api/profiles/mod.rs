@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN,
+    entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -66,7 +66,9 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != user_id
-        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        && (!session_user
+            .roles
+            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Unauthorized);
@@ -120,7 +122,9 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != user_id
-        && (!session_user.roles.contains(&ROLE_COMPANY_ADMIN.to_string())
+        && (!session_user
+            .roles
+            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Unauthorized);
