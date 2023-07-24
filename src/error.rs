@@ -60,10 +60,9 @@ impl IntoResponse for AppError {
             }
             AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
-            AppError::UserAlreadyExists => (
-                StatusCode::BAD_REQUEST,
-                "User with such email already exists.",
-            ),
+            AppError::UserAlreadyExists => {
+                (StatusCode::CONFLICT, "User with such email already exists.")
+            }
             AppError::Uuid(_error) => (StatusCode::BAD_REQUEST, "Invalid API key."),
             AppError::Validation(_error) => (StatusCode::BAD_REQUEST, "Validation problem."),
         };

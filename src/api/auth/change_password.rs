@@ -113,12 +113,7 @@ pub async fn change_password(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        app,
-        entity::User,
-        session::SessionResponse,
-        Args,
-    };
+    use crate::{app, entity::User, session::SessionResponse, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
