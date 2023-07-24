@@ -3,6 +3,7 @@ use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, Pa
 use rand_core::OsRng;
 use std::sync::Arc;
 
+pub mod change_password;
 pub mod login;
 pub mod logout;
 pub mod register;

@@ -429,6 +429,15 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
+    pub async fn try_get_hash_for_user_id(&self, id: Uuid) -> Result<Option<String>> {
+        let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE id = $1")
+            .bind(id)
+            .fetch_optional(&*self.pool)
+            .await?;
+
+        Ok(hash)
+    }
+
     pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
         let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
             .bind(email)
@@ -771,6 +780,22 @@ impl OctopusDatabase {
         .await?;
 
         Ok(profile)
+    }
+
+    pub async fn update_user_password(&self, id: Uuid, password: &str) -> Result<User> {
+        let user = sqlx::query_as!(
+            User,
+            "UPDATE users
+            SET password = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
+            id,
+            password
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(user)
     }
 
     #[allow(dead_code)]

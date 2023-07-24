@@ -1,7 +1,8 @@
 use crate::{
     api::{
         auth::{
-            login, login::LoginPost, logout, register, register::RegisterPost, register_company,
+            change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
+            register, register::RegisterPost, register_company,
             register_company::RegisterCompanyPost,
         },
         chat_messages::{ChatMessagePost, ChatMessagePut},
@@ -21,7 +22,7 @@ use crate::{
 use axum::{
     error_handling::HandleErrorLayer,
     http::{header, Method, StatusCode},
-    routing::{delete, get, post},
+    routing::{delete, get, post, put},
     Router,
 };
 use std::{sync::Arc, time::Duration};
@@ -51,6 +52,7 @@ pub async fn router(context: Arc<Context>) -> Router {
     #[openapi(
         components(
             schemas(
+                ChangePasswordPut,
                 Chat,
                 ChatMessage,
                 ChatMessageFile,
@@ -79,6 +81,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
+            change_password::change_password,
             chat_messages::create,
             chat_messages::delete,
             chat_messages::list,
@@ -122,6 +125,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "example_prompts", description = "Example prompts API."),
             (name = "workspaces", description = "Workspaces API."),
             (name = "profiles", description = "Profiles API."),
+            (name = "change_password", description = "Change password API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
@@ -155,6 +159,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/auth/register-company",
             post(register_company::register_company),
+        )
+        .route(
+            "/api/v1/auth/:user_id",
+            put(change_password::change_password),
         )
         .route(
             "/api/v1/chat-messages/:chat_id",
