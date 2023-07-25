@@ -111,7 +111,7 @@ pub struct Profile {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "workspaces_types", rename_all = "snake_case")]
 pub enum WorkspacesType {
     Private,
