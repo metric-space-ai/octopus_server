@@ -84,6 +84,26 @@ pub async fn register_company(
                 )
                 .await?;
 
+            let example_prompts = vec![
+                "How can I optimize the assembly line process to improve efficiency and reduce errors?",
+                "Provide me with safety guidelines for operating heavy machinery in the factory.",
+                "What are the best practices for quality control during the production process?",
+                "How can I troubleshoot common technical issues with the machinery on the factory floor?",
+                "Suggest ways to minimize waste and promote sustainability in our manufacturing processes.",
+                "What are the latest advancements in automation that could be implemented in our factory?",
+                "Help me understand the new regulatory requirements and compliance standards relevant to our industry.",
+                "Recommend training programs or courses to enhance my skills as a factory worker.",
+                "Assist me in conducting a risk assessment for our production line to identify potential hazards.",
+                "How can I improve communication and collaboration among team members on the factory floor?",
+            ];
+
+            for example_prompt in example_prompts {
+                context
+                    .octopus_database
+                    .insert_example_prompt(true, 0, example_prompt)
+                    .await?;
+            }
+
             Ok((StatusCode::CREATED, Json(user)).into_response())
         }
         Some(_user_exists) => Err(AppError::UserAlreadyExists),
