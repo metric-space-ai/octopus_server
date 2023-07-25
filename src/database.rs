@@ -61,6 +61,25 @@ impl OctopusDatabase {
         Ok(chat_messages)
     }
 
+    pub async fn get_chat_messages_by_chat_id_and_status(
+        &self,
+        chat_id: Uuid,
+        status: ChatMessageStatus,
+    ) -> Result<Vec<ChatMessage>> {
+        let chat_messages = sqlx::query_as::<_, ChatMessage>(
+            "SELECT id, chat_id, estimated_response_at, message, response, status, created_at, updated_at
+            FROM chat_messages
+            WHERE chat_id = $1 AND status = $2
+            ORDER BY created_at ASC",
+        )
+        .bind(chat_id)
+        .bind(status)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_messages)
+    }
+
     pub async fn get_chat_message_files_by_chat_message_id(
         &self,
         chat_message_id: Uuid,
