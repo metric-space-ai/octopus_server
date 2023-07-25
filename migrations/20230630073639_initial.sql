@@ -20,6 +20,8 @@ CREATE TABLE users(
     UNIQUE(email)
 );
 
+CREATE INDEX users_company_id ON users(company_id);
+
 CREATE TABLE profiles(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
@@ -40,6 +42,8 @@ CREATE TABLE sessions(
     expired_at TIMESTAMP WITH TIME ZONE NOT NULL
 );
 
+CREATE INDEX sessions_user_id ON sessions(user_id);
+
 CREATE TYPE workspaces_types AS ENUM('private', 'public');
 
 CREATE TABLE workspaces(
@@ -52,6 +56,9 @@ CREATE TABLE workspaces(
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
+CREATE INDEX workspaces_company_id ON workspaces(company_id);
+CREATE INDEX workspaces_type ON workspaces(type);
+
 CREATE TABLE chats(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
@@ -60,6 +67,9 @@ CREATE TABLE chats(
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
+
+CREATE INDEX chats_user_id ON chats(user_id);
+CREATE INDEX chats_workspace_id ON chats(workspace_id);
 
 CREATE TYPE chat_message_statuses AS ENUM('answered', 'asked');
 
@@ -74,12 +84,20 @@ CREATE TABLE chat_messages(
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
+CREATE INDEX chat_messages_chat_id ON chat_messages(chat_id);
+CREATE INDEX chat_messages_status ON chat_messages(status);
+CREATE INDEX chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX chat_messages_updated_at ON chat_messages(updated_at);
+
 CREATE TABLE chat_message_files(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
+
+CREATE INDEX chat_message_files_chat_message_id ON chat_message_files(chat_message_id);
+CREATE INDEX chat_message_files_created_at ON chat_message_files(created_at);
 
 CREATE TABLE chat_pictures(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -89,6 +107,8 @@ CREATE TABLE chat_pictures(
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(chat_id)
 );
+
+CREATE INDEX chat_pictures_chat_id ON chat_pictures(chat_id);
 
 CREATE TABLE example_prompts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
