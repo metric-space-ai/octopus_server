@@ -357,6 +357,17 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn try_delete_chat_messages_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Uuid>> {
+        let chat_message_ids = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM chat_messages WHERE id = ANY($1) RETURNING id",
+        )
+        .bind(ids)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_message_ids)
+    }
+
     pub async fn try_delete_chat_message_file_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat_message_file = sqlx::query_scalar::<_, Uuid>(
             "DELETE FROM chat_message_files WHERE id = $1 RETURNING id",

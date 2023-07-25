@@ -417,19 +417,19 @@ pub async fn update(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    let chat_message = context
+    let original_chat_message = context
         .octopus_database
         .try_get_chat_message_by_id(chat_message_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if chat_id != chat_message.chat_id {
+    if chat_id != original_chat_message.chat_id {
         return Err(AppError::Unauthorized);
     }
 
     let chat = context
         .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
+        .try_get_chat_by_id(original_chat_message.chat_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -458,19 +458,33 @@ pub async fn update(
         Some(estimated_seconds) => Utc::now() + Duration::seconds(estimated_seconds + 1),
     };
 
-    let chat_message = context
+    let chat_messages = context
         .octopus_database
-        .update_chat_message_full(
-            chat_message.id,
-            estimated_response_at,
-            &input.message,
-            ChatMessageStatus::Asked,
-            None,
-        )
+        .get_chat_messages_by_chat_id(original_chat_message.chat_id)
+        .await?;
+
+    let mut delete_chat_message_ids = vec![];
+
+    for chat_message in chat_messages {
+        if chat_message.created_at > original_chat_message.created_at {
+            delete_chat_message_ids.append(&mut vec![chat_message.id]);
+        }
+    }
+
+    delete_chat_message_ids.append(&mut vec![original_chat_message.id]);
+
+    context
+        .octopus_database
+        .try_delete_chat_messages_by_ids(&delete_chat_message_ids)
+        .await?;
+
+    let new_chat_message = context
+        .octopus_database
+        .insert_chat_message(chat.id, estimated_response_at, &input.message)
         .await?;
 
     let cloned_context = context.clone();
-    let cloned_chat_message = chat_message.clone();
+    let cloned_chat_message = new_chat_message.clone();
     tokio::spawn(async move {
         let chat_message = ai_request::open_ai_request(cloned_context, cloned_chat_message).await;
 
@@ -479,7 +493,7 @@ pub async fn update(
         }
     });
 
-    Ok((StatusCode::OK, Json(chat_message)).into_response())
+    Ok((StatusCode::OK, Json(new_chat_message)).into_response())
 }
 
 #[cfg(test)]
