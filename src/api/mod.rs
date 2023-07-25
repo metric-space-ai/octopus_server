@@ -44,6 +44,7 @@ mod chat_messages;
 mod chat_pictures;
 mod chats;
 mod example_prompts;
+mod profile_pictures;
 mod profiles;
 mod workspaces;
 
@@ -109,6 +110,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             logout::logout,
             profiles::read,
             profiles::update,
+            profile_pictures::delete,
+            profile_pictures::update,
             register::register,
             register_company::register_company,
             workspaces::create,
@@ -125,6 +128,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "example_prompts", description = "Example prompts API."),
             (name = "workspaces", description = "Workspaces API."),
             (name = "profiles", description = "Profiles API."),
+            (name = "profile_pictures", description = "Profile pictures API."),
             (name = "change_password", description = "Change password API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -210,6 +214,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
+        )
+        .route(
+            "/api/v1/profile-pictures/:user_id",
+            delete(profile_pictures::delete).put(profile_pictures::update),
         )
         .route(
             "/api/v1/profiles/:user_id",

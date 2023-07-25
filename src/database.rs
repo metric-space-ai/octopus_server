@@ -812,6 +812,26 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn update_profile_photo_file_name(
+        &self,
+        id: Uuid,
+        photo_file_name: Option<String>,
+    ) -> Result<Profile> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "UPDATE profiles
+            SET photo_file_name = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            id,
+            photo_file_name
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(profile)
+    }
+
     pub async fn update_user_password(&self, id: Uuid, password: &str) -> Result<User> {
         let user = sqlx::query_as!(
             User,

@@ -18,8 +18,11 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct ProfilePut {
+    #[validate(length(max = 256, min = 1))]
     pub job_title: Option<String>,
+    #[validate(length(max = 5, min = 5))]
     pub language: String,
+    #[validate(length(max = 256, min = 1))]
     pub name: Option<String>,
     pub text_size: i32,
 }
