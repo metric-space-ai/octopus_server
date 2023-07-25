@@ -38,6 +38,7 @@ pub struct ChatMessageFile {
     pub id: Uuid,
     pub chat_message_id: Uuid,
     pub file_name: String,
+    pub media_type: String,
     pub created_at: DateTime<Utc>,
 }
 

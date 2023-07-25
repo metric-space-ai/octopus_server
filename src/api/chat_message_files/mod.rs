@@ -378,7 +378,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -670,7 +670,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -907,7 +907,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -1430,7 +1430,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -1663,7 +1663,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -1970,7 +1970,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 
@@ -2206,7 +2206,7 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(chat_message_id, file_name)
+            .insert_chat_message_file(chat_message_id, file_name, "image/png")
             .await
             .unwrap();
 

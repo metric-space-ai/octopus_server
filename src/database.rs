@@ -86,7 +86,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageFile>> {
         let chat_message_files = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, created_at
+            "SELECT id, chat_message_id, file_name, media_type, created_at
             FROM chat_message_files
             WHERE chat_message_id = $1
             ORDER BY created_at ASC",
@@ -191,15 +191,17 @@ impl OctopusDatabase {
         &self,
         chat_message_id: Uuid,
         file_name: &str,
+        media_type: &str,
     ) -> Result<ChatMessageFile> {
         let chat_message_file = sqlx::query_as!(
             ChatMessageFile,
             "INSERT INTO chat_message_files
-            (chat_message_id, file_name)
-            VALUES ($1, $2)
-            RETURNING id, chat_message_id, file_name, created_at",
+            (chat_message_id, file_name, media_type)
+            VALUES ($1, $2, $3)
+            RETURNING id, chat_message_id, file_name, media_type, created_at",
             chat_message_id,
             file_name,
+            media_type,
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -511,7 +513,7 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessageFile>> {
         let chat_message_file = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, created_at
+            "SELECT id, chat_message_id, file_name, media_type, created_at
             FROM chat_message_files
             WHERE id = $1",
             id

@@ -93,6 +93,7 @@ CREATE TABLE chat_message_files(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
+    media_type VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 

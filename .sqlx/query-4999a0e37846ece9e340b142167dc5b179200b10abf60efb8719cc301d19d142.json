@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, workspace_id, name, created_at, updated_at\n            FROM chats\n            WHERE user_id = $1",
+  "query": "SELECT id, user_id, workspace_id, name, created_at, updated_at\n            FROM chats\n            WHERE workspace_id = $1",
   "describe": {
     "columns": [
       {
@@ -48,5 +48,5 @@
       false
     ]
   },
-  "hash": "d1e764ddc5c71d3d1a8308a7d154870c1ec1d42d7582d958de1dabed873769a8"
+  "hash": "4999a0e37846ece9e340b142167dc5b179200b10abf60efb8719cc301d19d142"
 }

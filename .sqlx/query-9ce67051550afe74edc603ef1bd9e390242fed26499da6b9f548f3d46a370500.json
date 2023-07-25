@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chat_message_files\n            (chat_message_id, file_name)\n            VALUES ($1, $2)\n            RETURNING id, chat_message_id, file_name, created_at",
+  "query": "SELECT id, chat_message_id, file_name, media_type, created_at\n            FROM chat_message_files\n            WHERE chat_message_id = $1\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -20,22 +20,27 @@
       },
       {
         "ordinal": 3,
+        "name": "media_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Varchar"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "2b35cb1cdf9a5d9bcaaf08cc55790ad6c49c36b5e0a9e9e18434c49c67fccd6c"
+  "hash": "9ce67051550afe74edc603ef1bd9e390242fed26499da6b9f548f3d46a370500"
 }
