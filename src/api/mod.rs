@@ -2,13 +2,13 @@ use crate::{
     api::{
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
-            register, register::RegisterPost, register_company,
-            register_company::RegisterCompanyPost,
+            register, register::RegisterPost,
         },
         chat_messages::{ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         profiles::ProfilePut,
+        setup::SetupPost,
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -47,6 +47,7 @@ mod chats;
 mod example_prompts;
 mod profile_pictures;
 mod profiles;
+mod setup;
 mod workspaces;
 
 pub async fn router(context: Arc<Context>) -> Router {
@@ -70,11 +71,11 @@ pub async fn router(context: Arc<Context>) -> Router {
                 LoginPost,
                 Profile,
                 ProfilePut,
-                RegisterCompanyPost,
                 RegisterPost,
                 ResponseError,
                 SessionResponse,
                 SessionResponseData,
+                SetupPost,
                 User,
                 Workspace,
                 WorkspacePost,
@@ -119,7 +120,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             profile_pictures::delete,
             profile_pictures::update,
             register::register,
-            register_company::register_company,
+            setup::setup,
             workspaces::create,
             workspaces::delete,
             workspaces::list,
@@ -140,7 +141,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "register", description = "Register API."),
-            (name = "register_company", description = "Register company API."),
+            (name = "setup", description = "Setup API."),
         )
     )]
     struct ApiDoc;
@@ -166,10 +167,6 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/auth/register/:company_id",
             post(register::register_with_company_id),
-        )
-        .route(
-            "/api/v1/auth/register-company",
-            post(register_company::register_company),
         )
         .route(
             "/api/v1/auth/:user_id",
@@ -240,6 +237,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/profiles/:user_id",
             get(profiles::read).put(profiles::update),
         )
+        .route("/api/v1/setup", post(setup::setup))
         .route(
             "/api/v1/workspaces",
             get(workspaces::list).post(workspaces::create),

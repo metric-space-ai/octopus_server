@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, is_visible, priority, prompt, created_at, updated_at\n            FROM example_prompts",
+  "query": "SELECT id, is_visible, priority, prompt, created_at, updated_at\n            FROM example_prompts\n            WHERE is_visible = $1\n            ORDER BY priority DESC",
   "describe": {
     "columns": [
       {
@@ -35,7 +35,9 @@
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Bool"
+      ]
     },
     "nullable": [
       false,
@@ -46,5 +48,5 @@
       false
     ]
   },
-  "hash": "57358599bc5c458fa484e730c2f191afd9ac343554f08362b49bd6c76c67a188"
+  "hash": "008f5ea2ef791bfb102040ab1d92a516caa3fcb8381076717879cdee175ad5c8"
 }

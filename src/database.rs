@@ -100,10 +100,15 @@ impl OctopusDatabase {
     }
 
     pub async fn get_example_prompts(&self) -> Result<Vec<ExamplePrompt>> {
+        let is_visible = true;
+
         let example_prompts = sqlx::query_as!(
             ExamplePrompt,
             "SELECT id, is_visible, priority, prompt, created_at, updated_at
-            FROM example_prompts"
+            FROM example_prompts
+            WHERE is_visible = $1
+            ORDER BY priority DESC",
+            is_visible
         )
         .fetch_all(&*self.pool)
         .await?;

@@ -13,8 +13,8 @@ use validator::Validate;
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/auth/register-company",
-    request_body = RegisterCompanyPost,
+    path = "/api/v1/setup",
+    request_body = SetupPost,
     responses(
         (status = 201, description = "Account created.", body = User),
         (status = 400, description = "Bad request.", body = ResponseError),
@@ -24,9 +24,9 @@ use validator::Validate;
         ()
     )
 )]
-pub async fn register_company(
+pub async fn setup(
     State(context): State<Arc<Context>>,
-    Json(input): Json<RegisterCompanyPost>,
+    Json(input): Json<SetupPost>,
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
@@ -84,24 +84,28 @@ pub async fn register_company(
                 )
                 .await?;
 
-            let example_prompts = vec![
-                "How can I optimize the assembly line process to improve efficiency and reduce errors?",
-                "Provide me with safety guidelines for operating heavy machinery in the factory.",
-                "What are the best practices for quality control during the production process?",
-                "How can I troubleshoot common technical issues with the machinery on the factory floor?",
-                "Suggest ways to minimize waste and promote sustainability in our manufacturing processes.",
-                "What are the latest advancements in automation that could be implemented in our factory?",
-                "Help me understand the new regulatory requirements and compliance standards relevant to our industry.",
-                "Recommend training programs or courses to enhance my skills as a factory worker.",
-                "Assist me in conducting a risk assessment for our production line to identify potential hazards.",
-                "How can I improve communication and collaboration among team members on the factory floor?",
-            ];
+            let example_prompts = context.octopus_database.get_example_prompts().await?;
 
-            for example_prompt in example_prompts {
-                context
-                    .octopus_database
-                    .insert_example_prompt(true, 0, example_prompt)
-                    .await?;
+            if example_prompts.is_empty() {
+                let example_prompts = vec![
+                    "How can I optimize the assembly line process to improve efficiency and reduce errors?",
+                    "Provide me with safety guidelines for operating heavy machinery in the factory.",
+                    "What are the best practices for quality control during the production process?",
+                    "How can I troubleshoot common technical issues with the machinery on the factory floor?",
+                    "Suggest ways to minimize waste and promote sustainability in our manufacturing processes.",
+                    "What are the latest advancements in automation that could be implemented in our factory?",
+                    "Help me understand the new regulatory requirements and compliance standards relevant to our industry.",
+                    "Recommend training programs or courses to enhance my skills as a factory worker.",
+                    "Assist me in conducting a risk assessment for our production line to identify potential hazards.",
+                    "How can I improve communication and collaboration among team members on the factory floor?",
+                ];
+
+                for example_prompt in example_prompts {
+                    context
+                        .octopus_database
+                        .insert_example_prompt(true, 0, example_prompt)
+                        .await?;
+                }
             }
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
@@ -111,7 +115,7 @@ pub async fn register_company(
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct RegisterCompanyPost {
+pub struct SetupPost {
     #[validate(length(max = 256, min = 1))]
     company_name: String,
     #[validate(email, length(max = 256))]
@@ -163,7 +167,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register-company")
+                    .uri("/api/v1/setup")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -228,7 +232,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register-company")
+                    .uri("/api/v1/setup")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -273,7 +277,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register-company")
+                    .uri("/api/v1/setup")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -303,7 +307,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/auth/register-company")
+                    .uri("/api/v1/setup")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
