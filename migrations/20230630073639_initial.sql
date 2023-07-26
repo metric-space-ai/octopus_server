@@ -100,6 +100,17 @@ CREATE TABLE chat_message_files(
 CREATE INDEX chat_message_files_chat_message_id ON chat_message_files(chat_message_id);
 CREATE INDEX chat_message_files_created_at ON chat_message_files(created_at);
 
+CREATE TABLE chat_message_pictures(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
+    file_name VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+);
+
+CREATE INDEX chat_message_pictures_chat_message_id ON chat_message_pictures(chat_message_id);
+CREATE INDEX chat_message_pictures_created_at ON chat_message_pictures(created_at);
+
 CREATE TABLE chat_pictures(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,

@@ -1,7 +1,8 @@
 use crate::{
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, Profile, Session, User, Workspace, WorkspacesType,
+        Chat, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
+        Company, EstimatedSeconds, ExamplePrompt, Profile, Session, User, Workspace,
+        WorkspacesType,
     },
     Result,
 };
@@ -209,6 +210,26 @@ impl OctopusDatabase {
         Ok(chat_message_file)
     }
 
+    pub async fn insert_chat_message_picture(
+        &self,
+        chat_message_id: Uuid,
+        file_name: &str,
+    ) -> Result<ChatMessagePicture> {
+        let chat_message_picture = sqlx::query_as!(
+            ChatMessagePicture,
+            "INSERT INTO chat_message_pictures
+            (chat_message_id, file_name)
+            VALUES ($1, $2)
+            RETURNING id, chat_message_id, file_name, created_at, updated_at",
+            chat_message_id,
+            file_name,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_message_picture)
+    }
+
     pub async fn insert_chat_picture(&self, chat_id: Uuid, file_name: &str) -> Result<ChatPicture> {
         let chat_picture = sqlx::query_as!(
             ChatPicture,
@@ -400,6 +421,17 @@ impl OctopusDatabase {
         Ok(chat_message_file)
     }
 
+    pub async fn try_delete_chat_message_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let chat_message_picture = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM chat_message_pictures WHERE id = $1 RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_message_picture)
+    }
+
     pub async fn try_delete_chat_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat_picture =
             sqlx::query_scalar::<_, Uuid>("DELETE FROM chat_pictures WHERE id = $1 RETURNING id")
@@ -522,6 +554,23 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_message_file)
+    }
+
+    pub async fn try_get_chat_message_picture_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<ChatMessagePicture>> {
+        let chat_message_picture = sqlx::query_as!(
+            ChatMessagePicture,
+            "SELECT id, chat_message_id, file_name, created_at, updated_at
+            FROM chat_message_pictures
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_message_picture)
     }
 
     pub async fn try_get_chat_picture_by_chat_id(
@@ -746,6 +795,26 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_message)
+    }
+
+    pub async fn update_chat_message_picture(
+        &self,
+        id: Uuid,
+        file_name: &str,
+    ) -> Result<ChatMessagePicture> {
+        let chat_message_picture = sqlx::query_as!(
+            ChatMessagePicture,
+            "UPDATE chat_message_pictures
+            SET file_name = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_message_id, file_name, created_at, updated_at",
+            id,
+            file_name
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_message_picture)
     }
 
     pub async fn update_chat_picture(&self, id: Uuid, file_name: &str) -> Result<ChatPicture> {

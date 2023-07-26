@@ -1,7 +1,7 @@
 use crate::{
     ai_request,
     context::Context,
-    entity::{ChatMessageStatus, ROLE_COMPANY_ADMIN_USER},
+    entity::{ChatMessageStatus, WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -60,6 +60,13 @@ pub async fn create(
     Json(input): Json<ChatMessagePost>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
     input.validate()?;
 
     let chat = context
@@ -68,8 +75,31 @@ pub async fn create(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if chat.user_id != session.user_id {
-        return Err(AppError::Unauthorized);
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(chat.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let workspace = context
+        .octopus_database
+        .try_get_workspace_by_id(chat.workspace_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    match workspace.r#type {
+        WorkspacesType::Private => {
+            if session_user.id != chat.user_id
+                && !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
+            {
+                return Err(AppError::Unauthorized);
+            }
+        }
+        WorkspacesType::Public => {
+            if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+                return Err(AppError::Unauthorized);
+            }
+        }
     }
 
     let chat_messages = context

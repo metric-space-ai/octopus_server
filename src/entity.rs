@@ -43,6 +43,15 @@ pub struct ChatMessageFile {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatMessagePicture {
+    pub id: Uuid,
+    pub chat_message_id: Uuid,
+    pub file_name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatPicture {
     pub id: Uuid,
     pub chat_id: Uuid,

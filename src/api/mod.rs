@@ -13,8 +13,8 @@ use crate::{
     },
     context::Context,
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessageStatus, ChatPicture, ExamplePrompt, Profile,
-        User, Workspace, WorkspacesType,
+        Chat, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
+        ExamplePrompt, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -40,6 +40,7 @@ use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
 mod chat_message_files;
+mod chat_message_pictures;
 mod chat_messages;
 mod chat_pictures;
 mod chats;
@@ -57,6 +58,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 Chat,
                 ChatMessage,
                 ChatMessageFile,
+                ChatMessagePicture,
                 ChatMessagePost,
                 ChatMessagePut,
                 ChatMessageStatus,
@@ -92,6 +94,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_message_files::delete,
             chat_message_files::list,
             chat_message_files::read,
+            chat_message_pictures::create,
+            chat_message_pictures::delete,
+            chat_message_pictures::read,
+            chat_message_pictures::update,
             chat_pictures::create,
             chat_pictures::delete,
             chat_pictures::read,
@@ -124,6 +130,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chats", description = "Chats API."),
             (name = "chat_messages", description = "Chat messages API."),
             (name = "chat_message_files", description = "Chat message files API."),
+            (name = "chat_message_pictures", description = "Chat message pictures API."),
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "workspaces", description = "Workspaces API."),
@@ -186,6 +193,16 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
             delete(chat_message_files::delete).get(chat_message_files::read),
+        )
+        .route(
+            "/api/v1/chat-message-pictures/:chat_message_id",
+            post(chat_message_pictures::create),
+        )
+        .route(
+            "/api/v1/chat-message-pictures/:chat_message_id/:chat_message_picture_id",
+            delete(chat_message_pictures::delete)
+                .get(chat_message_pictures::read)
+                .put(chat_message_pictures::update),
         )
         .route(
             "/api/v1/chat-pictures/:chat_id",
