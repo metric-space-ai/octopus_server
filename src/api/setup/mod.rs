@@ -5,10 +5,36 @@ use crate::{
     error::AppError,
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use utoipa::ToSchema;
 use validator::Validate;
+
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct SetupInfoResponse {
+    setup_required: bool,
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/setup",
+    responses(
+        (status = 200, description = "Setup info read.", body = SetupInfoResponse),
+    ),
+    security(
+        ()
+    )
+)]
+pub async fn info(State(context): State<Arc<Context>>) -> Result<impl IntoResponse, AppError> {
+    let companies = context.octopus_database.get_companies().await?;
+
+    let setup_info_response = SetupInfoResponse {
+        setup_required: companies.is_empty(),
+    };
+
+    Ok((StatusCode::OK, Json(setup_info_response)).into_response())
+}
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
@@ -128,7 +154,7 @@ pub struct SetupPost {
 
 #[cfg(test)]
 mod tests {
-    use crate::{app, entity::User, Args};
+    use crate::{api::setup::SetupInfoResponse, app, entity::User, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -141,6 +167,110 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn info_200() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
+
+        assert!(body.setup_required == true || body.setup_required == false);
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.setup_required, false);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
 
     #[tokio::test]
     async fn register_201() {

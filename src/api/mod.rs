@@ -8,7 +8,7 @@ use crate::{
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         profiles::ProfilePut,
-        setup::SetupPost,
+        setup::{SetupInfoResponse, SetupPost},
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -75,6 +75,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ResponseError,
                 SessionResponse,
                 SessionResponseData,
+                SetupInfoResponse,
                 SetupPost,
                 User,
                 Workspace,
@@ -120,6 +121,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             profile_pictures::delete,
             profile_pictures::update,
             register::register,
+            setup::info,
             setup::setup,
             workspaces::create,
             workspaces::delete,
@@ -237,7 +239,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/profiles/:user_id",
             get(profiles::read).put(profiles::update),
         )
-        .route("/api/v1/setup", post(setup::setup))
+        .route("/api/v1/setup", get(setup::info).post(setup::setup))
         .route(
             "/api/v1/workspaces",
             get(workspaces::list).post(workspaces::create),

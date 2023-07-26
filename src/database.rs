@@ -99,6 +99,18 @@ impl OctopusDatabase {
         Ok(chat_message_files)
     }
 
+    pub async fn get_companies(&self) -> Result<Vec<Company>> {
+        let companies = sqlx::query_as!(
+            Company,
+            "SELECT id, address, name, created_at, updated_at
+            FROM companies",
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(companies)
+    }
+
     pub async fn get_example_prompts(&self) -> Result<Vec<ExamplePrompt>> {
         let is_visible = true;
 
