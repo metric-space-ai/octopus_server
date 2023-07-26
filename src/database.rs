@@ -1,10 +1,10 @@
 use crate::{
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, Profile, Session, User, Workspace,
-        WorkspacesType,
+        Chat, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
+        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt, Profile, Session,
+        User, Workspace, WorkspacesType,
     },
-    Result,
+    Result, PUBLIC_DIR,
 };
 use chrono::{DateTime, Utc};
 use sqlx::PgPool;
@@ -62,6 +62,36 @@ impl OctopusDatabase {
         Ok(chat_messages)
     }
 
+    pub async fn get_chat_messages_extended_by_chat_id(
+        &self,
+        chat_id: Uuid,
+    ) -> Result<Vec<ChatMessageExtended>> {
+        let chat_messages = self.get_chat_messages_by_chat_id(chat_id).await?;
+        let chat_messages_ids = chat_messages.iter().map(|x| x.id).collect::<Vec<Uuid>>();
+
+        let chat_message_files = self
+            .get_chat_message_files_by_chat_message_ids(&chat_messages_ids)
+            .await?;
+        let chat_message_pictures = self
+            .get_chat_message_pictures_by_chat_message_ids(&chat_messages_ids)
+            .await?;
+
+        let mut chat_messages_extended = vec![];
+
+        for chat_message in chat_messages {
+            let chat_message_extended = self
+                .map_to_chat_message_extended(
+                    &chat_message,
+                    chat_message_files.clone(),
+                    chat_message_pictures.clone(),
+                )
+                .await?;
+            chat_messages_extended.append(&mut vec![chat_message_extended]);
+        }
+
+        Ok(chat_messages_extended)
+    }
+
     pub async fn get_chat_messages_by_chat_id_and_status(
         &self,
         chat_id: Uuid,
@@ -97,6 +127,42 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_message_files)
+    }
+
+    pub async fn get_chat_message_files_by_chat_message_ids(
+        &self,
+        chat_message_ids: &[Uuid],
+    ) -> Result<Vec<ChatMessageFile>> {
+        let chat_message_files = sqlx::query_as!(
+            ChatMessageFile,
+            "SELECT id, chat_message_id, file_name, media_type, created_at
+            FROM chat_message_files
+            WHERE chat_message_id = ANY($1)
+            ORDER BY created_at ASC",
+            chat_message_ids
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_message_files)
+    }
+
+    pub async fn get_chat_message_pictures_by_chat_message_ids(
+        &self,
+        chat_message_ids: &[Uuid],
+    ) -> Result<Vec<ChatMessagePicture>> {
+        let chat_message_pictures = sqlx::query_as!(
+            ChatMessagePicture,
+            "SELECT id, chat_message_id, file_name, created_at, updated_at
+            FROM chat_message_pictures
+            WHERE chat_message_id = ANY($1)
+            ORDER BY created_at ASC",
+            chat_message_ids
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_message_pictures)
     }
 
     pub async fn get_companies(&self) -> Result<Vec<Company>> {
@@ -554,6 +620,77 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_message)
+    }
+
+    pub async fn try_get_chat_message_extended_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<ChatMessageExtended>> {
+        let chat_message = self.try_get_chat_message_by_id(id).await?;
+
+        match chat_message {
+            None => Ok(None),
+            Some(chat_message) => {
+                let chat_message_files = self
+                    .get_chat_message_files_by_chat_message_id(chat_message.id)
+                    .await?;
+                let chat_message_pictures = self
+                    .get_chat_message_pictures_by_chat_message_ids(&[chat_message.id])
+                    .await?;
+                let chat_message_extended = self
+                    .map_to_chat_message_extended(
+                        &chat_message,
+                        chat_message_files,
+                        chat_message_pictures,
+                    )
+                    .await?;
+
+                Ok(Some(chat_message_extended))
+            }
+        }
+    }
+
+    pub async fn map_to_chat_message_extended(
+        &self,
+        chat_message: &ChatMessage,
+        chat_message_files: Vec<ChatMessageFile>,
+        chat_message_pictures: Vec<ChatMessagePicture>,
+    ) -> Result<ChatMessageExtended> {
+        let mut selected_chat_message_files = vec![];
+        let mut selected_chat_message_pictures = vec![];
+        for mut chat_message_file in chat_message_files {
+            if chat_message_file.chat_message_id == chat_message.id {
+                if !chat_message_file.file_name.contains(PUBLIC_DIR) {
+                    chat_message_file.file_name =
+                        format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
+                }
+                selected_chat_message_files.push(chat_message_file);
+            }
+        }
+        for mut chat_message_picture in chat_message_pictures {
+            if chat_message_picture.chat_message_id == chat_message.id {
+                if !chat_message_picture.file_name.contains(PUBLIC_DIR) {
+                    chat_message_picture.file_name =
+                        format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
+                }
+                selected_chat_message_pictures.push(chat_message_picture);
+            }
+        }
+
+        let chat_message_extended = ChatMessageExtended {
+            id: chat_message.id,
+            chat_id: chat_message.chat_id,
+            chat_message_files: selected_chat_message_files,
+            chat_message_pictures: selected_chat_message_pictures,
+            estimated_response_at: chat_message.estimated_response_at,
+            message: chat_message.message.clone(),
+            response: chat_message.response.clone(),
+            status: chat_message.status.clone(),
+            created_at: chat_message.created_at,
+            updated_at: chat_message.updated_at,
+        };
+
+        Ok(chat_message_extended)
     }
 
     pub async fn try_get_chat_message_file_by_id(

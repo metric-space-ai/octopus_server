@@ -1,9 +1,9 @@
 use crate::{
-    api::chat_pictures::PUBLIC_DIR,
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
+    PUBLIC_DIR,
 };
 use axum::{
     extract::{Multipart, Path, State},

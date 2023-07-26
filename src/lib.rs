@@ -15,6 +15,8 @@ mod session;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
+pub const PUBLIC_DIR: &str = "public";
+
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {

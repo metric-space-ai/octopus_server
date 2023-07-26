@@ -252,7 +252,7 @@ pub async fn list(
 
         let chat_messages = context
             .octopus_database
-            .get_chat_messages_by_chat_id(chat_id)
+            .get_chat_messages_extended_by_chat_id(chat_id)
             .await?;
 
         return Ok((StatusCode::OK, Json(chat_messages)).into_response());
@@ -296,7 +296,7 @@ pub async fn read(
 
     let chat_message = context
         .octopus_database
-        .try_get_chat_message_by_id(chat_message_id)
+        .try_get_chat_message_extended_by_id(chat_message_id)
         .await?
         .ok_or(AppError::NotFound)?;
 

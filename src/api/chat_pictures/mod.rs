@@ -3,6 +3,7 @@ use crate::{
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
+    PUBLIC_DIR,
 };
 use axum::{
     extract::{Multipart, Path, State},
@@ -18,8 +19,6 @@ use std::{
 };
 use utoipa::IntoParams;
 use uuid::Uuid;
-
-pub const PUBLIC_DIR: &str = "public";
 
 #[derive(Deserialize, IntoParams)]
 pub struct Params {

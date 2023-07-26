@@ -34,6 +34,20 @@ pub struct ChatMessage {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatMessageExtended {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub chat_message_files: Vec<ChatMessageFile>,
+    pub chat_message_pictures: Vec<ChatMessagePicture>,
+    pub estimated_response_at: DateTime<Utc>,
+    pub message: String,
+    pub response: Option<String>,
+    pub status: ChatMessageStatus,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatMessageFile {
     pub id: Uuid,
     pub chat_message_id: Uuid,
