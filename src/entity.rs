@@ -14,6 +14,16 @@ pub struct Chat {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatActivity {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub session_id: Uuid,
+    pub user_id: Uuid,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "chat_message_statuses", rename_all = "snake_case")]
 pub enum ChatMessageStatus {

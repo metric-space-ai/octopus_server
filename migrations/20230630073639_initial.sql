@@ -71,6 +71,18 @@ CREATE TABLE chats(
 CREATE INDEX chats_user_id ON chats(user_id);
 CREATE INDEX chats_workspace_id ON chats(workspace_id);
 
+CREATE TABLE chat_activities(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
+    session_id UUID NOT NULL REFERENCES sessions ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    UNIQUE(chat_id, session_id, user_id)
+);
+
+CREATE INDEX chat_activities_updated_at ON chat_activities(updated_at);
+
 CREATE TYPE chat_message_statuses AS ENUM('answered', 'asked');
 
 CREATE TABLE chat_messages(

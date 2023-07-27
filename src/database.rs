@@ -1,6 +1,6 @@
 use crate::{
     entity::{
-        Chat, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
+        Chat, ChatActivity, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
         ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt, Profile, Session,
         User, Workspace, WorkspacesType,
     },
@@ -35,6 +35,27 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chats)
+    }
+
+    pub async fn get_chat_activities_latest_by_chat_id_and_session_id(
+        &self,
+        chat_id: Uuid,
+        session_id: Uuid,
+    ) -> Result<Vec<ChatActivity>> {
+        let chat_activities = sqlx::query_as!(
+            ChatActivity,
+            "SELECT id, chat_id, session_id, user_id, created_at, updated_at
+            FROM chat_activities
+            WHERE chat_id = $1 AND session_id != $2
+            ORDER BY updated_at DESC
+            LIMIT 5",
+            chat_id,
+            session_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_activities)
     }
 
     pub async fn get_chat_messages_estimated_response_at(&self) -> Result<EstimatedSeconds> {
@@ -246,6 +267,30 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat)
+    }
+
+    pub async fn insert_chat_activity(
+        &self,
+        chat_id: Uuid,
+        session_id: Uuid,
+        user_id: Uuid,
+    ) -> Result<ChatActivity> {
+        let chat_activity = sqlx::query_as!(
+            ChatActivity,
+            "INSERT INTO chat_activities
+            (chat_id, session_id, user_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (chat_id, session_id, user_id)
+            DO UPDATE SET updated_at = current_timestamp(0)
+            RETURNING id, chat_id, session_id, user_id, created_at, updated_at",
+            chat_id,
+            session_id,
+            user_id,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_activity)
     }
 
     pub async fn insert_chat_message(

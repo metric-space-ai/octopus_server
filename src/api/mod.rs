@@ -13,8 +13,8 @@ use crate::{
     },
     context::Context,
     entity::{
-        Chat, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        ExamplePrompt, Profile, User, Workspace, WorkspacesType,
+        Chat, ChatActivity, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
+        ChatPicture, ExamplePrompt, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -39,6 +39,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod auth;
+mod chat_activities;
 mod chat_message_files;
 mod chat_message_pictures;
 mod chat_messages;
@@ -57,6 +58,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             schemas(
                 ChangePasswordPut,
                 Chat,
+                ChatActivity,
                 ChatMessage,
                 ChatMessageFile,
                 ChatMessagePicture,
@@ -87,6 +89,8 @@ pub async fn router(context: Arc<Context>) -> Router {
         modifiers(&SecurityAddon),
         paths(
             change_password::change_password,
+            chat_activities::create,
+            chat_activities::list,
             chat_messages::create,
             chat_messages::delete,
             chat_messages::list,
@@ -131,6 +135,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         tags(
             (name = "chats", description = "Chats API."),
+            (name = "chat_activities", description = "Chat activities API."),
             (name = "chat_messages", description = "Chat messages API."),
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_message_pictures", description = "Chat message pictures API."),
@@ -173,6 +178,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/auth/:user_id",
             put(change_password::change_password),
+        )
+        .route(
+            "/api/v1/chat-activities/:chat_id",
+            get(chat_activities::list).post(chat_activities::create),
         )
         .route(
             "/api/v1/chat-messages/:chat_id",
