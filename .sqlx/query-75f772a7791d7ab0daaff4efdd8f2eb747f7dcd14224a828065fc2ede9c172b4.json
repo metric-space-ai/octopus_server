@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_id, estimated_response_at, message, response, status AS \"status: _\", created_at, updated_at\n            FROM chat_messages\n            WHERE id = $1",
+  "query": "SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS \"status: _\", created_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -15,21 +15,26 @@
       },
       {
         "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -44,12 +49,12 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -64,11 +69,12 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
       false
     ]
   },
-  "hash": "702a329c182eddec632729a6db0b8b396ec455e57edb2ba87753f35d27aec7f9"
+  "hash": "75f772a7791d7ab0daaff4efdd8f2eb747f7dcd14224a828065fc2ede9c172b4"
 }

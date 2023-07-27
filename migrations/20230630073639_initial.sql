@@ -76,6 +76,7 @@ CREATE TYPE chat_message_statuses AS ENUM('answered', 'asked');
 CREATE TABLE chat_messages(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
     estimated_response_at TIMESTAMP WITH TIME ZONE NOT NULL,
     message TEXT NOT NULL,
     response TEXT,
@@ -85,6 +86,7 @@ CREATE TABLE chat_messages(
 );
 
 CREATE INDEX chat_messages_chat_id ON chat_messages(chat_id);
+CREATE INDEX chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX chat_messages_status ON chat_messages(status);
 CREATE INDEX chat_messages_created_at ON chat_messages(created_at);
 CREATE INDEX chat_messages_updated_at ON chat_messages(updated_at);

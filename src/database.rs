@@ -50,7 +50,7 @@ impl OctopusDatabase {
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             ORDER BY created_at ASC"#,
@@ -98,7 +98,7 @@ impl OctopusDatabase {
         status: ChatMessageStatus,
     ) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as::<_, ChatMessage>(
-            "SELECT id, chat_id, estimated_response_at, message, response, status, created_at, updated_at
+            "SELECT id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1 AND status = $2
             ORDER BY created_at ASC",
@@ -251,16 +251,18 @@ impl OctopusDatabase {
     pub async fn insert_chat_message(
         &self,
         chat_id: Uuid,
+        user_id: Uuid,
         estimated_response_at: DateTime<Utc>,
         message: &str,
     ) -> Result<ChatMessage> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
             r#"INSERT INTO chat_messages
-            (chat_id, estimated_response_at, message)
-            VALUES ($1, $2, $3)
-            RETURNING id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
+            (chat_id, user_id, estimated_response_at, message)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
             chat_id,
+            user_id,
             estimated_response_at,
             message,
         )
@@ -611,7 +613,7 @@ impl OctopusDatabase {
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
             FROM chat_messages
             WHERE id = $1"#,
             id
@@ -680,6 +682,7 @@ impl OctopusDatabase {
         let chat_message_extended = ChatMessageExtended {
             id: chat_message.id,
             chat_id: chat_message.chat_id,
+            user_id: chat_message.user_id,
             chat_message_files: selected_chat_message_files,
             chat_message_pictures: selected_chat_message_pictures,
             estimated_response_at: chat_message.estimated_response_at,
@@ -902,7 +905,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET response = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, estimated_response_at, message, response, status, created_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at",
         )
         .bind(id)
         .bind(response)
@@ -915,7 +918,7 @@ impl OctopusDatabase {
                     r#"UPDATE chat_messages
                     SET response = $2, status = $3, updated_at = current_timestamp(0)
                     WHERE id = $1
-                    RETURNING id, chat_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
+                    RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
                     id,
                     response,
                     status
@@ -938,7 +941,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET estimated_response_at = $2, message = $3, status = $4, response = $5, created_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, estimated_response_at, message, response, status, created_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at",
         )
         .bind(id)
         .bind(estimated_response_at)

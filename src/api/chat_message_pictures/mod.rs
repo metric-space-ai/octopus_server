@@ -83,14 +83,15 @@ pub async fn create(
 
     match workspace.r#type {
         WorkspacesType::Private => {
-            if session_user.id != chat.user_id
+            if session_user.id != chat_message.user_id
                 && !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
             {
                 return Err(AppError::Unauthorized);
             }
         }
         WorkspacesType::Public => {
-            if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+            if session_user.id != chat_message.user_id && session_user.company_id != user.company_id
+            {
                 return Err(AppError::Unauthorized);
             }
         }
@@ -186,19 +187,13 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id
+    if session_user.id != chat_message.user_id
         && (!session_user
             .roles
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
@@ -268,19 +263,13 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+    if session_user.id != chat_message.user_id && session_user.company_id != user.company_id {
         return Err(AppError::Unauthorized);
     }
 
@@ -337,19 +326,13 @@ pub async fn update(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id
+    if session_user.id != chat_message.user_id
         && (!session_user
             .roles
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())

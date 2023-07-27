@@ -25,6 +25,7 @@ pub enum ChatMessageStatus {
 pub struct ChatMessage {
     pub id: Uuid,
     pub chat_id: Uuid,
+    pub user_id: Uuid,
     pub estimated_response_at: DateTime<Utc>,
     pub message: String,
     pub response: Option<String>,
@@ -37,6 +38,7 @@ pub struct ChatMessage {
 pub struct ChatMessageExtended {
     pub id: Uuid,
     pub chat_id: Uuid,
+    pub user_id: Uuid,
     pub chat_message_files: Vec<ChatMessageFile>,
     pub chat_message_pictures: Vec<ChatMessagePicture>,
     pub estimated_response_at: DateTime<Utc>,

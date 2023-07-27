@@ -123,7 +123,12 @@ pub async fn create(
 
     let chat_message = context
         .octopus_database
-        .insert_chat_message(chat.id, estimated_response_at, &input.message)
+        .insert_chat_message(
+            chat.id,
+            session_user.id,
+            estimated_response_at,
+            &input.message,
+        )
         .await?;
 
     let cloned_context = context.clone();
@@ -182,19 +187,13 @@ pub async fn delete(
         return Err(AppError::Unauthorized);
     }
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id
+    if session_user.id != chat_message.user_id
         && (!session_user
             .roles
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
@@ -304,19 +303,13 @@ pub async fn read(
         return Err(AppError::Unauthorized);
     }
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+    if session_user.id != chat_message.user_id && session_user.company_id != user.company_id {
         return Err(AppError::Unauthorized);
     }
 
@@ -366,19 +359,13 @@ pub async fn regenerate(
         return Err(AppError::Unauthorized);
     }
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id
+    if session_user.id != chat_message.user_id
         && (!session_user
             .roles
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
@@ -467,19 +454,13 @@ pub async fn update(
         return Err(AppError::Unauthorized);
     }
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(original_chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
     let user = context
         .octopus_database
-        .try_get_user_by_id(chat.user_id)
+        .try_get_user_by_id(original_chat_message.user_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id
+    if session_user.id != original_chat_message.user_id
         && (!session_user
             .roles
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
@@ -520,7 +501,12 @@ pub async fn update(
 
     let new_chat_message = context
         .octopus_database
-        .insert_chat_message(chat.id, estimated_response_at, &input.message)
+        .insert_chat_message(
+            original_chat_message.chat_id,
+            session_user.id,
+            estimated_response_at,
+            &input.message,
+        )
         .await?;
 
     let cloned_context = context.clone();

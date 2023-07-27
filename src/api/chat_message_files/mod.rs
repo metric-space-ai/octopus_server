@@ -63,19 +63,13 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if chat.user_id != session.user_id {
+    if chat_message.user_id != session.user_id {
         return Err(AppError::Unauthorized);
     }
 
     context
         .octopus_database
-        .try_delete_chat_message_file_by_id(chat_message_file_id)
+        .try_delete_chat_message_file_by_id(chat_message_file.id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -107,23 +101,16 @@ pub async fn list(
         .await?;
 
     if let Some(chat_message) = chat_message {
-        let chat = context
+        if chat_message.user_id != session.user_id {
+            return Err(AppError::Unauthorized);
+        }
+
+        let chat_message_files = context
             .octopus_database
-            .try_get_chat_by_id(chat_message.chat_id)
+            .get_chat_message_files_by_chat_message_id(chat_message.id)
             .await?;
 
-        if let Some(chat) = chat {
-            if chat.user_id != session.user_id {
-                return Err(AppError::Unauthorized);
-            }
-
-            let chat_message_files = context
-                .octopus_database
-                .get_chat_message_files_by_chat_message_id(chat_message_id)
-                .await?;
-
-            return Ok((StatusCode::OK, Json(chat_message_files)).into_response());
-        }
+        return Ok((StatusCode::OK, Json(chat_message_files)).into_response());
     }
 
     Ok((StatusCode::OK, Json(())).into_response())
@@ -172,13 +159,7 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if chat.user_id != session.user_id {
+    if chat_message.user_id != session.user_id {
         return Err(AppError::Unauthorized);
     }
 
