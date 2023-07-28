@@ -26,9 +26,10 @@ impl OctopusDatabase {
     pub async fn get_chats_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Chat>> {
         let chats = sqlx::query_as!(
             Chat,
-            "SELECT id, user_id, workspace_id, name, created_at, updated_at
+            "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at
             FROM chats
-            WHERE workspace_id = $1",
+            WHERE workspace_id = $1
+            AND deleted_at IS NULL",
             workspace_id
         )
         .fetch_all(&*self.pool)
@@ -46,7 +47,8 @@ impl OctopusDatabase {
             ChatActivity,
             "SELECT id, chat_id, session_id, user_id, created_at, updated_at
             FROM chat_activities
-            WHERE chat_id = $1 AND session_id != $2
+            WHERE chat_id = $1
+            AND session_id != $2
             ORDER BY updated_at DESC
             LIMIT 5",
             chat_id,
@@ -71,9 +73,10 @@ impl OctopusDatabase {
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
+            AND deleted_at IS NULL
             ORDER BY created_at ASC"#,
             chat_id
         )
@@ -119,9 +122,11 @@ impl OctopusDatabase {
         status: ChatMessageStatus,
     ) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as::<_, ChatMessage>(
-            "SELECT id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at
+            "SELECT id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at
             FROM chat_messages
-            WHERE chat_id = $1 AND status = $2
+            WHERE chat_id = $1
+            AND status = $2
+            AND deleted_at IS NULL
             ORDER BY created_at ASC",
         )
         .bind(chat_id)
@@ -138,9 +143,10 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageFile>> {
         let chat_message_files = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at
+            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
             FROM chat_message_files
             WHERE chat_message_id = $1
+            AND deleted_at IS NULL
             ORDER BY created_at ASC",
             chat_message_id
         )
@@ -156,9 +162,10 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageFile>> {
         let chat_message_files = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at
+            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
             FROM chat_message_files
             WHERE chat_message_id = ANY($1)
+            AND deleted_at IS NULL
             ORDER BY created_at ASC",
             chat_message_ids
         )
@@ -174,9 +181,10 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessagePicture>> {
         let chat_message_pictures = sqlx::query_as!(
             ChatMessagePicture,
-            "SELECT id, chat_message_id, file_name, created_at, updated_at
+            "SELECT id, chat_message_id, file_name, created_at, deleted_at, updated_at
             FROM chat_message_pictures
             WHERE chat_message_id = ANY($1)
+            AND deleted_at IS NULL
             ORDER BY created_at ASC",
             chat_message_ids
         )
@@ -189,8 +197,9 @@ impl OctopusDatabase {
     pub async fn get_companies(&self) -> Result<Vec<Company>> {
         let companies = sqlx::query_as!(
             Company,
-            "SELECT id, address, name, created_at, updated_at
-            FROM companies",
+            "SELECT id, address, name, created_at, deleted_at, updated_at
+            FROM companies
+            WHERE deleted_at IS NULL",
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -203,9 +212,10 @@ impl OctopusDatabase {
 
         let example_prompts = sqlx::query_as!(
             ExamplePrompt,
-            "SELECT id, is_visible, priority, prompt, created_at, updated_at
+            "SELECT id, is_visible, priority, prompt, created_at, deleted_at, updated_at
             FROM example_prompts
             WHERE is_visible = $1
+            AND deleted_at IS NULL
             ORDER BY priority DESC",
             is_visible
         )
@@ -221,10 +231,11 @@ impl OctopusDatabase {
         r#type: WorkspacesType,
     ) -> Result<Vec<Workspace>> {
         let workspaces = sqlx::query_as::<_, Workspace>(
-            "SELECT id, company_id, user_id, name, type, created_at, updated_at
+            "SELECT id, company_id, user_id, name, type, created_at, deleted_at, updated_at
             FROM workspaces
             WHERE company_id = $1
-            AND type = $2",
+            AND type = $2
+            AND deleted_at IS NULL",
         )
         .bind(company_id)
         .bind(r#type)
@@ -240,10 +251,11 @@ impl OctopusDatabase {
         r#type: WorkspacesType,
     ) -> Result<Vec<Workspace>> {
         let workspaces = sqlx::query_as::<_, Workspace>(
-            "SELECT id, company_id, user_id, name, type, created_at, updated_at
+            "SELECT id, company_id, user_id, name, type, created_at, deleted_at, updated_at
             FROM workspaces
             WHERE user_id = $1
-            AND type = $2",
+            AND type = $2
+            AND deleted_at IS NULL",
         )
         .bind(user_id)
         .bind(r#type)
@@ -259,7 +271,7 @@ impl OctopusDatabase {
             "INSERT INTO chats
             (user_id, workspace_id)
             VALUES ($1, $2)
-            RETURNING id, user_id, workspace_id, name, created_at, updated_at",
+            RETURNING id, user_id, workspace_id, name, created_at, deleted_at, updated_at",
             user_id,
             workspace_id
         )
@@ -305,7 +317,7 @@ impl OctopusDatabase {
             r#"INSERT INTO chat_messages
             (chat_id, user_id, estimated_response_at, message)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at"#,
             chat_id,
             user_id,
             estimated_response_at,
@@ -329,7 +341,7 @@ impl OctopusDatabase {
             "INSERT INTO chat_message_files
             (chat_message_id, file_name, media_type)
             VALUES ($1, $2, $3)
-            RETURNING id, chat_message_id, file_name, media_type, created_at",
+            RETURNING id, chat_message_id, file_name, media_type, created_at, deleted_at",
             chat_message_id,
             file_name,
             media_type,
@@ -350,7 +362,7 @@ impl OctopusDatabase {
             "INSERT INTO chat_message_pictures
             (chat_message_id, file_name)
             VALUES ($1, $2)
-            RETURNING id, chat_message_id, file_name, created_at, updated_at",
+            RETURNING id, chat_message_id, file_name, created_at, deleted_at, updated_at",
             chat_message_id,
             file_name,
         )
@@ -366,7 +378,7 @@ impl OctopusDatabase {
             "INSERT INTO chat_pictures
             (chat_id, file_name)
             VALUES ($1, $2)
-            RETURNING id, chat_id, file_name, created_at, updated_at",
+            RETURNING id, chat_id, file_name, created_at, deleted_at, updated_at",
             chat_id,
             file_name
         )
@@ -382,7 +394,7 @@ impl OctopusDatabase {
             "INSERT INTO companies
             (address, name)
             VALUES ($1, $2)
-            RETURNING id, address, name, created_at, updated_at",
+            RETURNING id, address, name, created_at, deleted_at, updated_at",
             address,
             name
         )
@@ -403,7 +415,7 @@ impl OctopusDatabase {
             "INSERT INTO example_prompts
             (is_visible, priority, prompt)
             VALUES ($1, $2, $3)
-            RETURNING id, is_visible, priority, prompt, created_at, updated_at",
+            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
             is_visible,
             priority,
             prompt
@@ -425,7 +437,7 @@ impl OctopusDatabase {
             "INSERT INTO profiles
             (user_id, job_title, name)
             VALUES ($1, $2, $3)
-            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at",
             user_id,
             job_title,
             name
@@ -473,7 +485,7 @@ impl OctopusDatabase {
             (company_id, email, is_enabled, pepper_id, password, roles)
             VALUES ($1, $2, $3, $4, $5, $6)
             ON CONFLICT (email) DO NOTHING
-            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
             company_id,
             email,
             is_enabled,
@@ -498,7 +510,7 @@ impl OctopusDatabase {
             "INSERT INTO workspaces
             (company_id, user_id, name, type)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, company_id, user_id, name, type, created_at, updated_at",
+            RETURNING id, company_id, user_id, name, type, created_at, deleted_at, updated_at",
         )
         .bind(company_id)
         .bind(user_id)
@@ -511,27 +523,39 @@ impl OctopusDatabase {
     }
 
     pub async fn try_delete_chat_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let chat = sqlx::query_scalar::<_, Uuid>("DELETE FROM chats WHERE id = $1 RETURNING id")
-            .bind(id)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let chat = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE chats
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(chat)
     }
 
     pub async fn try_delete_chat_message_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let chat_message =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM chat_messages WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let chat_message = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE chat_messages
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(chat_message)
     }
 
     pub async fn try_delete_chat_messages_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Uuid>> {
         let chat_message_ids = sqlx::query_scalar::<_, Uuid>(
-            "DELETE FROM chat_messages WHERE id = ANY($1) RETURNING id",
+            "UPDATE chat_messages
+            SET deleted_at = current_timestamp(0)
+            WHERE id = ANY($1)
+            RETURNING id",
         )
         .bind(ids)
         .fetch_all(&*self.pool)
@@ -542,7 +566,10 @@ impl OctopusDatabase {
 
     pub async fn try_delete_chat_message_file_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat_message_file = sqlx::query_scalar::<_, Uuid>(
-            "DELETE FROM chat_message_files WHERE id = $1 RETURNING id",
+            "UPDATE chat_message_files
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -553,7 +580,10 @@ impl OctopusDatabase {
 
     pub async fn try_delete_chat_message_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat_message_picture = sqlx::query_scalar::<_, Uuid>(
-            "DELETE FROM chat_message_pictures WHERE id = $1 RETURNING id",
+            "UPDATE chat_message_pictures
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id",
         )
         .bind(id)
         .fetch_optional(&*self.pool)
@@ -563,80 +593,112 @@ impl OctopusDatabase {
     }
 
     pub async fn try_delete_chat_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let chat_picture =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM chat_pictures WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let chat_picture = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE chat_pictures
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(chat_picture)
     }
 
     #[allow(dead_code)]
     pub async fn try_delete_company_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let company =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM companies WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let company = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE companies
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(company)
     }
 
     pub async fn try_delete_example_prompt_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let example_prompt =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM example_prompts WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let example_prompt = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE example_prompts
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(example_prompt)
     }
 
     pub async fn try_delete_session_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let session =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM sessions WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let session = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM sessions
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(session)
     }
 
     #[allow(dead_code)]
     pub async fn try_delete_user_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let user = sqlx::query_scalar::<_, Uuid>("DELETE FROM users WHERE id = $1 RETURNING id")
-            .bind(id)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let user = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE users
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(user)
     }
 
     pub async fn try_delete_workspace_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let workspace =
-            sqlx::query_scalar::<_, Uuid>("DELETE FROM workspaces WHERE id = $1 RETURNING id")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let workspace = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE workspaces
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(workspace)
     }
 
     pub async fn try_get_hash_for_user_id(&self, id: Uuid) -> Result<Option<String>> {
-        let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE id = $1")
-            .bind(id)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let hash = sqlx::query_scalar::<_, String>(
+            "SELECT password
+            FROM users
+            WHERE id = $1",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(hash)
     }
 
     pub async fn try_get_hash_for_email(&self, email: &str) -> Result<Option<String>> {
-        let hash = sqlx::query_scalar::<_, String>("SELECT password FROM users WHERE email = $1")
-            .bind(email)
-            .fetch_optional(&*self.pool)
-            .await?;
+        let hash = sqlx::query_scalar::<_, String>(
+            "SELECT password
+            FROM users
+            WHERE email = $1",
+        )
+        .bind(email)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(hash)
     }
@@ -644,9 +706,10 @@ impl OctopusDatabase {
     pub async fn try_get_chat_by_id(&self, id: Uuid) -> Result<Option<Chat>> {
         let chat = sqlx::query_as!(
             Chat,
-            "SELECT id, user_id, workspace_id, name, created_at, updated_at
+            "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at
             FROM chats
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -658,9 +721,10 @@ impl OctopusDatabase {
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
-            WHERE id = $1"#,
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
             id
         )
         .fetch_optional(&*self.pool)
@@ -735,6 +799,7 @@ impl OctopusDatabase {
             response: chat_message.response.clone(),
             status: chat_message.status.clone(),
             created_at: chat_message.created_at,
+            deleted_at: chat_message.deleted_at,
             updated_at: chat_message.updated_at,
         };
 
@@ -747,9 +812,10 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessageFile>> {
         let chat_message_file = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at
+            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
             FROM chat_message_files
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -764,9 +830,10 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessagePicture>> {
         let chat_message_picture = sqlx::query_as!(
             ChatMessagePicture,
-            "SELECT id, chat_message_id, file_name, created_at, updated_at
+            "SELECT id, chat_message_id, file_name, created_at, deleted_at, updated_at
             FROM chat_message_pictures
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -781,9 +848,10 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatPicture>> {
         let chat_picture = sqlx::query_as!(
             ChatPicture,
-            "SELECT id, chat_id, file_name, created_at, updated_at
+            "SELECT id, chat_id, file_name, created_at, deleted_at, updated_at
             FROM chat_pictures
-            WHERE chat_id = $1",
+            WHERE chat_id = $1
+            AND deleted_at IS NULL",
             chat_id
         )
         .fetch_optional(&*self.pool)
@@ -795,9 +863,10 @@ impl OctopusDatabase {
     pub async fn try_get_chat_picture_by_id(&self, id: Uuid) -> Result<Option<ChatPicture>> {
         let chat_picture = sqlx::query_as!(
             ChatPicture,
-            "SELECT id, chat_id, file_name, created_at, updated_at
+            "SELECT id, chat_id, file_name, created_at, deleted_at, updated_at
             FROM chat_pictures
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -809,8 +878,9 @@ impl OctopusDatabase {
     pub async fn try_get_company_primary(&self) -> Result<Option<Company>> {
         let company = sqlx::query_as!(
             Company,
-            "SELECT id, address, name, created_at, updated_at
+            "SELECT id, address, name, created_at, deleted_at, updated_at
             FROM companies
+            WHERE deleted_at IS NULL
             ORDER BY created_at ASC
             LIMIT 1"
         )
@@ -823,9 +893,10 @@ impl OctopusDatabase {
     pub async fn try_get_example_prompt_by_id(&self, id: Uuid) -> Result<Option<ExamplePrompt>> {
         let example_prompt = sqlx::query_as!(
             ExamplePrompt,
-            "SELECT id, is_visible, priority, prompt, created_at, updated_at
+            "SELECT id, is_visible, priority, prompt, created_at, deleted_at, updated_at
             FROM example_prompts
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -835,11 +906,15 @@ impl OctopusDatabase {
     }
 
     pub async fn try_get_example_prompt_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
-        let example_prompt_id =
-            sqlx::query_scalar::<_, Uuid>("SELECT id FROM example_prompts WHERE id = $1")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
+        let example_prompt_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id
+            FROM example_prompts
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
 
         Ok(example_prompt_id)
     }
@@ -847,9 +922,10 @@ impl OctopusDatabase {
     pub async fn try_get_profile_by_user_id(&self, user_id: Uuid) -> Result<Option<Profile>> {
         let profile = sqlx::query_as!(
             Profile,
-            "SELECT id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at
+            "SELECT id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at
             FROM profiles
-            WHERE user_id = $1",
+            WHERE user_id = $1
+            AND deleted_at IS NULL",
             user_id
         )
         .fetch_optional(&*self.pool)
@@ -875,9 +951,10 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
+            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
             FROM users
-            WHERE email = $1",
+            WHERE email = $1
+            AND deleted_at IS NULL",
             email
         )
         .fetch_optional(&*self.pool)
@@ -889,9 +966,10 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, updated_at
+            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
             FROM users
-            WHERE id = $1",
+            WHERE id = $1
+            AND deleted_at IS NULL",
             id
         )
         .fetch_optional(&*self.pool)
@@ -913,9 +991,10 @@ impl OctopusDatabase {
     pub async fn try_get_workspace_by_id(&self, id: Uuid) -> Result<Option<Workspace>> {
         let workspace = sqlx::query_as!(
             Workspace,
-            r#"SELECT id, company_id, user_id, name, type AS "type: _", created_at, updated_at
+            r#"SELECT id, company_id, user_id, name, type AS "type: _", created_at, deleted_at, updated_at
             FROM workspaces
-            WHERE id = $1"#,
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
             id
         )
         .fetch_optional(&*self.pool)
@@ -930,7 +1009,7 @@ impl OctopusDatabase {
             "UPDATE chats
             SET name = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, workspace_id, name, created_at, updated_at",
+            RETURNING id, user_id, workspace_id, name, created_at, deleted_at, updated_at",
             id,
             name
         )
@@ -950,7 +1029,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET response = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(response)
@@ -963,7 +1042,7 @@ impl OctopusDatabase {
                     r#"UPDATE chat_messages
                     SET response = $2, status = $3, updated_at = current_timestamp(0)
                     WHERE id = $1
-                    RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, updated_at"#,
+                    RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at"#,
                     id,
                     response,
                     status
@@ -986,7 +1065,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET estimated_response_at = $2, message = $3, status = $4, response = $5, created_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(estimated_response_at)
@@ -1009,7 +1088,7 @@ impl OctopusDatabase {
             "UPDATE chat_message_pictures
             SET file_name = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_message_id, file_name, created_at, updated_at",
+            RETURNING id, chat_message_id, file_name, created_at, deleted_at, updated_at",
             id,
             file_name
         )
@@ -1025,7 +1104,7 @@ impl OctopusDatabase {
             "UPDATE chat_pictures
             SET file_name = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, file_name, created_at, updated_at",
+            RETURNING id, chat_id, file_name, created_at, deleted_at, updated_at",
             id,
             file_name
         )
@@ -1047,7 +1126,7 @@ impl OctopusDatabase {
             "UPDATE example_prompts
             SET is_visible = $2, priority = $3, prompt = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, is_visible, priority, prompt, created_at, updated_at",
+            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
             id,
             is_visible,
             priority,
@@ -1072,7 +1151,7 @@ impl OctopusDatabase {
             "UPDATE profiles
             SET job_title = $2, language = $3, name = $4, text_size = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at",
             id,
             job_title,
             language,
@@ -1095,7 +1174,7 @@ impl OctopusDatabase {
             "UPDATE profiles
             SET photo_file_name = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, updated_at",
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at",
             id,
             photo_file_name
         )
@@ -1111,7 +1190,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET password = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
             id,
             password
         )
@@ -1128,7 +1207,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET roles = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
             id,
             roles
         )
@@ -1148,7 +1227,7 @@ impl OctopusDatabase {
             "UPDATE workspaces
             SET name = $2, type = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, user_id, name, type, created_at, updated_at",
+            RETURNING id, company_id, user_id, name, type, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(name)

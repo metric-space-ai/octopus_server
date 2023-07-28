@@ -11,6 +11,7 @@ pub struct Chat {
     pub workspace_id: Uuid,
     pub name: Option<String>,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -41,6 +42,7 @@ pub struct ChatMessage {
     pub response: Option<String>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -56,6 +58,7 @@ pub struct ChatMessageExtended {
     pub response: Option<String>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -66,6 +69,7 @@ pub struct ChatMessageFile {
     pub file_name: String,
     pub media_type: String,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
@@ -74,6 +78,7 @@ pub struct ChatMessagePicture {
     pub chat_message_id: Uuid,
     pub file_name: String,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -83,6 +88,7 @@ pub struct ChatPicture {
     pub chat_id: Uuid,
     pub file_name: String,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -92,6 +98,7 @@ pub struct Company {
     pub address: Option<String>,
     pub name: String,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -107,6 +114,7 @@ pub struct ExamplePrompt {
     pub priority: i32,
     pub prompt: String,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -131,6 +139,7 @@ pub struct User {
     pub is_enabled: bool,
     pub roles: Vec<String>,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -144,6 +153,7 @@ pub struct Profile {
     pub photo_file_name: Option<String>,
     pub text_size: i32,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -162,5 +172,6 @@ pub struct Workspace {
     pub name: String,
     pub r#type: WorkspacesType,
     pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }

@@ -4,8 +4,11 @@ CREATE TABLE companies(
     address VARCHAR(256),
     name VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
+
+CREATE INDEX companies_deleted_at ON companies(deleted_at);
 
 CREATE TABLE users(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -16,11 +19,13 @@ CREATE TABLE users(
     password VARCHAR(256) NOT NULL,
     roles VARCHAR(1024) [] NOT NULL DEFAULT '{}',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(email)
 );
 
 CREATE INDEX users_company_id ON users(company_id);
+CREATE INDEX users_deleted_at ON users(deleted_at);
 
 CREATE TABLE profiles(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -31,9 +36,12 @@ CREATE TABLE profiles(
     photo_file_name VARCHAR(256),
     text_size INT NOT NULL DEFAULT 16,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(user_id)
 );
+
+CREATE INDEX profiles_deleted_at ON profiles(deleted_at);
 
 CREATE TABLE sessions(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,11 +61,13 @@ CREATE TABLE workspaces(
     name VARCHAR(256) NOT NULL,
     type workspaces_types NOT NULL DEFAULT 'public',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
 CREATE INDEX workspaces_company_id ON workspaces(company_id);
 CREATE INDEX workspaces_type ON workspaces(type);
+CREATE INDEX workspaces_deleted_at ON workspaces(deleted_at);
 
 CREATE TABLE chats(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -65,11 +75,13 @@ CREATE TABLE chats(
     workspace_id UUID NOT NULL REFERENCES workspaces ON DELETE CASCADE,
     name TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
 CREATE INDEX chats_user_id ON chats(user_id);
 CREATE INDEX chats_workspace_id ON chats(workspace_id);
+CREATE INDEX chats_deleted_at ON chats(deleted_at);
 
 CREATE TABLE chat_activities(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -94,6 +106,7 @@ CREATE TABLE chat_messages(
     response TEXT,
     status chat_message_statuses NOT NULL DEFAULT 'asked',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
@@ -101,6 +114,7 @@ CREATE INDEX chat_messages_chat_id ON chat_messages(chat_id);
 CREATE INDEX chat_messages_user_id ON chat_messages(user_id);
 CREATE INDEX chat_messages_status ON chat_messages(status);
 CREATE INDEX chat_messages_created_at ON chat_messages(created_at);
+CREATE INDEX chat_messages_deleted_at ON chat_messages(deleted_at);
 CREATE INDEX chat_messages_updated_at ON chat_messages(updated_at);
 
 CREATE TABLE chat_message_files(
@@ -108,33 +122,39 @@ CREATE TABLE chat_message_files(
     chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
     media_type VARCHAR(256) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE
 );
 
 CREATE INDEX chat_message_files_chat_message_id ON chat_message_files(chat_message_id);
 CREATE INDEX chat_message_files_created_at ON chat_message_files(created_at);
+CREATE INDEX chat_message_files_deleted_at ON chat_message_files(deleted_at);
 
 CREATE TABLE chat_message_pictures(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
 CREATE INDEX chat_message_pictures_chat_message_id ON chat_message_pictures(chat_message_id);
 CREATE INDEX chat_message_pictures_created_at ON chat_message_pictures(created_at);
+CREATE INDEX chat_message_pictures_deleted_at ON chat_message_pictures(deleted_at);
 
 CREATE TABLE chat_pictures(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
     file_name VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     UNIQUE(chat_id)
 );
 
 CREATE INDEX chat_pictures_chat_id ON chat_pictures(chat_id);
+CREATE INDEX chat_pictures_deleted_at ON chat_pictures(deleted_at);
 
 CREATE TABLE example_prompts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -142,5 +162,8 @@ CREATE TABLE example_prompts(
     priority INT NOT NULL DEFAULT 0,
     prompt TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
+
+CREATE INDEX example_prompts_deleted_at ON example_prompts(deleted_at);
