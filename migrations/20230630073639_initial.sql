@@ -167,3 +167,18 @@ CREATE TABLE example_prompts(
 );
 
 CREATE INDEX example_prompts_deleted_at ON example_prompts(deleted_at);
+
+CREATE TABLE password_reset_tokens(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    email VARCHAR(256) NOT NULL,
+    token VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (current_timestamp(0) + interval '1 day'),
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    UNIQUE(token)
+);
+
+CREATE INDEX password_reset_tokens_user_id ON password_reset_tokens(user_id);
+CREATE INDEX password_reset_tokens_deleted_at ON password_reset_tokens(deleted_at);

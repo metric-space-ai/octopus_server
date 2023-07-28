@@ -1,8 +1,8 @@
 use crate::{
     entity::{
         Chat, ChatActivity, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
-        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt, Profile, Session,
-        User, Workspace, WorkspacesType,
+        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt,
+        PasswordResetToken, Profile, Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -21,6 +21,22 @@ impl OctopusDatabase {
         Self {
             pool: Arc::new(pool),
         }
+    }
+
+    #[allow(dead_code)]
+    pub async fn expire_password_reset_token(&self, id: Uuid) -> Result<PasswordResetToken> {
+        let password_reset_token = sqlx::query_as!(
+            PasswordResetToken,
+            "UPDATE password_reset_tokens
+            SET expires_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, email, created_at, deleted_at, expires_at, updated_at",
+            id,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(password_reset_token)
     }
 
     pub async fn get_chats_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Chat>> {
@@ -426,6 +442,28 @@ impl OctopusDatabase {
         Ok(example_prompt)
     }
 
+    pub async fn insert_password_reset_token(
+        &self,
+        user_id: Uuid,
+        email: &str,
+        token: &str,
+    ) -> Result<PasswordResetToken> {
+        let password_reset_token = sqlx::query_as!(
+            PasswordResetToken,
+            "INSERT INTO password_reset_tokens
+            (user_id, email, token)
+            VALUES ($1, $2, $3)
+            RETURNING id, user_id, email, created_at, deleted_at, expires_at, updated_at",
+            user_id,
+            email,
+            token
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(password_reset_token)
+    }
+
     pub async fn insert_profile(
         &self,
         user_id: Uuid,
@@ -633,6 +671,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt)
+    }
+
+    pub async fn try_delete_password_reset_token_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let password_reset_token = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE password_reset_tokens
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(password_reset_token)
     }
 
     pub async fn try_delete_session_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
@@ -917,6 +969,62 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_id)
+    }
+
+    pub async fn try_get_password_reset_token_by_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<PasswordResetToken>> {
+        let password_reset_token = sqlx::query_as!(
+            PasswordResetToken,
+            "SELECT id, user_id, email, created_at, deleted_at, expires_at, updated_at
+            FROM password_reset_tokens
+            WHERE token = $1
+            AND deleted_at IS NULL",
+            token
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(password_reset_token)
+    }
+
+    pub async fn try_get_password_reset_token_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<PasswordResetToken>> {
+        let password_reset_token = sqlx::query_as!(
+            PasswordResetToken,
+            "SELECT id, user_id, email, created_at, deleted_at, expires_at, updated_at
+            FROM password_reset_tokens
+            WHERE user_id = $1
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
+            user_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(password_reset_token)
+    }
+
+    #[allow(dead_code)]
+    pub async fn try_get_password_reset_token_token_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<String>> {
+        let token = sqlx::query_scalar::<_, String>(
+            "SELECT token
+            FROM password_reset_tokens
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(token)
     }
 
     pub async fn try_get_profile_by_user_id(&self, user_id: Uuid) -> Result<Option<Profile>> {

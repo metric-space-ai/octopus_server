@@ -7,6 +7,7 @@ use crate::{
         chat_messages::{ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
+        password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
         workspaces::{WorkspacePost, WorkspacePut},
@@ -14,7 +15,7 @@ use crate::{
     context::Context,
     entity::{
         Chat, ChatActivity, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
-        ChatPicture, ExamplePrompt, Profile, User, Workspace, WorkspacesType,
+        ChatPicture, ExamplePrompt, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -46,6 +47,7 @@ mod chat_messages;
 mod chat_pictures;
 mod chats;
 mod example_prompts;
+mod password_resets;
 mod profile_pictures;
 mod profiles;
 mod setup;
@@ -71,6 +73,9 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ExamplePromptPost,
                 ExamplePromptPut,
                 LoginPost,
+                PasswordResetPost,
+                PasswordResetPut,
+                PasswordResetToken,
                 Profile,
                 ProfilePut,
                 RegisterPost,
@@ -120,6 +125,9 @@ pub async fn router(context: Arc<Context>) -> Router {
             example_prompts::update,
             login::login,
             logout::logout,
+            password_resets::change_password,
+            password_resets::request,
+            password_resets::validate,
             profiles::read,
             profiles::update,
             profile_pictures::delete,
@@ -147,6 +155,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "change_password", description = "Change password API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
+            (name = "password_resets", description = "Password resets API."),
             (name = "register", description = "Register API."),
             (name = "setup", description = "Setup API."),
         )
@@ -239,6 +248,11 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
+        )
+        .route("/api/v1/password-resets", post(password_resets::request))
+        .route(
+            "/api/v1/password-resets/:token",
+            get(password_resets::validate).put(password_resets::change_password),
         )
         .route(
             "/api/v1/profile-pictures/:user_id",

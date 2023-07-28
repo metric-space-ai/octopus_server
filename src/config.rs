@@ -7,6 +7,7 @@ pub struct Config {
     pub pepper: String,
     pub pepper_id: i32,
     pub port: u16,
+    pub sendgrid_api_key: String,
 }
 
 impl Config {
@@ -16,6 +17,7 @@ impl Config {
         pepper: String,
         pepper_id: i32,
         port: u16,
+        sendgrid_api_key: String,
     ) -> Self {
         Self {
             database_url,
@@ -23,6 +25,7 @@ impl Config {
             pepper,
             pepper_id,
             port,
+            sendgrid_api_key,
         }
     }
 }
@@ -31,6 +34,7 @@ pub fn load(args: Args) -> Result<Config> {
     let mut database_url: Option<String> = None;
     let mut openai_api_key: Option<String> = None;
     let mut port = 8080;
+    let mut sendgrid_api_key: Option<String> = None;
 
     if let Ok(val) = std::env::var("DATABASE_URL") {
         database_url = Some(val);
@@ -59,12 +63,17 @@ pub fn load(args: Args) -> Result<Config> {
         port = val;
     }
 
+    if let Ok(val) = std::env::var("SENDGRID_API_KEY") {
+        sendgrid_api_key = Some(val);
+    }
+
     let config = Config::new(
         database_url.expect("Unknown database url"),
         openai_api_key.expect("OpenAI API key not provided"),
         pepper,
         pepper_id,
         port,
+        sendgrid_api_key.expect("SendGrid API key not provided"),
     );
 
     Ok(config)

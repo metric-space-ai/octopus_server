@@ -9,6 +9,7 @@ mod app;
 mod config;
 mod context;
 mod database;
+mod email_service;
 mod entity;
 mod error;
 mod session;

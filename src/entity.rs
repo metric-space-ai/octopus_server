@@ -119,6 +119,31 @@ pub struct ExamplePrompt {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct PasswordResetToken {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub email: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub expires_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Profile {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub job_title: Option<String>,
+    pub language: String,
+    pub name: Option<String>,
+    pub photo_file_name: Option<String>,
+    pub text_size: i32,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -138,20 +163,6 @@ pub struct User {
     pub email: String,
     pub is_enabled: bool,
     pub roles: Vec<String>,
-    pub created_at: DateTime<Utc>,
-    pub deleted_at: Option<DateTime<Utc>>,
-    pub updated_at: DateTime<Utc>,
-}
-
-#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
-pub struct Profile {
-    pub id: Uuid,
-    pub user_id: Uuid,
-    pub job_title: Option<String>,
-    pub language: String,
-    pub name: Option<String>,
-    pub photo_file_name: Option<String>,
-    pub text_size: i32,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
