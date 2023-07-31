@@ -1,4 +1,6 @@
-use crate::{api::auth, context::Context, error::AppError};
+use crate::{
+    api::auth, context::Context, email_service::send_password_reset_request_email, error::AppError,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -146,7 +148,7 @@ pub async fn request(
         .insert_password_reset_token(user.id, &input.email, &token)
         .await?;
 
-    //send_password_reset_request_email(context, &input.email, &token)?;
+    send_password_reset_request_email(context, &input.email, &token).await?;
 
     Ok((StatusCode::CREATED, Json(password_reset_token)).into_response())
 }
