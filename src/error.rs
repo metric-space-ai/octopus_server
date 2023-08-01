@@ -9,12 +9,15 @@ use http::header::ToStrError;
 use serde::Serialize;
 use serde_json::json;
 use std::error::Error;
+use strum_macros::Display;
 use utoipa::ToSchema;
 use validator::ValidationErrors;
 
-#[derive(Debug)]
+#[derive(Debug, Display)]
 pub enum AppError {
+    BadResponse,
     BadRequest,
+    Casting,
     CompanyNotFound,
     Concurrency(tokio::task::JoinError),
     Conflict,
@@ -27,9 +30,10 @@ pub enum AppError {
     Multipart(MultipartError),
     NotFound,
     NotRegistered,
+    OpenAI(OpenAIError),
     PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
-    OpenAI(OpenAIError),
+    Request(reqwest::Error),
     Unauthorized,
     UserAlreadyExists,
     Uuid(uuid::Error),
@@ -39,7 +43,9 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
+            AppError::BadResponse => (StatusCode::INTERNAL_SERVER_ERROR, "Response problem."),
             AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad request."),
+            AppError::Casting => (StatusCode::INTERNAL_SERVER_ERROR, "Casting problem."),
             AppError::CompanyNotFound => {
                 (StatusCode::BAD_REQUEST, "Main company is not registered.")
             }
@@ -56,11 +62,12 @@ impl IntoResponse for AppError {
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
+            AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
             AppError::PasswordDoesNotMatch => (StatusCode::BAD_REQUEST, "Password does not match."),
             AppError::PasswordHash(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
-            AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
+            AppError::Request(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Request error."),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
                 (StatusCode::CONFLICT, "User with such email already exists.")
@@ -107,6 +114,12 @@ impl From<OpenAIError> for AppError {
     }
 }
 
+impl From<reqwest::Error> for AppError {
+    fn from(inner: reqwest::Error) -> Self {
+        AppError::Request(inner)
+    }
+}
+
 impl From<serde_json::Error> for AppError {
     fn from(inner: serde_json::Error) -> Self {
         AppError::Json(inner)
@@ -136,6 +149,8 @@ impl From<ValidationErrors> for AppError {
         AppError::Validation(inner)
     }
 }
+
+impl serde::ser::StdError for AppError {}
 
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ResponseError {

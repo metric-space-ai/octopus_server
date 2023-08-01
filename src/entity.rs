@@ -4,6 +4,44 @@ use sqlx::{FromRow, Type};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[sqlx(
+    type_name = "ai_functions_health_check_statuses",
+    rename_all = "snake_case"
+)]
+pub enum AiFunctionHealthCheckStatus {
+    NotWorking,
+    Ok,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_functions_setup_statuses", rename_all = "snake_case")]
+pub enum AiFunctionSetupStatus {
+    NotPerformed,
+    Performed,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct AiFunction {
+    pub id: Uuid,
+    pub base_function_url: String,
+    pub description: String,
+    pub hardware_bindings: Vec<String>,
+    pub health_check_status: AiFunctionHealthCheckStatus,
+    pub health_check_url: String,
+    pub is_available: bool,
+    pub is_enabled: bool,
+    pub k8s_configuration: Option<String>,
+    pub name: String,
+    pub parameters: serde_json::Value,
+    pub setup_status: AiFunctionSetupStatus,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub health_check_at: Option<DateTime<Utc>>,
+    pub setup_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Chat {
     pub id: Uuid,
@@ -39,6 +77,7 @@ pub struct ChatMessage {
     pub user_id: Uuid,
     pub estimated_response_at: DateTime<Utc>,
     pub message: String,
+    pub progress: i32,
     pub response: Option<String>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
@@ -55,6 +94,7 @@ pub struct ChatMessageExtended {
     pub chat_message_pictures: Vec<ChatMessagePicture>,
     pub estimated_response_at: DateTime<Utc>,
     pub message: String,
+    pub progress: i32,
     pub response: Option<String>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
@@ -151,7 +191,7 @@ pub struct Session {
     pub expired_at: DateTime<Utc>,
 }
 
-//pub const ROLE_ADMIN: &str = "ROLE_ADMIN";
+pub const ROLE_ADMIN: &str = "ROLE_ADMIN";
 pub const ROLE_COMPANY_ADMIN_USER: &str = "ROLE_COMPANY_ADMIN_USER";
 pub const ROLE_PRIVATE_USER: &str = "ROLE_PRIVATE_USER";
 pub const ROLE_PUBLIC_USER: &str = "ROLE_PUBLIC_USER";

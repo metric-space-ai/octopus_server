@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -30,11 +30,16 @@
       },
       {
         "ordinal": 5,
+        "name": "progress",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -49,30 +54,28 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Timestamptz",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -85,5 +88,5 @@
       false
     ]
   },
-  "hash": "878ec387c51a4df5411a4a013e596bd56d3cbb9d5c8030792aa0078afd1a4730"
+  "hash": "9c91dfb6930d025702e3368561b85d376e92bb21715095ff724b356470fc3e3b"
 }

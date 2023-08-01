@@ -1,8 +1,8 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
+    entity::{AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ROLE_ADMIN},
     error::AppError,
-    session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    session::{ensure_secured, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -10,34 +10,169 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use chrono::{Duration, Utc};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct ExamplePromptPost {
-    pub is_visible: bool,
-    pub priority: i32,
-    pub prompt: String,
+pub struct AiFunctionPost {
+    pub base_function_url: String,
+    pub description: String,
+    pub hardware_bindings: Vec<String>,
+    pub health_check_url: String,
+    pub is_available: bool,
+    pub is_enabled: bool,
+    pub k8s_configuration: Option<String>,
+    pub name: String,
+    pub parameters: serde_json::Value,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct ExamplePromptPut {
-    pub is_visible: bool,
-    pub priority: i32,
-    pub prompt: String,
+pub struct AiFunctionPut {
+    pub base_function_url: String,
+    pub description: String,
+    pub hardware_bindings: Vec<String>,
+    pub health_check_url: String,
+    pub is_available: bool,
+    pub is_enabled: bool,
+    pub k8s_configuration: Option<String>,
+    pub name: String,
+    pub parameters: serde_json::Value,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HealthCheckResponse {
+    pub status: AiFunctionHealthCheckStatus,
+}
+
+#[derive(Debug, Serialize)]
+pub struct SetupPost {
+    pub force_setup: bool,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SetupResponse {
+    pub setup: AiFunctionSetupStatus,
+}
+
+pub async fn prepare_ai_function(
+    context: Arc<Context>,
+    ai_function: AiFunction,
+) -> Result<AiFunction, AppError> {
+    if ai_function.is_available && ai_function.is_enabled {
+        let perform_health_check = match ai_function.health_check_status {
+            AiFunctionHealthCheckStatus::NotWorking => true,
+            AiFunctionHealthCheckStatus::Ok => {
+                let mut result = false;
+                let last_valid_health_check_date = Utc::now() - Duration::minutes(30);
+
+                if let Some(health_check_at) = ai_function.health_check_at {
+                    if health_check_at < last_valid_health_check_date {
+                        result = true;
+                    }
+                }
+
+                result
+            }
+        };
+        let ai_function = if perform_health_check {
+            let response = reqwest::Client::new()
+                .get(ai_function.health_check_url.clone())
+                .send()
+                .await?;
+
+            if response.status() == StatusCode::OK {
+                let response: HealthCheckResponse = response.json().await?;
+
+                context
+                    .octopus_database
+                    .update_ai_function_health_check_status(ai_function.id, response.status)
+                    .await?
+            } else {
+                context
+                    .octopus_database
+                    .update_ai_function_health_check_status(
+                        ai_function.id,
+                        AiFunctionHealthCheckStatus::NotWorking,
+                    )
+                    .await?
+            }
+        } else {
+            ai_function
+        };
+
+        let perform_setup = match ai_function.setup_status {
+            AiFunctionSetupStatus::NotPerformed => true,
+            AiFunctionSetupStatus::Performed => {
+                let mut result = false;
+                let response = reqwest::Client::new()
+                    .get(format!("{}/setup", ai_function.base_function_url))
+                    .send()
+                    .await?;
+
+                if response.status() == StatusCode::OK {
+                    let response: SetupResponse = response.json().await?;
+
+                    if let AiFunctionSetupStatus::NotPerformed = response.setup {
+                        result = true;
+                    }
+                }
+
+                result
+            }
+        };
+
+        if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
+            let ai_function = if perform_setup {
+                let setup_post = SetupPost { force_setup: false };
+                let response = reqwest::Client::new()
+                    .post(format!("{}/setup", ai_function.base_function_url))
+                    .json(&setup_post)
+                    .send()
+                    .await?;
+
+                if response.status() == StatusCode::CREATED {
+                    let response: SetupResponse = response.json().await?;
+
+                    context
+                        .octopus_database
+                        .update_ai_function_setup_status(ai_function.id, response.setup)
+                        .await?
+                } else {
+                    context
+                        .octopus_database
+                        .update_ai_function_setup_status(
+                            ai_function.id,
+                            AiFunctionSetupStatus::NotPerformed,
+                        )
+                        .await?
+                }
+            } else {
+                ai_function
+            };
+
+            return Ok(ai_function);
+        }
+
+        return Ok(ai_function);
+    }
+
+    Ok(ai_function)
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/example-prompts",
-    request_body = ExamplePromptPost,
+    path = "/api/v1/ai-functions",
+    request_body = AiFunctionPost,
     responses(
-        (status = 201, description = "Example prompt created.", body = ExamplePrompt),
+        (status = 201, description = "AI Function created.", body = AiFunction),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -46,30 +181,60 @@ pub struct ExamplePromptPut {
 pub async fn create(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Json(input): Json<ExamplePromptPost>,
+    Json(input): Json<AiFunctionPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
     input.validate()?;
 
-    let example_prompt = context
+    let ai_function_exists = context
         .octopus_database
-        .insert_example_prompt(input.is_visible, input.priority, &input.prompt)
+        .try_get_ai_function_by_name(&input.name)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(example_prompt)).into_response())
+    match ai_function_exists {
+        None => {
+            let ai_function = context
+                .octopus_database
+                .insert_ai_function(
+                    &input.base_function_url,
+                    &input.description,
+                    &input.hardware_bindings,
+                    &input.health_check_url,
+                    input.is_available,
+                    input.is_enabled,
+                    input.k8s_configuration,
+                    &input.name,
+                    input.parameters,
+                )
+                .await?;
+
+            let cloned_context = context.clone();
+            let cloned_ai_function = ai_function.clone();
+            tokio::spawn(async move {
+                let ai_function = prepare_ai_function(cloned_context, cloned_ai_function).await;
+
+                if let Err(e) = ai_function {
+                    debug!("Error: {:?}", e);
+                }
+            });
+
+            Ok((StatusCode::CREATED, Json(ai_function)).into_response())
+        }
+        Some(_ai_function) => Err(AppError::Conflict),
+    }
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     delete,
-    path = "/api/v1/example-prompts/:id",
+    path = "/api/v1/ai-functions/:id",
     responses(
-        (status = 204, description = "Example prompt deleted."),
+        (status = 204, description = "AI Function deleted."),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "AI Function id")
     ),
     security(
         ("api_key" = [])
@@ -80,11 +245,11 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
 
     context
         .octopus_database
-        .try_delete_example_prompt_by_id(id)
+        .try_delete_ai_function_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -94,9 +259,9 @@ pub async fn delete(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/example-prompts",
+    path = "/api/v1/ai-functions",
     responses(
-        (status = 200, description = "List of Example prompts.", body = [ExamplePrompt]),
+        (status = 200, description = "List of AI Functions.", body = [AiFunction]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
@@ -107,24 +272,24 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
 
-    let example_prompts = context.octopus_database.get_example_prompts().await?;
+    let ai_functions = context.octopus_database.get_ai_functions().await?;
 
-    Ok((StatusCode::OK, Json(example_prompts)).into_response())
+    Ok((StatusCode::OK, Json(ai_functions)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/example-prompts/:id",
+    path = "/api/v1/ai-functions/:id",
     responses(
-        (status = 200, description = "Example prompt read.", body = ExamplePrompt),
+        (status = 200, description = "AI Function read.", body = AiFunction),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "AI Function id")
     ),
     security(
         ("api_key" = [])
@@ -135,29 +300,30 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
 
-    let example_prompt = context
+    let ai_function = context
         .octopus_database
-        .try_get_example_prompt_by_id(id)
+        .try_get_ai_function_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    Ok((StatusCode::OK, Json(example_prompt)).into_response())
+    Ok((StatusCode::OK, Json(ai_function)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     put,
-    path = "/api/v1/example-prompts/:id",
-    request_body = ExamplePromptPut,
+    path = "/api/v1/ai-functions/:id",
+    request_body = AiFunctionPut,
     responses(
-        (status = 200, description = "Example prompt updated.", body = ExamplePrompt),
+        (status = 200, description = "AI Function updated.", body = AiFunction),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "AI Function not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "AI Function id")
     ),
     security(
         ("api_key" = [])
@@ -167,28 +333,65 @@ pub async fn update(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
-    Json(input): Json<ExamplePromptPut>,
+    Json(input): Json<AiFunctionPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
     input.validate()?;
 
     context
         .octopus_database
-        .try_get_example_prompt_id_by_id(id)
+        .try_get_ai_function_id_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let example_prompt = context
+    let ai_function_exists = context
         .octopus_database
-        .update_example_prompt(id, input.is_visible, input.priority, &input.prompt)
+        .try_get_ai_function_by_name(&input.name)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if ai_function_exists.id != id {
+        return Err(AppError::Conflict);
+    }
+
+    let ai_function = context
+        .octopus_database
+        .update_ai_function(
+            id,
+            &input.base_function_url,
+            &input.description,
+            &input.hardware_bindings,
+            &input.health_check_url,
+            input.is_available,
+            input.is_enabled,
+            input.k8s_configuration,
+            &input.name,
+            input.parameters,
+        )
         .await?;
 
-    Ok((StatusCode::OK, Json(example_prompt)).into_response())
+    let cloned_context = context.clone();
+    let cloned_ai_function = ai_function.clone();
+    tokio::spawn(async move {
+        let ai_function = prepare_ai_function(cloned_context, cloned_ai_function).await;
+
+        if let Err(e) = ai_function {
+            debug!("Error: {:?}", e);
+        }
+    });
+
+    Ok((StatusCode::OK, Json(ai_function)).into_response())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{app, entity::ExamplePrompt, entity::User, session::SessionResponse, Args};
+    use crate::{
+        app,
+        entity::AiFunction,
+        entity::{User, ROLE_ADMIN, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+        session::SessionResponse,
+        Args,
+    };
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -256,6 +459,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -283,22 +500,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -310,13 +546,13 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         app.context
             .octopus_database
@@ -332,7 +568,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -458,22 +694,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -499,6 +754,211 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn create_409() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123".to_string();
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let session_id = body.id;
+
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ai-functions")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
+
+        let ai_function_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ai-functions")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -557,6 +1017,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -584,22 +1058,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -611,19 +1104,19 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -704,6 +1197,20 @@ mod tests {
 
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -731,22 +1238,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -758,13 +1284,13 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let email = format!(
             "{}{}{}",
@@ -838,7 +1364,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -875,7 +1401,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -933,6 +1459,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -960,13 +1500,13 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let ai_function_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1044,6 +1584,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1071,22 +1625,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1098,19 +1671,19 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1122,7 +1695,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Vec<ExamplePrompt> = serde_json::from_slice(&body).unwrap();
+        let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
 
@@ -1140,7 +1713,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -1199,6 +1772,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1226,22 +1813,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1253,19 +1859,19 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -1289,7 +1895,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -1348,6 +1954,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1375,22 +1995,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1402,19 +2041,19 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1426,11 +2065,11 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
         app.context
             .octopus_database
@@ -1446,7 +2085,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -1505,6 +2144,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1532,22 +2185,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1559,19 +2231,19 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -1595,7 +2267,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -1653,6 +2325,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1680,13 +2366,13 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let ai_function_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1764,6 +2450,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1791,22 +2491,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1818,30 +2537,44 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
+        let is_available = false;
+        let is_enabled = false;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1853,11 +2586,11 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
         app.context
             .octopus_database
@@ -1873,7 +2606,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -1934,6 +2667,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1961,22 +2708,41 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/ai-functions")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -1988,13 +2754,13 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
 
-        let example_prompt_id = body.id;
+        let ai_function_id = body.id;
 
         let email = format!(
             "{}{}{}",
@@ -2064,22 +2830,36 @@ mod tests {
 
         let session_id = body.id;
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
+        let is_available = false;
+        let is_enabled = false;
 
         let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -2116,7 +2896,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_ai_function_by_id(ai_function_id)
             .await
             .unwrap();
     }
@@ -2174,6 +2954,20 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -2201,24 +2995,43 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let ai_function_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
                         })
                         .to_string(),
                     ))
@@ -2238,6 +3051,273 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn update_409() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+        let fifth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let session_id = body.id;
+
+        let is_available = true;
+        let is_enabled = true;
+        let name = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ai-functions")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name);
+
+        let ai_function_id = body.id;
+
+        let name2 = format!(
+            "function-foo-sync{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ai-functions")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name2,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: AiFunction = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.is_available, is_available);
+        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.name, name2);
+
+        let ai_function2_id = body.id;
+
+        let is_available = false;
+        let is_enabled = false;
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/ai-functions/{ai_function_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
+                            "description": "Synchronous communication test function",
+                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "health_check_url": "http://127.0.0.1:5000/v1/health-check",
+                            "is_available": &is_available,
+                            "is_enabled": &is_enabled,
+                            "name": &name2,
+                            "parameters": {
+                                "type": "object",
+                                "properties": {
+                                    "value1": {
+                                        "type": "string",
+                                        "description": "First value"
+                                    },
+                                    "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
+                                },
+                                "required": ["value1", "value2"]
+                            }
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_ai_function_by_id(ai_function_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_ai_function_by_id(ai_function2_id)
             .await
             .unwrap();
     }

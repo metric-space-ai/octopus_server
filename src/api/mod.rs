@@ -1,5 +1,6 @@
 use crate::{
     api::{
+        ai_functions::{AiFunctionPost, AiFunctionPut},
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
             register, register::RegisterPost,
@@ -14,8 +15,9 @@ use crate::{
     },
     context::Context,
     entity::{
-        Chat, ChatActivity, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
-        ChatPicture, ExamplePrompt, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, Chat, ChatActivity,
+        ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
+        ExamplePrompt, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -39,6 +41,7 @@ use utoipa::{
 };
 use utoipa_swagger_ui::SwaggerUi;
 
+mod ai_functions;
 mod auth;
 mod chat_activities;
 mod chat_message_files;
@@ -58,6 +61,11 @@ pub async fn router(context: Arc<Context>) -> Router {
     #[openapi(
         components(
             schemas(
+                AiFunction,
+                AiFunctionHealthCheckStatus,
+                AiFunctionPost,
+                AiFunctionPut,
+                AiFunctionSetupStatus,
                 ChangePasswordPut,
                 Chat,
                 ChatActivity,
@@ -93,6 +101,11 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
+            ai_functions::create,
+            ai_functions::delete,
+            ai_functions::list,
+            ai_functions::read,
+            ai_functions::update,
             change_password::change_password,
             chat_activities::create,
             chat_activities::list,
@@ -142,6 +155,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             workspaces::update,
         ),
         tags(
+            (name = "ai_functions", description = "AI functions API."),
+            (name = "change_password", description = "Change password API."),
             (name = "chats", description = "Chats API."),
             (name = "chat_activities", description = "Chat activities API."),
             (name = "chat_messages", description = "Chat messages API."),
@@ -149,15 +164,14 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chat_message_pictures", description = "Chat message pictures API."),
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompts", description = "Example prompts API."),
-            (name = "workspaces", description = "Workspaces API."),
-            (name = "profiles", description = "Profiles API."),
-            (name = "profile_pictures", description = "Profile pictures API."),
-            (name = "change_password", description = "Change password API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "password_resets", description = "Password resets API."),
+            (name = "profiles", description = "Profiles API."),
+            (name = "profile_pictures", description = "Profile pictures API."),
             (name = "register", description = "Register API."),
             (name = "setup", description = "Setup API."),
+            (name = "workspaces", description = "Workspaces API."),
         )
     )]
     struct ApiDoc;
@@ -238,6 +252,16 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/chats/:workspace_id/:chat_id",
             delete(chats::delete).get(chats::read).put(chats::update),
+        )
+        .route(
+            "/api/v1/ai-functions",
+            get(ai_functions::list).post(ai_functions::create),
+        )
+        .route(
+            "/api/v1/ai-functions/:id",
+            delete(ai_functions::delete)
+                .get(ai_functions::read)
+                .put(ai_functions::update),
         )
         .route(
             "/api/v1/example-prompts",

@@ -391,6 +391,7 @@ pub async fn regenerate(
             estimated_response_at,
             &chat_message.message,
             ChatMessageStatus::Asked,
+            0,
             None,
         )
         .await?;
@@ -488,11 +489,11 @@ pub async fn update(
 
     for chat_message in chat_messages {
         if chat_message.created_at > original_chat_message.created_at {
-            delete_chat_message_ids.append(&mut vec![chat_message.id]);
+            delete_chat_message_ids.push(chat_message.id);
         }
     }
 
-    delete_chat_message_ids.append(&mut vec![original_chat_message.id]);
+    delete_chat_message_ids.push(original_chat_message.id);
 
     context
         .octopus_database

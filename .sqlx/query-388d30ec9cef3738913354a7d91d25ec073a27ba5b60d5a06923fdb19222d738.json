@@ -1,0 +1,138 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, base_function_url, description, hardware_bindings, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS \"setup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_functions\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "base_function_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "hardware_bindings",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 4,
+        "name": "health_check_status: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_functions_health_check_statuses",
+            "kind": {
+              "Enum": [
+                "not_working",
+                "ok"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "health_check_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_available",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "k8s_configuration",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "parameters",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 11,
+        "name": "setup_status: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_functions_setup_statuses",
+            "kind": {
+              "Enum": [
+                "not_performed",
+                "performed"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "health_check_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "setup_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "388d30ec9cef3738913354a7d91d25ec073a27ba5b60d5a06923fdb19222d738"
+}

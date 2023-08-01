@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -30,11 +30,16 @@
       },
       {
         "ordinal": 5,
+        "name": "progress",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 6,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -49,17 +54,17 @@
         }
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -75,6 +80,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
@@ -82,5 +88,5 @@
       false
     ]
   },
-  "hash": "4523f385cb08cf19c43c550b1cbc437c43739ef0abeba37645845ef2244105bd"
+  "hash": "fd00f5481d583b828bdf08e70d32e20588fcd548199bdf016fed23f802512e6e"
 }

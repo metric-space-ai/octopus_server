@@ -1,8 +1,9 @@
 use crate::{
     entity::{
-        Chat, ChatActivity, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
-        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt,
-        PasswordResetToken, Profile, Session, User, Workspace, WorkspacesType,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, Chat, ChatActivity,
+        ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
+        ChatPicture, Company, EstimatedSeconds, ExamplePrompt, PasswordResetToken, Profile,
+        Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -37,6 +38,46 @@ impl OctopusDatabase {
         .await?;
 
         Ok(password_reset_token)
+    }
+
+    pub async fn get_ai_functions(&self) -> Result<Vec<AiFunction>> {
+        let ai_functions = sqlx::query_as!(
+            AiFunction,
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            FROM ai_functions
+            WHERE deleted_at IS NULL
+            ORDER BY name ASC"#
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ai_functions)
+    }
+
+    pub async fn get_ai_functions_for_request(&self) -> Result<Vec<AiFunction>> {
+        let health_check_status = AiFunctionHealthCheckStatus::Ok;
+        let is_available = true;
+        let is_enabled = true;
+        let setup_status = AiFunctionSetupStatus::Performed;
+
+        let ai_functions = sqlx::query_as::<_, AiFunction>(
+            "SELECT id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at
+            FROM ai_functions
+            WHERE health_check_status = $1
+            AND is_available = $2
+            AND is_enabled = $3
+            AND setup_status = $4
+            AND deleted_at IS NULL
+            ORDER BY name ASC",
+        )
+        .bind(health_check_status)
+        .bind(is_available)
+        .bind(is_enabled)
+        .bind(setup_status)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ai_functions)
     }
 
     pub async fn get_chats_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Chat>> {
@@ -89,7 +130,7 @@ impl OctopusDatabase {
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
@@ -126,7 +167,7 @@ impl OctopusDatabase {
                     chat_message_pictures.clone(),
                 )
                 .await?;
-            chat_messages_extended.append(&mut vec![chat_message_extended]);
+            chat_messages_extended.push(chat_message_extended);
         }
 
         Ok(chat_messages_extended)
@@ -138,7 +179,7 @@ impl OctopusDatabase {
         status: ChatMessageStatus,
     ) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as::<_, ChatMessage>(
-            "SELECT id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at
+            "SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND status = $2
@@ -281,6 +322,41 @@ impl OctopusDatabase {
         Ok(workspaces)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_ai_function(
+        &self,
+        base_function_url: &str,
+        description: &str,
+        hardware_bindings: &[String],
+        health_check_url: &str,
+        is_available: bool,
+        is_enabled: bool,
+        k8s_configuration: Option<String>,
+        name: &str,
+        parameters: serde_json::Value,
+    ) -> Result<AiFunction> {
+        let ai_function = sqlx::query_as!(
+            AiFunction,
+            r#"INSERT INTO ai_functions
+            (base_function_url, description, hardware_bindings, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            base_function_url,
+            description,
+            hardware_bindings,
+            health_check_url,
+            is_available,
+            is_enabled,
+            k8s_configuration,
+            name,
+            parameters,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
     pub async fn insert_chat(&self, user_id: Uuid, workspace_id: Uuid) -> Result<Chat> {
         let chat = sqlx::query_as!(
             Chat,
@@ -333,7 +409,7 @@ impl OctopusDatabase {
             r#"INSERT INTO chat_messages
             (chat_id, user_id, estimated_response_at, message)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, chat_id, user_id, estimated_response_at, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at"#,
             chat_id,
             user_id,
             estimated_response_at,
@@ -560,11 +636,27 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
+    pub async fn try_delete_ai_function_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let ai_function = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE ai_functions
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
     pub async fn try_delete_chat_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let chat = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chats
             SET deleted_at = current_timestamp(0)
             WHERE id = $1
+            AND deleted_at IS NULL
             RETURNING id",
         )
         .bind(id)
@@ -579,6 +671,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -593,6 +686,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET deleted_at = current_timestamp(0)
             WHERE id = ANY($1)
+            AND deleted_at IS NULL
             RETURNING id",
         )
         .bind(ids)
@@ -607,6 +701,7 @@ impl OctopusDatabase {
             "UPDATE chat_message_files
             SET deleted_at = current_timestamp(0)
             WHERE id = $1
+            AND deleted_at IS NULL
             RETURNING id",
         )
         .bind(id)
@@ -621,6 +716,7 @@ impl OctopusDatabase {
             "UPDATE chat_message_pictures
             SET deleted_at = current_timestamp(0)
             WHERE id = $1
+            AND deleted_at IS NULL
             RETURNING id",
         )
         .bind(id)
@@ -635,6 +731,7 @@ impl OctopusDatabase {
             "UPDATE chat_pictures
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -650,6 +747,7 @@ impl OctopusDatabase {
             "UPDATE companies
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -664,6 +762,7 @@ impl OctopusDatabase {
             "UPDATE example_prompts
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -678,6 +777,7 @@ impl OctopusDatabase {
             "UPDATE password_reset_tokens
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -706,6 +806,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET deleted_at = current_timestamp(0)
             WHERE id = $1
+            AND deleted_at IS NULL
             RETURNING id",
         )
         .bind(id)
@@ -720,6 +821,7 @@ impl OctopusDatabase {
             "UPDATE workspaces
                 SET deleted_at = current_timestamp(0)
                 WHERE id = $1
+                AND deleted_at IS NULL
                 RETURNING id",
         )
         .bind(id)
@@ -727,6 +829,50 @@ impl OctopusDatabase {
         .await?;
 
         Ok(workspace)
+    }
+
+    pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
+        let ai_function = sqlx::query_as!(
+            AiFunction,
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            FROM ai_functions
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
+    pub async fn try_get_ai_function_by_name(&self, name: &str) -> Result<Option<AiFunction>> {
+        let ai_function = sqlx::query_as!(
+            AiFunction,
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            FROM ai_functions
+            WHERE name = $1
+            AND deleted_at IS NULL"#,
+            name
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
+    pub async fn try_get_ai_function_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let ai_function_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id
+            FROM ai_functions
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_function_id)
     }
 
     pub async fn try_get_hash_for_user_id(&self, id: Uuid) -> Result<Option<String>> {
@@ -773,7 +919,7 @@ impl OctopusDatabase {
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at
+            r#"SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -848,6 +994,7 @@ impl OctopusDatabase {
             chat_message_pictures: selected_chat_message_pictures,
             estimated_response_at: chat_message.estimated_response_at,
             message: chat_message.message.clone(),
+            progress: chat_message.progress,
             response: chat_message.response.clone(),
             status: chat_message.status.clone(),
             created_at: chat_message.created_at,
@@ -1111,6 +1258,81 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_ai_function(
+        &self,
+        id: Uuid,
+        base_function_url: &str,
+        description: &str,
+        hardware_bindings: &[String],
+        health_check_url: &str,
+        is_available: bool,
+        is_enabled: bool,
+        k8s_configuration: Option<String>,
+        name: &str,
+        parameters: serde_json::Value,
+    ) -> Result<AiFunction> {
+        let ai_function = sqlx::query_as!(
+            AiFunction,
+            r#"UPDATE ai_functions
+            SET base_function_url = $2, description = $3, hardware_bindings = $4, health_check_url = $5, is_available = $6, is_enabled = $7, k8s_configuration = $8, name = $9, parameters = $10, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            base_function_url,
+            description,
+            hardware_bindings,
+            health_check_url,
+            is_available,
+            is_enabled,
+            k8s_configuration,
+            name,
+            parameters,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
+    pub async fn update_ai_function_health_check_status(
+        &self,
+        id: Uuid,
+        health_check_status: AiFunctionHealthCheckStatus,
+    ) -> Result<AiFunction> {
+        let ai_function = sqlx::query_as::<_, AiFunction>(
+            "UPDATE ai_functions
+            SET health_check_status = $2, health_check_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+        )
+        .bind(id)
+        .bind(health_check_status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
+    pub async fn update_ai_function_setup_status(
+        &self,
+        id: Uuid,
+        setup_status: AiFunctionSetupStatus,
+    ) -> Result<AiFunction> {
+        let ai_function = sqlx::query_as::<_, AiFunction>(
+            "UPDATE ai_functions
+            SET setup_status = $2, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+        )
+        .bind(id)
+        .bind(setup_status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
     pub async fn update_chat(&self, id: Uuid, name: &str) -> Result<Chat> {
         let chat = sqlx::query_as!(
             Chat,
@@ -1130,34 +1352,23 @@ impl OctopusDatabase {
     pub async fn update_chat_message(
         &self,
         id: Uuid,
+        progress: i32,
         response: &str,
         status: ChatMessageStatus,
     ) -> Result<ChatMessage> {
         let chat_message = sqlx::query_as::<_, ChatMessage>(
             "UPDATE chat_messages
-            SET response = $2, status = $3, updated_at = current_timestamp(0)
+            SET progress = $2, response = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
+        .bind(progress)
         .bind(response)
         .bind(status)
         .fetch_one(&*self.pool)
         .await?;
-        /*
-                let chat_message = sqlx::query_as!(
-                    ChatMessage,
-                    r#"UPDATE chat_messages
-                    SET response = $2, status = $3, updated_at = current_timestamp(0)
-                    WHERE id = $1
-                    RETURNING id, chat_id, user_id, estimated_response_at, message, response, status AS "status: _", created_at, deleted_at, updated_at"#,
-                    id,
-                    response,
-                    status
-                )
-                .fetch_one(&*self.pool)
-                .await?;
-        */
+
         Ok(chat_message)
     }
 
@@ -1167,18 +1378,20 @@ impl OctopusDatabase {
         estimated_response_at: DateTime<Utc>,
         message: &str,
         status: ChatMessageStatus,
+        progress: i32,
         response: Option<String>,
     ) -> Result<ChatMessage> {
         let chat_message = sqlx::query_as::<_, ChatMessage>(
             "UPDATE chat_messages
-            SET estimated_response_at = $2, message = $3, status = $4, response = $5, created_at = current_timestamp(0), updated_at = current_timestamp(0)
+            SET estimated_response_at = $2, message = $3, status = $4, progress = $5, response = $6, created_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, chat_id, user_id, estimated_response_at, message, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, chat_id, user_id, estimated_response_at, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(estimated_response_at)
         .bind(message)
         .bind(status)
+        .bind(progress)
         .bind(response)
         .fetch_one(&*self.pool)
         .await?;
