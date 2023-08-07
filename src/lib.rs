@@ -3,7 +3,7 @@ use std::{error::Error, net::SocketAddr};
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod ai_request;
+mod ai;
 mod api;
 mod app;
 mod config;

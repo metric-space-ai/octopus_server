@@ -1372,6 +1372,31 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn update_chat_message_from_function(
+        &self,
+        id: Uuid,
+        estimated_response_at: DateTime<Utc>,
+        status: ChatMessageStatus,
+        progress: i32,
+        response: Option<String>,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET estimated_response_at = $2, status = $3, progress = $4, response = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, user_id, estimated_response_at, message, progress, response, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(estimated_response_at)
+        .bind(status)
+        .bind(progress)
+        .bind(response)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_message)
+    }
+
     pub async fn update_chat_message_full(
         &self,
         id: Uuid,

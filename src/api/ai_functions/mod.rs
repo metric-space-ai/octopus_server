@@ -1,6 +1,7 @@
 use crate::{
+    ai,
     context::Context,
-    entity::{AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ROLE_ADMIN},
+    entity::ROLE_ADMIN,
     error::AppError,
     session::{ensure_secured, ExtractedSession},
 };
@@ -10,8 +11,7 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use chrono::{Duration, Utc};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::sync::Arc;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -42,126 +42,6 @@ pub struct AiFunctionPut {
     pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct HealthCheckResponse {
-    pub status: AiFunctionHealthCheckStatus,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SetupPost {
-    pub force_setup: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetupResponse {
-    pub setup: AiFunctionSetupStatus,
-}
-
-pub async fn prepare_ai_function(
-    context: Arc<Context>,
-    ai_function: AiFunction,
-) -> Result<AiFunction, AppError> {
-    if ai_function.is_available && ai_function.is_enabled {
-        let perform_health_check = match ai_function.health_check_status {
-            AiFunctionHealthCheckStatus::NotWorking => true,
-            AiFunctionHealthCheckStatus::Ok => {
-                let mut result = false;
-                let last_valid_health_check_date = Utc::now() - Duration::minutes(30);
-
-                if let Some(health_check_at) = ai_function.health_check_at {
-                    if health_check_at < last_valid_health_check_date {
-                        result = true;
-                    }
-                }
-
-                result
-            }
-        };
-        let ai_function = if perform_health_check {
-            let response = reqwest::Client::new()
-                .get(ai_function.health_check_url.clone())
-                .send()
-                .await?;
-
-            if response.status() == StatusCode::OK {
-                let response: HealthCheckResponse = response.json().await?;
-
-                context
-                    .octopus_database
-                    .update_ai_function_health_check_status(ai_function.id, response.status)
-                    .await?
-            } else {
-                context
-                    .octopus_database
-                    .update_ai_function_health_check_status(
-                        ai_function.id,
-                        AiFunctionHealthCheckStatus::NotWorking,
-                    )
-                    .await?
-            }
-        } else {
-            ai_function
-        };
-
-        let perform_setup = match ai_function.setup_status {
-            AiFunctionSetupStatus::NotPerformed => true,
-            AiFunctionSetupStatus::Performed => {
-                let mut result = false;
-                let response = reqwest::Client::new()
-                    .get(format!("{}/setup", ai_function.base_function_url))
-                    .send()
-                    .await?;
-
-                if response.status() == StatusCode::OK {
-                    let response: SetupResponse = response.json().await?;
-
-                    if let AiFunctionSetupStatus::NotPerformed = response.setup {
-                        result = true;
-                    }
-                }
-
-                result
-            }
-        };
-
-        if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
-            let ai_function = if perform_setup {
-                let setup_post = SetupPost { force_setup: false };
-                let response = reqwest::Client::new()
-                    .post(format!("{}/setup", ai_function.base_function_url))
-                    .json(&setup_post)
-                    .send()
-                    .await?;
-
-                if response.status() == StatusCode::CREATED {
-                    let response: SetupResponse = response.json().await?;
-
-                    context
-                        .octopus_database
-                        .update_ai_function_setup_status(ai_function.id, response.setup)
-                        .await?
-                } else {
-                    context
-                        .octopus_database
-                        .update_ai_function_setup_status(
-                            ai_function.id,
-                            AiFunctionSetupStatus::NotPerformed,
-                        )
-                        .await?
-                }
-            } else {
-                ai_function
-            };
-
-            return Ok(ai_function);
-        }
-
-        return Ok(ai_function);
-    }
-
-    Ok(ai_function)
 }
 
 #[axum_macros::debug_handler]
@@ -211,7 +91,7 @@ pub async fn create(
             let cloned_context = context.clone();
             let cloned_ai_function = ai_function.clone();
             tokio::spawn(async move {
-                let ai_function = prepare_ai_function(cloned_context, cloned_ai_function).await;
+                let ai_function = ai::prepare_ai_function(cloned_context, cloned_ai_function).await;
 
                 if let Err(e) = ai_function {
                     debug!("Error: {:?}", e);
@@ -373,7 +253,7 @@ pub async fn update(
     let cloned_context = context.clone();
     let cloned_ai_function = ai_function.clone();
     tokio::spawn(async move {
-        let ai_function = prepare_ai_function(cloned_context, cloned_ai_function).await;
+        let ai_function = ai::prepare_ai_function(cloned_context, cloned_ai_function).await;
 
         if let Err(e) = ai_function {
             debug!("Error: {:?}", e);
