@@ -1,8 +1,8 @@
 use crate::{
     context::Context,
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ChatMessage,
-        ChatMessageStatus,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
+        ChatMessage, ChatMessageStatus,
     },
     error::AppError,
     Result,
@@ -71,7 +71,196 @@ pub struct SetupResponse {
     pub setup: AiFunctionSetupStatus,
 }
 
-pub async fn check_function_status(
+#[derive(Debug, Deserialize)]
+pub struct WarmupResponse {
+    pub warmup: AiFunctionWarmupStatus,
+}
+
+pub async fn function_health_check(
+    context: Arc<Context>,
+    ai_function: &AiFunction,
+) -> Result<AiFunction> {
+    let start = Utc::now();
+
+    let response = reqwest::Client::new()
+        .get(ai_function.health_check_url.clone())
+        .send()
+        .await;
+
+    let end = Utc::now();
+
+    let health_check_execution_time = (end - start).num_seconds() as i32;
+
+    if let Ok(response) = response {
+        if response.status() == StatusCode::OK {
+            let response: HealthCheckResponse = response.json().await?;
+
+            let result = context
+                .octopus_database
+                .update_ai_function_health_check_status(
+                    ai_function.id,
+                    health_check_execution_time,
+                    response.status,
+                )
+                .await?;
+
+            return Ok(result);
+        }
+    }
+
+    let result = context
+        .octopus_database
+        .update_ai_function_health_check_status(
+            ai_function.id,
+            health_check_execution_time,
+            AiFunctionHealthCheckStatus::NotWorking,
+        )
+        .await?;
+
+    Ok(result)
+}
+
+pub async fn function_prepare(
+    context: Arc<Context>,
+    ai_function: AiFunction,
+) -> Result<AiFunction> {
+    if ai_function.is_available && ai_function.is_enabled {
+        let perform_health_check = match ai_function.health_check_status {
+            AiFunctionHealthCheckStatus::NotWorking => true,
+            AiFunctionHealthCheckStatus::Ok => {
+                let mut result = false;
+                let last_valid_health_check_date = Utc::now() - Duration::minutes(30);
+
+                if let Some(health_check_at) = ai_function.health_check_at {
+                    if health_check_at < last_valid_health_check_date {
+                        result = true;
+                    }
+                }
+
+                result
+            }
+        };
+        let ai_function = if perform_health_check {
+            function_health_check(context.clone(), &ai_function).await?
+        } else {
+            ai_function
+        };
+
+        let perform_setup = match ai_function.setup_status {
+            AiFunctionSetupStatus::NotPerformed => true,
+            AiFunctionSetupStatus::Performed => {
+                let mut result = false;
+                let response = reqwest::Client::new()
+                    .get(format!("{}/setup", ai_function.base_function_url))
+                    .send()
+                    .await;
+
+                if let Ok(response) = response {
+                    if response.status() == StatusCode::OK {
+                        let response: SetupResponse = response.json().await?;
+
+                        if let AiFunctionSetupStatus::NotPerformed = response.setup {
+                            result = true;
+                        }
+                    }
+                }
+
+                result
+            }
+        };
+
+        if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
+            let ai_function = if perform_setup {
+                function_setup(context.clone(), &ai_function).await?
+            } else {
+                ai_function
+            };
+
+            let perform_warmup = match ai_function.warmup_status {
+                AiFunctionWarmupStatus::NotPerformed => true,
+                AiFunctionWarmupStatus::Performed => {
+                    let mut result = false;
+                    let response = reqwest::Client::new()
+                        .get(format!("{}/warmup", ai_function.base_function_url))
+                        .send()
+                        .await;
+
+                    if let Ok(response) = response {
+                        if response.status() == StatusCode::OK {
+                            let response: WarmupResponse = response.json().await?;
+
+                            if let AiFunctionWarmupStatus::NotPerformed = response.warmup {
+                                result = true;
+                            }
+                        }
+                    }
+
+                    result
+                }
+            };
+
+            if let AiFunctionSetupStatus::Performed = ai_function.setup_status {
+                let ai_function = if perform_warmup {
+                    function_warmup(context.clone(), &ai_function).await?
+                } else {
+                    ai_function
+                };
+
+                return Ok(ai_function);
+            }
+
+            return Ok(ai_function);
+        }
+
+        return Ok(ai_function);
+    }
+
+    Ok(ai_function)
+}
+
+pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> Result<AiFunction> {
+    let start = Utc::now();
+
+    let setup_post = SetupPost { force_setup: false };
+    let response = reqwest::Client::new()
+        .post(format!("{}/setup", ai_function.base_function_url))
+        .json(&setup_post)
+        .send()
+        .await;
+
+    let end = Utc::now();
+    let setup_execution_time = (end - start).num_seconds() as i32;
+
+    if let Ok(response) = response {
+        if response.status() == StatusCode::CREATED {
+            let response: SetupResponse = response.json().await?;
+
+            let result = context
+                .octopus_database
+                .update_ai_function_setup_status(
+                    ai_function.id,
+                    setup_execution_time,
+                    response.setup,
+                )
+                .await?;
+
+            return Ok(result);
+        }
+    }
+
+    let result = context
+        .octopus_database
+        .update_ai_function_setup_status(
+            ai_function.id,
+            setup_execution_time,
+            AiFunctionSetupStatus::NotPerformed,
+        )
+        .await?;
+
+    Ok(result)
+}
+
+pub async fn function_status(
     ai_function: &AiFunction,
     ai_function_response: &AiFunctionResponse,
 ) -> Result<Option<AiFunctionResponse>> {
@@ -94,22 +283,31 @@ pub async fn check_function_status(
     Ok(None)
 }
 
-pub async fn function_health_check(
+pub async fn function_warmup(
     context: Arc<Context>,
     ai_function: &AiFunction,
 ) -> Result<AiFunction> {
+    let start = Utc::now();
+
     let response = reqwest::Client::new()
-        .get(ai_function.health_check_url.clone())
+        .post(format!("{}/warmup", ai_function.base_function_url))
         .send()
         .await;
 
+    let end = Utc::now();
+    let warmup_execution_time = (end - start).num_seconds() as i32;
+
     if let Ok(response) = response {
-        if response.status() == StatusCode::OK {
-            let response: HealthCheckResponse = response.json().await?;
+        if response.status() == StatusCode::CREATED {
+            let response: WarmupResponse = response.json().await?;
 
             let result = context
                 .octopus_database
-                .update_ai_function_health_check_status(ai_function.id, response.status)
+                .update_ai_function_warmup_status(
+                    ai_function.id,
+                    warmup_execution_time,
+                    response.warmup,
+                )
                 .await?;
 
             return Ok(result);
@@ -118,9 +316,10 @@ pub async fn function_health_check(
 
     let result = context
         .octopus_database
-        .update_ai_function_health_check_status(
+        .update_ai_function_warmup_status(
             ai_function.id,
-            AiFunctionHealthCheckStatus::NotWorking,
+            warmup_execution_time,
+            AiFunctionWarmupStatus::NotPerformed,
         )
         .await?;
 
@@ -254,91 +453,6 @@ pub async fn open_ai_request(
     }
 
     Ok(chat_message)
-}
-
-pub async fn prepare_ai_function(
-    context: Arc<Context>,
-    ai_function: AiFunction,
-) -> Result<AiFunction> {
-    if ai_function.is_available && ai_function.is_enabled {
-        let perform_health_check = match ai_function.health_check_status {
-            AiFunctionHealthCheckStatus::NotWorking => true,
-            AiFunctionHealthCheckStatus::Ok => {
-                let mut result = false;
-                let last_valid_health_check_date = Utc::now() - Duration::minutes(30);
-
-                if let Some(health_check_at) = ai_function.health_check_at {
-                    if health_check_at < last_valid_health_check_date {
-                        result = true;
-                    }
-                }
-
-                result
-            }
-        };
-        let ai_function = if perform_health_check {
-            function_health_check(context.clone(), &ai_function).await?
-        } else {
-            ai_function
-        };
-
-        let perform_setup = match ai_function.setup_status {
-            AiFunctionSetupStatus::NotPerformed => true,
-            AiFunctionSetupStatus::Performed => {
-                let mut result = false;
-                let response = reqwest::Client::new()
-                    .get(format!("{}/setup", ai_function.base_function_url))
-                    .send()
-                    .await?;
-
-                if response.status() == StatusCode::OK {
-                    let response: SetupResponse = response.json().await?;
-
-                    if let AiFunctionSetupStatus::NotPerformed = response.setup {
-                        result = true;
-                    }
-                }
-
-                result
-            }
-        };
-
-        if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
-            let ai_function = if perform_setup {
-                let setup_post = SetupPost { force_setup: false };
-                let response = reqwest::Client::new()
-                    .post(format!("{}/setup", ai_function.base_function_url))
-                    .json(&setup_post)
-                    .send()
-                    .await?;
-
-                if response.status() == StatusCode::CREATED {
-                    let response: SetupResponse = response.json().await?;
-
-                    context
-                        .octopus_database
-                        .update_ai_function_setup_status(ai_function.id, response.setup)
-                        .await?
-                } else {
-                    context
-                        .octopus_database
-                        .update_ai_function_setup_status(
-                            ai_function.id,
-                            AiFunctionSetupStatus::NotPerformed,
-                        )
-                        .await?
-                }
-            } else {
-                ai_function
-            };
-
-            return Ok(ai_function);
-        }
-
-        return Ok(ai_function);
-    }
-
-    Ok(ai_function)
 }
 
 pub async fn update_chat_message(

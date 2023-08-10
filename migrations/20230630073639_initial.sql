@@ -186,12 +186,14 @@ CREATE INDEX password_reset_tokens_deleted_at ON password_reset_tokens(deleted_a
 
 CREATE TYPE ai_functions_health_check_statuses AS ENUM('not_working', 'ok');
 CREATE TYPE ai_functions_setup_statuses AS ENUM('not_performed', 'performed');
+CREATE TYPE ai_functions_warmup_statuses AS ENUM('not_performed', 'performed');
 
 CREATE TABLE ai_functions(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     base_function_url VARCHAR(256) NOT NULL,
     description TEXT NOT NULL,
     hardware_bindings VARCHAR(1024) [] NOT NULL DEFAULT '{}',
+    health_check_execution_time INT NOT NULL DEFAULT 0,
     health_check_status ai_functions_health_check_statuses NOT NULL DEFAULT 'not_working',
     health_check_url VARCHAR(256) NOT NULL,
     is_available BOOLEAN NOT NULL DEFAULT false,
@@ -199,12 +201,16 @@ CREATE TABLE ai_functions(
     k8s_configuration TEXT,
     name VARCHAR(256) NOT NULL,
     parameters JSON NOT NULL,
+    setup_execution_time INT NOT NULL DEFAULT 0,
     setup_status ai_functions_setup_statuses NOT NULL DEFAULT 'not_performed',
+    warmup_execution_time INT NOT NULL DEFAULT 0,
+    warmup_status ai_functions_warmup_statuses NOT NULL DEFAULT 'not_performed',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     deleted_at TIMESTAMP WITH TIME ZONE,
     health_check_at TIMESTAMP WITH TIME ZONE,
     setup_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    warmup_at TIMESTAMP WITH TIME ZONE,
     UNIQUE(name)
 );
 
@@ -213,3 +219,4 @@ CREATE INDEX ai_functions_health_check_status ON ai_functions(health_check_statu
 CREATE INDEX ai_functions_is_available ON ai_functions(is_available);
 CREATE INDEX ai_functions_is_enabled ON ai_functions(is_enabled);
 CREATE INDEX ai_functions_setup_status ON ai_functions(setup_status);
+CREATE INDEX ai_functions_warmup_status ON ai_functions(warmup_status);

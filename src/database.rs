@@ -1,9 +1,9 @@
 use crate::{
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, Chat, ChatActivity,
-        ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
-        ChatPicture, Company, EstimatedSeconds, ExamplePrompt, PasswordResetToken, Profile,
-        Session, User, Workspace, WorkspacesType,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
+        Chat, ChatActivity, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
+        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt,
+        PasswordResetToken, Profile, Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -43,7 +43,7 @@ impl OctopusDatabase {
     pub async fn get_ai_functions(&self) -> Result<Vec<AiFunction>> {
         let ai_functions = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
             FROM ai_functions
             WHERE deleted_at IS NULL
             ORDER BY name ASC"#
@@ -59,14 +59,16 @@ impl OctopusDatabase {
         let is_available = true;
         let is_enabled = true;
         let setup_status = AiFunctionSetupStatus::Performed;
+        let warmup_status = AiFunctionWarmupStatus::Performed;
 
         let ai_functions = sqlx::query_as::<_, AiFunction>(
-            "SELECT id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at
+            "SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
             FROM ai_functions
             WHERE health_check_status = $1
             AND is_available = $2
             AND is_enabled = $3
             AND setup_status = $4
+            AND warmup_status = $5
             AND deleted_at IS NULL
             ORDER BY name ASC",
         )
@@ -74,6 +76,7 @@ impl OctopusDatabase {
         .bind(is_available)
         .bind(is_enabled)
         .bind(setup_status)
+        .bind(warmup_status)
         .fetch_all(&*self.pool)
         .await?;
 
@@ -340,7 +343,7 @@ impl OctopusDatabase {
             r#"INSERT INTO ai_functions
             (base_function_url, description, hardware_bindings, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at"#,
             base_function_url,
             description,
             hardware_bindings,
@@ -834,7 +837,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
             FROM ai_functions
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -849,7 +852,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_name(&self, name: &str) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
             FROM ai_functions
             WHERE name = $1
             AND deleted_at IS NULL"#,
@@ -1277,7 +1280,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_functions
             SET base_function_url = $2, description = $3, hardware_bindings = $4, health_check_url = $5, is_available = $6, is_enabled = $7, k8s_configuration = $8, name = $9, parameters = $10, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, base_function_url, description, hardware_bindings, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at"#,
             id,
             base_function_url,
             description,
@@ -1298,15 +1301,17 @@ impl OctopusDatabase {
     pub async fn update_ai_function_health_check_status(
         &self,
         id: Uuid,
+        health_check_execution_time: i32,
         health_check_status: AiFunctionHealthCheckStatus,
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "UPDATE ai_functions
-            SET health_check_status = $2, health_check_at = current_timestamp(0), updated_at = current_timestamp(0)
+            SET health_check_execution_time = $2, health_check_status = $3, health_check_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at",
         )
         .bind(id)
+        .bind(health_check_execution_time)
         .bind(health_check_status)
         .fetch_one(&*self.pool)
         .await?;
@@ -1317,16 +1322,39 @@ impl OctopusDatabase {
     pub async fn update_ai_function_setup_status(
         &self,
         id: Uuid,
+        setup_execution_time: i32,
         setup_status: AiFunctionSetupStatus,
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "UPDATE ai_functions
-            SET setup_status = $2, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
+            SET setup_execution_time = $2, setup_status = $3, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, base_function_url, description, hardware_bindings, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at",
         )
         .bind(id)
+        .bind(setup_execution_time)
         .bind(setup_status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
+    pub async fn update_ai_function_warmup_status(
+        &self,
+        id: Uuid,
+        warmup_execution_time: i32,
+        warmup_status: AiFunctionWarmupStatus,
+    ) -> Result<AiFunction> {
+        let ai_function = sqlx::query_as::<_, AiFunction>(
+            "UPDATE ai_functions
+            SET warmup_execution_time = $2, warmup_status = $3, warmup_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at",
+        )
+        .bind(id)
+        .bind(warmup_execution_time)
+        .bind(warmup_status)
         .fetch_one(&*self.pool)
         .await?;
 

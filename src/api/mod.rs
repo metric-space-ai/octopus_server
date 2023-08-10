@@ -1,6 +1,9 @@
 use crate::{
     api::{
-        ai_functions::{AiFunctionPost, AiFunctionPut},
+        ai_functions::{
+            AiFunctionOperation, AiFunctionOperationPost, AiFunctionOperationResponse,
+            AiFunctionPost, AiFunctionPut,
+        },
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
             register, register::RegisterPost,
@@ -15,9 +18,9 @@ use crate::{
     },
     context::Context,
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, Chat, ChatActivity,
-        ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        ExamplePrompt, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
+        Chat, ChatActivity, ChatMessage, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
+        ChatPicture, ExamplePrompt, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -63,9 +66,13 @@ pub async fn router(context: Arc<Context>) -> Router {
             schemas(
                 AiFunction,
                 AiFunctionHealthCheckStatus,
+                AiFunctionOperation,
+                AiFunctionOperationPost,
+                AiFunctionOperationResponse,
                 AiFunctionPost,
                 AiFunctionPut,
                 AiFunctionSetupStatus,
+                AiFunctionWarmupStatus,
                 ChangePasswordPut,
                 Chat,
                 ChatActivity,
@@ -104,6 +111,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             ai_functions::create,
             ai_functions::delete,
             ai_functions::list,
+            ai_functions::operation,
             ai_functions::read,
             ai_functions::update,
             change_password::change_password,
@@ -261,6 +269,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/ai-functions/:id",
             delete(ai_functions::delete)
                 .get(ai_functions::read)
+                .post(ai_functions::operation)
                 .put(ai_functions::update),
         )
         .route(

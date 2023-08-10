@@ -1,6 +1,6 @@
 use crate::{
     ai::{
-        check_function_status, function_health_check, update_chat_message, AiFunctionResponse,
+        function_health_check, function_status, update_chat_message, AiFunctionResponse,
         AiFunctionResponseStatus,
     },
     context::Context,
@@ -39,7 +39,7 @@ pub async fn handle_function_bar_async(
                 update_chat_message(&response, context.clone(), chat_message).await?;
 
             loop {
-                let response = check_function_status(ai_function, &response).await?;
+                let response = function_status(ai_function, &response).await?;
 
                 if let Some(response) = response {
                     chat_message =

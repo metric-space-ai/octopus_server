@@ -21,12 +21,20 @@ pub enum AiFunctionSetupStatus {
     Performed,
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_functions_warmup_statuses", rename_all = "snake_case")]
+pub enum AiFunctionWarmupStatus {
+    NotPerformed,
+    Performed,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiFunction {
     pub id: Uuid,
     pub base_function_url: String,
     pub description: String,
     pub hardware_bindings: Vec<String>,
+    pub health_check_execution_time: i32,
     pub health_check_status: AiFunctionHealthCheckStatus,
     pub health_check_url: String,
     pub is_available: bool,
@@ -34,12 +42,16 @@ pub struct AiFunction {
     pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
+    pub setup_execution_time: i32,
     pub setup_status: AiFunctionSetupStatus,
+    pub warmup_execution_time: i32,
+    pub warmup_status: AiFunctionWarmupStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,
     pub setup_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
+    pub warmup_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

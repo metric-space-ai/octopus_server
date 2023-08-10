@@ -11,7 +11,8 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use chrono::{DateTime, Duration, Utc};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -29,6 +30,23 @@ pub struct AiFunctionPost {
     pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
+}
+
+#[derive(Clone, Debug, Deserialize, ToSchema)]
+pub enum AiFunctionOperation {
+    HealthCheck,
+    Setup,
+    Warmup,
+}
+
+#[derive(Clone, Debug, Deserialize, ToSchema, Validate)]
+pub struct AiFunctionOperationPost {
+    pub operation: AiFunctionOperation,
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct AiFunctionOperationResponse {
+    pub estimated_operation_end_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -91,7 +109,7 @@ pub async fn create(
             let cloned_context = context.clone();
             let cloned_ai_function = ai_function.clone();
             tokio::spawn(async move {
-                let ai_function = ai::prepare_ai_function(cloned_context, cloned_ai_function).await;
+                let ai_function = ai::function_prepare(cloned_context, cloned_ai_function).await;
 
                 if let Err(e) = ai_function {
                     debug!("Error: {:?}", e);
@@ -157,6 +175,74 @@ pub async fn list(
     let ai_functions = context.octopus_database.get_ai_functions().await?;
 
     Ok((StatusCode::OK, Json(ai_functions)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    post,
+    path = "/api/v1/ai-functions/:id",
+    request_body = AiFunctionOperationPost,
+    responses(
+        (status = 201, description = "AI Function operation scheduled.", body = AiFunctionOperationResponse),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "AI Function not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Function id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn operation(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+    Json(input): Json<AiFunctionOperationPost>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    input.validate()?;
+
+    let ai_function = context
+        .octopus_database
+        .try_get_ai_function_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let cloned_context = context.clone();
+    let cloned_ai_function = ai_function.clone();
+    let cloned_input = input.clone();
+    tokio::spawn(async move {
+        let ai_function = match cloned_input.operation {
+            AiFunctionOperation::HealthCheck => {
+                ai::function_health_check(cloned_context, &cloned_ai_function).await
+            }
+            AiFunctionOperation::Setup => {
+                ai::function_setup(cloned_context, &cloned_ai_function).await
+            }
+            AiFunctionOperation::Warmup => {
+                ai::function_warmup(cloned_context, &cloned_ai_function).await
+            }
+        };
+
+        if let Err(e) = ai_function {
+            debug!("Error: {:?}", e);
+        }
+    });
+
+    let execution_time = match input.operation {
+        AiFunctionOperation::HealthCheck => ai_function.health_check_execution_time,
+        AiFunctionOperation::Setup => ai_function.setup_execution_time,
+        AiFunctionOperation::Warmup => ai_function.warmup_execution_time,
+    };
+
+    let estimated_operation_end_at = Utc::now() + Duration::seconds(execution_time as i64 + 1);
+
+    let ai_function_operation_response = AiFunctionOperationResponse {
+        estimated_operation_end_at,
+    };
+
+    Ok((StatusCode::CREATED, Json(ai_function_operation_response)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -253,7 +339,7 @@ pub async fn update(
     let cloned_context = context.clone();
     let cloned_ai_function = ai_function.clone();
     tokio::spawn(async move {
-        let ai_function = ai::prepare_ai_function(cloned_context, cloned_ai_function).await;
+        let ai_function = ai::function_prepare(cloned_context, cloned_ai_function).await;
 
         if let Err(e) = ai_function {
             debug!("Error: {:?}", e);

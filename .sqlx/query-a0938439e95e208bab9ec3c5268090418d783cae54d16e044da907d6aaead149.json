@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, base_function_url, description, hardware_bindings, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_status AS \"setup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_functions\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE deleted_at IS NULL\n            ORDER BY name ASC",
   "describe": {
     "columns": [
       {
@@ -25,6 +25,11 @@
       },
       {
         "ordinal": 4,
+        "name": "health_check_execution_time",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
         "name": "health_check_status: _",
         "type_info": {
           "Custom": {
@@ -39,37 +44,42 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "health_check_url",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "is_available",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "k8s_configuration",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "parameters",
         "type_info": "Json"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
+        "name": "setup_execution_time",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 13,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
@@ -84,35 +94,58 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 14,
+        "name": "warmup_execution_time",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "warmup_status: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_functions_warmup_statuses",
+            "kind": {
+              "Enum": [
+                "not_performed",
+                "performed"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 16,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 17,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 18,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 19,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 16,
+        "ordinal": 20,
         "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 21,
+        "name": "warmup_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
@@ -123,16 +156,21 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
       false,
       false,
+      false,
+      false,
+      false,
       true,
       true,
       true,
-      false
+      false,
+      true
     ]
   },
-  "hash": "388d30ec9cef3738913354a7d91d25ec073a27ba5b60d5a06923fdb19222d738"
+  "hash": "a0938439e95e208bab9ec3c5268090418d783cae54d16e044da907d6aaead149"
 }
