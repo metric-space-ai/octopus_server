@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_id, user_id, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, ai_function_id, chat_id, user_id, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -10,36 +10,41 @@
       },
       {
         "ordinal": 1,
-        "name": "chat_id",
+        "name": "ai_function_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 2,
-        "name": "user_id",
+        "name": "chat_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -54,28 +59,32 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Text"
       ]
     },
     "nullable": [
       false,
+      true,
       false,
       false,
       false,
@@ -88,5 +97,5 @@
       false
     ]
   },
-  "hash": "9c91dfb6930d025702e3368561b85d376e92bb21715095ff724b356470fc3e3b"
+  "hash": "f671f5b206cb68e3474efb2724a433de86a040b6de8f5a13d2062385df93163c"
 }

@@ -85,6 +85,7 @@ pub enum ChatMessageStatus {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatMessage {
     pub id: Uuid,
+    pub ai_function_id: Option<Uuid>,
     pub chat_id: Uuid,
     pub user_id: Uuid,
     pub estimated_response_at: DateTime<Utc>,
@@ -100,6 +101,7 @@ pub struct ChatMessage {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatMessageExtended {
     pub id: Uuid,
+    pub ai_function_id: Option<Uuid>,
     pub chat_id: Uuid,
     pub user_id: Uuid,
     pub chat_message_files: Vec<ChatMessageFile>,

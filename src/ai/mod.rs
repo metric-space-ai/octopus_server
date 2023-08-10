@@ -456,6 +456,7 @@ pub async fn open_ai_request(
 }
 
 pub async fn update_chat_message(
+    ai_function: &AiFunction,
     ai_function_response: &AiFunctionResponse,
     context: Arc<Context>,
     chat_message: &ChatMessage,
@@ -479,6 +480,7 @@ pub async fn update_chat_message(
         .octopus_database
         .update_chat_message_from_function(
             chat_message.id,
+            ai_function.id,
             ai_function_response.estimated_response_at,
             status,
             ai_function_response.progress,

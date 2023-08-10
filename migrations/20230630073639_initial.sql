@@ -52,6 +52,43 @@ CREATE TABLE sessions(
 
 CREATE INDEX sessions_user_id ON sessions(user_id);
 
+CREATE TYPE ai_functions_health_check_statuses AS ENUM('not_working', 'ok');
+CREATE TYPE ai_functions_setup_statuses AS ENUM('not_performed', 'performed');
+CREATE TYPE ai_functions_warmup_statuses AS ENUM('not_performed', 'performed');
+
+CREATE TABLE ai_functions(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    base_function_url VARCHAR(256) NOT NULL,
+    description TEXT NOT NULL,
+    hardware_bindings VARCHAR(1024) [] NOT NULL DEFAULT '{}',
+    health_check_execution_time INT NOT NULL DEFAULT 0,
+    health_check_status ai_functions_health_check_statuses NOT NULL DEFAULT 'not_working',
+    health_check_url VARCHAR(256) NOT NULL,
+    is_available BOOLEAN NOT NULL DEFAULT false,
+    is_enabled BOOLEAN NOT NULL DEFAULT false,
+    k8s_configuration TEXT,
+    name VARCHAR(256) NOT NULL,
+    parameters JSON NOT NULL,
+    setup_execution_time INT NOT NULL DEFAULT 0,
+    setup_status ai_functions_setup_statuses NOT NULL DEFAULT 'not_performed',
+    warmup_execution_time INT NOT NULL DEFAULT 0,
+    warmup_status ai_functions_warmup_statuses NOT NULL DEFAULT 'not_performed',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    health_check_at TIMESTAMP WITH TIME ZONE,
+    setup_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    warmup_at TIMESTAMP WITH TIME ZONE,
+    UNIQUE(name)
+);
+
+CREATE INDEX ai_functions_deleted_at ON ai_functions(deleted_at);
+CREATE INDEX ai_functions_health_check_status ON ai_functions(health_check_status);
+CREATE INDEX ai_functions_is_available ON ai_functions(is_available);
+CREATE INDEX ai_functions_is_enabled ON ai_functions(is_enabled);
+CREATE INDEX ai_functions_setup_status ON ai_functions(setup_status);
+CREATE INDEX ai_functions_warmup_status ON ai_functions(warmup_status);
+
 CREATE TYPE workspaces_types AS ENUM('private', 'public');
 
 CREATE TABLE workspaces(
@@ -99,6 +136,7 @@ CREATE TYPE chat_message_statuses AS ENUM('answered', 'asked');
 
 CREATE TABLE chat_messages(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ai_function_id UUID REFERENCES ai_functions ON DELETE CASCADE,
     chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
     user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
     estimated_response_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -113,6 +151,7 @@ CREATE TABLE chat_messages(
 
 CREATE INDEX chat_messages_chat_id ON chat_messages(chat_id);
 CREATE INDEX chat_messages_user_id ON chat_messages(user_id);
+CREATE INDEX chat_messages_ai_function_id ON chat_messages(ai_function_id);
 CREATE INDEX chat_messages_status ON chat_messages(status);
 CREATE INDEX chat_messages_created_at ON chat_messages(created_at);
 CREATE INDEX chat_messages_deleted_at ON chat_messages(deleted_at);
@@ -183,40 +222,3 @@ CREATE TABLE password_reset_tokens(
 
 CREATE INDEX password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX password_reset_tokens_deleted_at ON password_reset_tokens(deleted_at);
-
-CREATE TYPE ai_functions_health_check_statuses AS ENUM('not_working', 'ok');
-CREATE TYPE ai_functions_setup_statuses AS ENUM('not_performed', 'performed');
-CREATE TYPE ai_functions_warmup_statuses AS ENUM('not_performed', 'performed');
-
-CREATE TABLE ai_functions(
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    base_function_url VARCHAR(256) NOT NULL,
-    description TEXT NOT NULL,
-    hardware_bindings VARCHAR(1024) [] NOT NULL DEFAULT '{}',
-    health_check_execution_time INT NOT NULL DEFAULT 0,
-    health_check_status ai_functions_health_check_statuses NOT NULL DEFAULT 'not_working',
-    health_check_url VARCHAR(256) NOT NULL,
-    is_available BOOLEAN NOT NULL DEFAULT false,
-    is_enabled BOOLEAN NOT NULL DEFAULT false,
-    k8s_configuration TEXT,
-    name VARCHAR(256) NOT NULL,
-    parameters JSON NOT NULL,
-    setup_execution_time INT NOT NULL DEFAULT 0,
-    setup_status ai_functions_setup_statuses NOT NULL DEFAULT 'not_performed',
-    warmup_execution_time INT NOT NULL DEFAULT 0,
-    warmup_status ai_functions_warmup_statuses NOT NULL DEFAULT 'not_performed',
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    health_check_at TIMESTAMP WITH TIME ZONE,
-    setup_at TIMESTAMP WITH TIME ZONE,
-    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
-    warmup_at TIMESTAMP WITH TIME ZONE,
-    UNIQUE(name)
-);
-
-CREATE INDEX ai_functions_deleted_at ON ai_functions(deleted_at);
-CREATE INDEX ai_functions_health_check_status ON ai_functions(health_check_status);
-CREATE INDEX ai_functions_is_available ON ai_functions(is_available);
-CREATE INDEX ai_functions_is_enabled ON ai_functions(is_enabled);
-CREATE INDEX ai_functions_setup_status ON ai_functions(setup_status);
-CREATE INDEX ai_functions_warmup_status ON ai_functions(warmup_status);

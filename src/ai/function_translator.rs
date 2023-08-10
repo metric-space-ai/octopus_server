@@ -42,14 +42,15 @@ pub async fn handle_function_translator(
             function_translator(ai_function, source_language, target_language, text).await?;
         if let Some(response) = response {
             let mut chat_message =
-                update_chat_message(&response, context.clone(), chat_message).await?;
+                update_chat_message(ai_function, &response, context.clone(), chat_message).await?;
 
             loop {
                 let response = function_status(ai_function, &response).await?;
 
                 if let Some(response) = response {
                     chat_message =
-                        update_chat_message(&response, context.clone(), &chat_message).await?;
+                        update_chat_message(ai_function, &response, context.clone(), &chat_message)
+                            .await?;
 
                     if response.status == AiFunctionResponseStatus::Processed {
                         break;
