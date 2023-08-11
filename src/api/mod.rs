@@ -226,6 +226,10 @@ pub async fn router(context: Arc<Context>) -> Router {
                 .put(chat_messages::update),
         )
         .route(
+            "/api/v1/chat-messages/:chat_id/:chat_message_id/flag",
+            put(chat_messages::flag),
+        )
+        .route(
             "/api/v1/chat-message-files/:chat_message_id",
             get(chat_message_files::list),
         )
