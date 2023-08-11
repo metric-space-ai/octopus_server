@@ -388,6 +388,33 @@ pub async fn open_ai_request(
         functions.push(function);
     }
 
+    if functions.is_empty() {
+        let function = ChatCompletionFunctionsArgs::default()
+            .name("dummy-function")
+            .description("This is a dummy function that should not be used")
+            .parameters(json!({
+                "type": "object",
+                "properties": {
+                    "parameter1": {
+                        "type": "string",
+                        "description": "This parameter should not be used",
+                    },
+                    "parameter2": {
+                        "type": "string",
+                        "description": "This parameter should not be used",
+                    },
+                    "parameter3": {
+                        "type": "string",
+                        "description": "This parameter should not be used",
+                    },
+                },
+                "required": ["parameter1", "parameter2", "parameter3"],
+            }))
+            .build()?;
+
+        functions.push(function);
+    }
+
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
         .model("gpt-3.5-turbo-0613")
