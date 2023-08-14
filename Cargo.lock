@@ -1429,6 +1429,7 @@ dependencies = [
  "async-openai",
  "axum",
  "axum-macros",
+ "base64",
  "chrono",
  "clap",
  "fake",

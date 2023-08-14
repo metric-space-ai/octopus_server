@@ -5,7 +5,7 @@ use crate::{
         ChatMessage, ChatMessageStatus,
     },
     error::AppError,
-    Result,
+    Result, PUBLIC_DIR,
 };
 use async_openai::{
     types::{
@@ -15,10 +15,11 @@ use async_openai::{
     Client,
 };
 use axum::http::StatusCode;
+use base64::{alphabet, engine, Engine};
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::sync::Arc;
+use std::{fs::File, io::Write, sync::Arc};
 use uuid::Uuid;
 
 mod function_bar_async;
@@ -514,6 +515,38 @@ pub async fn update_chat_message(
             response,
         )
         .await?;
+
+    if !ai_function_response.file_attachements.is_empty() {
+        let engine = engine::GeneralPurpose::new(&alphabet::URL_SAFE, engine::general_purpose::PAD);
+
+        for file_attachement in &ai_function_response.file_attachements {
+            let content = file_attachement
+                .content
+                .strip_prefix("b'")
+                .ok_or(AppError::InternalError)?
+                .to_string();
+            let content = content.strip_suffix('\'').ok_or(AppError::InternalError)?;
+            let data = engine.decode(content)?;
+            let extension = (file_attachement
+                .file_name
+                .split('.')
+                .collect::<Vec<&str>>()
+                .last()
+                .ok_or(AppError::File)?)
+            .to_string();
+
+            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
+            let path = format!("{PUBLIC_DIR}/{file_name}");
+
+            let mut file = File::create(path)?;
+            file.write_all(&data)?;
+
+            context
+                .octopus_database
+                .insert_chat_message_file(chat_message.id, &file_name, &file_attachement.media_type)
+                .await?;
+        }
+    }
 
     Ok(chat_message)
 }
