@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, base_function_url, description, hardware_bindings, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE name = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, base_function_url, description, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE name = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -20,8 +20,8 @@
       },
       {
         "ordinal": 3,
-        "name": "hardware_bindings",
-        "type_info": "VarcharArray"
+        "name": "device_map",
+        "type_info": "Json"
       },
       {
         "ordinal": 4,
@@ -174,5 +174,5 @@
       true
     ]
   },
-  "hash": "97c5c877fd53b76a515fe6de2414ece14fc2a7c57ce5f516a5426e6d9c115073"
+  "hash": "91737ed40e2509b8318a9644538fdb8ff02de19d9c9b1363e18fce317f0280fa"
 }

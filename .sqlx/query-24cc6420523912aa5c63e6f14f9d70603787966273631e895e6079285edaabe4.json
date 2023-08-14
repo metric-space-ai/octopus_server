@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE chat_messages\n            SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ai_function_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "chat_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "bad_reply_comment",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "bad_reply_is_harmful",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "bad_reply_is_not_helpful",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "bad_reply_is_not_true",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "estimated_response_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "message",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "progress",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "response",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "status: _",
+        "type_info": {
+          "Custom": {
+            "name": "chat_message_statuses",
+            "kind": {
+              "Enum": [
+                "answered",
+                "asked"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Bool",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "24cc6420523912aa5c63e6f14f9d70603787966273631e895e6079285edaabe4"
+}

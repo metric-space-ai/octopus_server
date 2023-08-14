@@ -17,6 +17,7 @@ use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Serialize)]
 pub struct FunctionFooSyncPost {
+    pub device_map: serde_json::Value,
     pub value1: String,
     pub value2: String,
 }
@@ -87,6 +88,7 @@ async fn function_foo_sync(
     value2: &str,
 ) -> Result<Option<AiFunctionResponse>> {
     let function_foo_sync_post = FunctionFooSyncPost {
+        device_map: ai_function.device_map.clone(),
         value1: value1.to_string(),
         value2: value2.to_string(),
     };

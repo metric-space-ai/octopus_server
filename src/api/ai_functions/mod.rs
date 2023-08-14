@@ -23,7 +23,7 @@ use validator::Validate;
 pub struct AiFunctionPost {
     pub base_function_url: String,
     pub description: String,
-    pub hardware_bindings: Vec<String>,
+    pub device_map: serde_json::Value,
     pub health_check_url: String,
     pub is_available: bool,
     pub is_enabled: bool,
@@ -53,7 +53,7 @@ pub struct AiFunctionOperationResponse {
 pub struct AiFunctionPut {
     pub base_function_url: String,
     pub description: String,
-    pub hardware_bindings: Vec<String>,
+    pub device_map: serde_json::Value,
     pub health_check_url: String,
     pub is_available: bool,
     pub is_enabled: bool,
@@ -96,7 +96,7 @@ pub async fn create(
                 .insert_ai_function(
                     &input.base_function_url,
                     &input.description,
-                    &input.hardware_bindings,
+                    input.device_map,
                     &input.health_check_url,
                     input.is_available,
                     input.is_enabled,
@@ -326,7 +326,7 @@ pub async fn update(
             id,
             &input.base_function_url,
             &input.description,
-            &input.hardware_bindings,
+            input.device_map,
             &input.health_check_url,
             input.is_available,
             input.is_enabled,
@@ -485,7 +485,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -679,7 +681,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -838,7 +842,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -884,7 +890,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1043,7 +1051,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1223,7 +1233,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1610,7 +1622,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1798,7 +1812,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1980,7 +1996,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2170,7 +2188,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2476,7 +2496,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2525,7 +2547,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2693,7 +2717,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2810,7 +2836,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2982,7 +3010,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3136,7 +3166,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3188,7 +3220,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3237,7 +3271,9 @@ mod tests {
                         serde_json::json!({
                             "base_function_url": "http://127.0.0.1:5000/v1/function-foo-sync",
                             "description": "Synchronous communication test function",
-                            "hardware_bindings": ["CPU 0", "GPU 0"],
+                            "device_map": {
+                                "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
+                            },
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,

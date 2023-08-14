@@ -60,7 +60,7 @@ CREATE TABLE ai_functions(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     base_function_url VARCHAR(256) NOT NULL,
     description TEXT NOT NULL,
-    hardware_bindings VARCHAR(1024) [] NOT NULL DEFAULT '{}',
+    device_map JSON NOT NULL,
     health_check_execution_time INT NOT NULL DEFAULT 0,
     health_check_status ai_functions_health_check_statuses NOT NULL DEFAULT 'not_working',
     health_check_url VARCHAR(256) NOT NULL,

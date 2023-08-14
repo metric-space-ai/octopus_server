@@ -17,6 +17,7 @@ use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Serialize)]
 pub struct FunctionTranslatorPost {
+    pub device_map: serde_json::Value,
     pub source_language: String,
     pub target_language: String,
     pub text: String,
@@ -94,6 +95,7 @@ async fn function_translator(
     text: &str,
 ) -> Result<Option<AiFunctionResponse>> {
     let function_translator_post = FunctionTranslatorPost {
+        device_map: ai_function.device_map.clone(),
         source_language: source_language.to_string(),
         target_language: target_language.to_string(),
         text: text.to_string(),
