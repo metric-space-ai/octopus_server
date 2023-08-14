@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at\n            FROM chats\n            WHERE workspace_id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at\n            FROM chats\n            WHERE workspace_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -54,5 +54,5 @@
       false
     ]
   },
-  "hash": "a5c221bb122f681b7ea58988ec2d0f6ef132a90df94c21b791c710fc25288b3d"
+  "hash": "43533573ea6697199e05a504140773727cfd66629963f2bd31d5c102e1314ea8"
 }

@@ -89,13 +89,34 @@ impl OctopusDatabase {
             "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at
             FROM chats
             WHERE workspace_id = $1
-            AND deleted_at IS NULL",
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC",
             workspace_id
         )
         .fetch_all(&*self.pool)
         .await?;
 
         Ok(chats)
+    }
+
+    pub async fn get_chat_by_workspace_id_latest(
+        &self,
+        workspace_id: Uuid,
+    ) -> Result<Option<Chat>> {
+        let chat = sqlx::query_as!(
+            Chat,
+            "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at
+            FROM chats
+            WHERE workspace_id = $1
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
+            workspace_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat)
     }
 
     pub async fn get_chat_activities_latest_by_chat_id_and_session_id(
@@ -144,6 +165,26 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_messages)
+    }
+
+    pub async fn get_chat_messages_by_chat_id_latest(
+        &self,
+        chat_id: Uuid,
+    ) -> Result<Option<ChatMessage>> {
+        let chat_message = sqlx::query_as!(
+            ChatMessage,
+            r#"SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
+            FROM chat_messages
+            WHERE chat_id = $1
+            AND deleted_at IS NULL
+            ORDER BY created_at ASC
+            LIMIT 1"#,
+            chat_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_message)
     }
 
     pub async fn get_chat_messages_extended_by_chat_id(

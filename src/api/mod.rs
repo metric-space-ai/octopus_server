@@ -8,7 +8,7 @@ use crate::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
             register, register::RegisterPost,
         },
-        chat_messages::{ChatMessagePost, ChatMessagePut},
+        chat_messages::{ChatMessageFlagPut, ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
@@ -78,6 +78,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ChatActivity,
                 ChatMessage,
                 ChatMessageFile,
+                ChatMessageFlagPut,
                 ChatMessagePicture,
                 ChatMessagePost,
                 ChatMessagePut,
@@ -119,6 +120,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_activities::list,
             chat_messages::create,
             chat_messages::delete,
+            chat_messages::flag,
+            chat_messages::latest,
             chat_messages::list,
             chat_messages::read,
             chat_messages::regenerate,
@@ -219,6 +222,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             get(chat_messages::list).post(chat_messages::create),
         )
         .route(
+            "/api/v1/chat-messages/:chat_id/latest",
+            get(chat_messages::latest),
+        )
+        .route(
             "/api/v1/chat-messages/:chat_id/:chat_message_id",
             delete(chat_messages::delete)
                 .get(chat_messages::read)
@@ -261,6 +268,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/chats/:workspace_id",
             get(chats::list).post(chats::create),
         )
+        .route("/api/v1/chats/:workspace_id/latest", get(chats::latest))
         .route(
             "/api/v1/chats/:workspace_id/:chat_id",
             delete(chats::delete).get(chats::read).put(chats::update),
