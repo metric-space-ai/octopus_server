@@ -418,7 +418,7 @@ pub async fn open_ai_request(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model("gpt-4-32k-0613")
+        .model("gpt-4-0613")
         .messages(messages)
         .functions(functions)
         .function_call("auto")
