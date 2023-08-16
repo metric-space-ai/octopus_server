@@ -22,7 +22,6 @@ use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
 use uuid::Uuid;
 
-mod function_bar_async;
 mod function_foo_sync;
 mod function_translator;
 
@@ -149,25 +148,7 @@ pub async fn function_prepare(
 
         let perform_setup = match ai_function.setup_status {
             AiFunctionSetupStatus::NotPerformed => true,
-            AiFunctionSetupStatus::Performed => {
-                let mut result = false;
-                let response = reqwest::Client::new()
-                    .get(format!("{}/setup", ai_function.base_function_url))
-                    .send()
-                    .await;
-
-                if let Ok(response) = response {
-                    if response.status() == StatusCode::OK {
-                        let response: SetupResponse = response.json().await?;
-
-                        if let AiFunctionSetupStatus::NotPerformed = response.setup {
-                            result = true;
-                        }
-                    }
-                }
-
-                result
-            }
+            AiFunctionSetupStatus::Performed => false,
         };
 
         if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
@@ -176,39 +157,6 @@ pub async fn function_prepare(
             } else {
                 ai_function
             };
-
-            let perform_warmup = match ai_function.warmup_status {
-                AiFunctionWarmupStatus::NotPerformed => true,
-                AiFunctionWarmupStatus::Performed => {
-                    let mut result = false;
-                    let response = reqwest::Client::new()
-                        .get(format!("{}/warmup", ai_function.base_function_url))
-                        .send()
-                        .await;
-
-                    if let Ok(response) = response {
-                        if response.status() == StatusCode::OK {
-                            let response: WarmupResponse = response.json().await?;
-
-                            if let AiFunctionWarmupStatus::NotPerformed = response.warmup {
-                                result = true;
-                            }
-                        }
-                    }
-
-                    result
-                }
-            };
-
-            if let AiFunctionSetupStatus::Performed = ai_function.setup_status {
-                let ai_function = if perform_warmup {
-                    function_warmup(context.clone(), &ai_function).await?
-                } else {
-                    ai_function
-                };
-
-                return Ok(ai_function);
-            }
 
             return Ok(ai_function);
         }
@@ -224,7 +172,7 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
 
     let setup_post = SetupPost { force_setup: false };
     let response = reqwest::Client::new()
-        .post(format!("{}/setup", ai_function.base_function_url))
+        .post(&ai_function.setup_url)
         .json(&setup_post)
         .send()
         .await;
@@ -259,29 +207,6 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
         .await?;
 
     Ok(result)
-}
-
-pub async fn function_status(
-    ai_function: &AiFunction,
-    ai_function_response: &AiFunctionResponse,
-) -> Result<Option<AiFunctionResponse>> {
-    let response = reqwest::Client::new()
-        .get(format!(
-            "{}/{}",
-            ai_function.base_function_url, ai_function_response.id
-        ))
-        .send()
-        .await;
-
-    if let Ok(response) = response {
-        if response.status() == StatusCode::OK {
-            let response: AiFunctionResponse = response.json().await?;
-
-            return Ok(Some(response));
-        }
-    }
-
-    Ok(None)
 }
 
 pub async fn function_warmup(
@@ -443,15 +368,7 @@ pub async fn open_ai_request(
             .await?;
 
         if let Some(ai_function) = ai_function {
-            if function_name == "function_bar_async" {
-                function_bar_async::handle_function_bar_async(
-                    &ai_function,
-                    &chat_message,
-                    context.clone(),
-                    &function_args,
-                )
-                .await?;
-            } else if function_name == "function_foo_sync" {
+            if function_name == "function_foo_sync" {
                 function_foo_sync::handle_function_foo_sync(
                     &ai_function,
                     &chat_message,

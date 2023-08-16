@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, base_function_url, description, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE deleted_at IS NULL\n            ORDER BY name ASC",
+  "query": "SELECT id, base_function_url, description, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", setup_url, warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -95,11 +95,16 @@
       },
       {
         "ordinal": 14,
+        "name": "setup_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 15,
         "name": "warmup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "warmup_status: _",
         "type_info": {
           "Custom": {
@@ -114,38 +119,40 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "warmup_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid"
+      ]
     },
     "nullable": [
       false,
@@ -165,6 +172,7 @@
       false,
       false,
       false,
+      false,
       true,
       true,
       true,
@@ -172,5 +180,5 @@
       true
     ]
   },
-  "hash": "b05029e7daa2bb8b131e7db6ff9548e0a9eef37d0913ce5ee77d42b26d6d7ee2"
+  "hash": "a6aa537bd9296e2c3ce9ba1a76927657064b24a17682a5e505e9426a41ce7c71"
 }

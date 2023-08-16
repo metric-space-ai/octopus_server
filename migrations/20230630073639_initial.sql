@@ -71,6 +71,7 @@ CREATE TABLE ai_functions(
     parameters JSON NOT NULL,
     setup_execution_time INT NOT NULL DEFAULT 0,
     setup_status ai_functions_setup_statuses NOT NULL DEFAULT 'not_performed',
+    setup_url VARCHAR(256) NOT NULL,
     warmup_execution_time INT NOT NULL DEFAULT 0,
     warmup_status ai_functions_warmup_statuses NOT NULL DEFAULT 'not_performed',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),

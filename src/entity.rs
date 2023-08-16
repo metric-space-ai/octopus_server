@@ -44,6 +44,7 @@ pub struct AiFunction {
     pub parameters: serde_json::Value,
     pub setup_execution_time: i32,
     pub setup_status: AiFunctionSetupStatus,
+    pub setup_url: String,
     pub warmup_execution_time: i32,
     pub warmup_status: AiFunctionWarmupStatus,
     pub created_at: DateTime<Utc>,

@@ -1,15 +1,11 @@
 use crate::{
-    ai::{
-        function_health_check, function_status, update_chat_message, AiFunctionResponse,
-        AiFunctionResponseStatus,
-    },
+    ai::{function_health_check, update_chat_message, AiFunctionResponse},
     context::Context,
     entity::{AiFunction, ChatMessage},
     error::AppError,
     Result,
 };
 use axum::http::StatusCode;
-use chrono::Utc;
 use serde::Serialize;
 use serde_json::value::Value;
 use std::sync::Arc;
@@ -42,34 +38,8 @@ pub async fn handle_function_translator(
         let response =
             function_translator(ai_function, source_language, target_language, text).await?;
         if let Some(response) = response {
-            let mut chat_message =
+            let chat_message =
                 update_chat_message(ai_function, &response, context.clone(), chat_message).await?;
-
-            loop {
-                let response = function_status(ai_function, &response).await?;
-
-                if let Some(response) = response {
-                    chat_message =
-                        update_chat_message(ai_function, &response, context.clone(), &chat_message)
-                            .await?;
-
-                    if response.status == AiFunctionResponseStatus::Processed {
-                        break;
-                    }
-
-                    let now = Utc::now();
-                    let duration = now.signed_duration_since(response.estimated_response_at);
-                    let seconds = if duration.num_seconds().abs() > 2 {
-                        duration.num_seconds().abs().try_into()?
-                    } else {
-                        2
-                    };
-
-                    sleep(Duration::from_secs(seconds)).await;
-                } else {
-                    sleep(Duration::from_secs(2)).await;
-                }
-            }
 
             return Ok(Some(chat_message));
         } else {

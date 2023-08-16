@@ -30,6 +30,7 @@ pub struct AiFunctionPost {
     pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
+    pub setup_url: String,
 }
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
@@ -60,6 +61,7 @@ pub struct AiFunctionPut {
     pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
+    pub setup_url: String,
 }
 
 #[axum_macros::debug_handler]
@@ -103,6 +105,7 @@ pub async fn create(
                     input.k8s_configuration,
                     &input.name,
                     input.parameters,
+                    &input.setup_url,
                 )
                 .await?;
 
@@ -333,6 +336,7 @@ pub async fn update(
             input.k8s_configuration,
             &input.name,
             input.parameters,
+            &input.setup_url,
         )
         .await?;
 
@@ -502,7 +506,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -698,7 +703,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -859,7 +865,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -907,7 +914,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -1068,7 +1076,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -1250,7 +1259,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -1639,7 +1649,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -1829,7 +1840,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2013,7 +2025,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2205,7 +2218,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2513,7 +2527,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2564,7 +2579,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2734,7 +2750,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -2853,7 +2870,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -3027,7 +3045,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -3183,7 +3202,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -3237,7 +3257,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
@@ -3288,7 +3309,8 @@ mod tests {
                                     "value2": { "type": "string", "enum": ["abc", "def"], "description": "Second value" }
                                 },
                                 "required": ["value1", "value2"]
-                            }
+                            },
+                            "setup_url": "http://127.0.0.1:5000/v1/setup"
                         })
                         .to_string(),
                     ))
