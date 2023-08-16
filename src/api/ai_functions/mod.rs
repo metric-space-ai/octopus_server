@@ -1,9 +1,10 @@
 use crate::{
     ai,
+    ai::AiFunctionResponse,
     context::Context,
-    entity::ROLE_ADMIN,
+    entity::{AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ROLE_ADMIN},
     error::AppError,
-    session::{ensure_secured, ExtractedSession},
+    session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -18,6 +19,12 @@ use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct AiFunctionDirectCallPost {
+    pub name: String,
+    pub parameters: serde_json::Value,
+}
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiFunctionPost {
@@ -155,6 +162,60 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    post,
+    path = "/api/v1/ai-functions/direct-call",
+    request_body = AiFunctionDirectCallPost,
+    responses(
+        (status = 201, description = "AI Function direct call executed.", body = AiFunctionResponse),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "AI Function not found.", body = ResponseError),
+        (status = 410, description = "Resource gone.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn direct_call(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Json(input): Json<AiFunctionDirectCallPost>,
+) -> Result<impl IntoResponse, AppError> {
+    require_authenticated_session(extracted_session).await?;
+    input.validate()?;
+
+    let ai_function = context
+        .octopus_database
+        .try_get_ai_function_by_name(&input.name)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !ai_function.is_available
+        || !ai_function.is_enabled
+        || ai_function.health_check_status != AiFunctionHealthCheckStatus::Ok
+        || ai_function.setup_status != AiFunctionSetupStatus::Performed
+    {
+        return Err(AppError::Gone);
+    }
+
+    let response = reqwest::Client::new()
+        .post(ai_function.base_function_url.clone())
+        .json(&input.parameters)
+        .send()
+        .await;
+
+    if let Ok(response) = response {
+        if response.status() == StatusCode::CREATED {
+            let ai_function_response: AiFunctionResponse = response.json().await?;
+
+            return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
+        }
+    }
+
+    Err(AppError::Gone)
 }
 
 #[axum_macros::debug_handler]

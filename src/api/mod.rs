@@ -1,8 +1,12 @@
 use crate::{
+    ai::{
+        AiFunctionResponse, AiFunctionResponseFileAttachement, AiFunctionResponseResponse,
+        AiFunctionResponseStatus,
+    },
     api::{
         ai_functions::{
-            AiFunctionOperation, AiFunctionOperationPost, AiFunctionOperationResponse,
-            AiFunctionPost, AiFunctionPut,
+            AiFunctionDirectCallPost, AiFunctionOperation, AiFunctionOperationPost,
+            AiFunctionOperationResponse, AiFunctionPost, AiFunctionPut,
         },
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
@@ -65,12 +69,17 @@ pub async fn router(context: Arc<Context>) -> Router {
         components(
             schemas(
                 AiFunction,
+                AiFunctionDirectCallPost,
                 AiFunctionHealthCheckStatus,
                 AiFunctionOperation,
                 AiFunctionOperationPost,
                 AiFunctionOperationResponse,
                 AiFunctionPost,
                 AiFunctionPut,
+                AiFunctionResponse,
+                AiFunctionResponseFileAttachement,
+                AiFunctionResponseResponse,
+                AiFunctionResponseStatus,
                 AiFunctionSetupStatus,
                 AiFunctionWarmupStatus,
                 ChangePasswordPut,
@@ -111,6 +120,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         paths(
             ai_functions::create,
             ai_functions::delete,
+            ai_functions::direct_call,
             ai_functions::list,
             ai_functions::operation,
             ai_functions::read,
@@ -278,6 +288,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             get(ai_functions::list).post(ai_functions::create),
         )
         .route(
+            "/api/v1/ai-functions/direct-call",
+            post(ai_functions::direct_call),
+        )
+        .route(
             "/api/v1/ai-functions/:id",
             delete(ai_functions::delete)
                 .get(ai_functions::read)
@@ -345,7 +359,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                         ))
                     }
                 }))
-                .timeout(Duration::from_secs(10))
+                .timeout(Duration::from_secs(120))
                 .layer(TraceLayer::new_for_http())
                 .into_inner(),
         )

@@ -4,7 +4,7 @@ use sqlx::{FromRow, Type};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(
     type_name = "ai_functions_health_check_statuses",
     rename_all = "snake_case"
@@ -14,7 +14,7 @@ pub enum AiFunctionHealthCheckStatus {
     Ok,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "ai_functions_setup_statuses", rename_all = "snake_case")]
 pub enum AiFunctionSetupStatus {
     NotPerformed,

@@ -20,33 +20,34 @@ use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 mod function_foo_sync;
 mod function_translator;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AiFunctionResponseFileAttachement {
     pub content: String,
     pub file_name: String,
     pub media_type: String,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
 pub enum AiFunctionResponseStatus {
     Initial,
     Processed,
     Processing,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 #[serde(untagged)]
 pub enum AiFunctionResponseResponse {
     Array(Vec<String>),
     String(String),
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AiFunctionResponse {
     pub id: Uuid,
     pub estimated_response_at: DateTime<Utc>,
