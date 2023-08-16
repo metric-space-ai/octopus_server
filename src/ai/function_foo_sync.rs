@@ -1,5 +1,5 @@
 use crate::{
-    ai::{function_health_check, update_chat_message, AiFunctionResponse},
+    ai::{update_chat_message, AiFunctionResponse},
     context::Context,
     entity::{AiFunction, ChatMessage},
     error::AppError,
@@ -40,8 +40,6 @@ pub async fn handle_function_foo_sync(
             failed_connection_attempts += 1;
 
             if failed_connection_attempts > 10 {
-                function_health_check(context.clone(), ai_function).await?;
-
                 break;
             }
 

@@ -16,7 +16,7 @@ use async_openai::{
 };
 use axum::http::StatusCode;
 use base64::{alphabet, engine, Engine};
-use chrono::{DateTime, Duration, Utc};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
@@ -50,7 +50,6 @@ pub enum AiFunctionResponseResponse {
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AiFunctionResponse {
     pub id: Uuid,
-    pub estimated_response_at: DateTime<Utc>,
     pub progress: i32,
     pub status: AiFunctionResponseStatus,
     pub response: Option<AiFunctionResponseResponse>,
@@ -77,90 +76,21 @@ pub struct WarmupResponse {
     pub warmup: AiFunctionWarmupStatus,
 }
 
-pub async fn function_health_check(
-    context: Arc<Context>,
-    ai_function: &AiFunction,
-) -> Result<AiFunction> {
-    let start = Utc::now();
-
-    let response = reqwest::Client::new()
-        .get(ai_function.health_check_url.clone())
-        .send()
-        .await;
-
-    let end = Utc::now();
-
-    let health_check_execution_time = (end - start).num_seconds() as i32;
-
-    if let Ok(response) = response {
-        if response.status() == StatusCode::OK {
-            let response: HealthCheckResponse = response.json().await?;
-
-            let result = context
-                .octopus_database
-                .update_ai_function_health_check_status(
-                    ai_function.id,
-                    health_check_execution_time,
-                    response.status,
-                )
-                .await?;
-
-            return Ok(result);
-        }
-    }
-
-    let result = context
-        .octopus_database
-        .update_ai_function_health_check_status(
-            ai_function.id,
-            health_check_execution_time,
-            AiFunctionHealthCheckStatus::NotWorking,
-        )
-        .await?;
-
-    Ok(result)
-}
-
 pub async fn function_prepare(
     context: Arc<Context>,
     ai_function: AiFunction,
 ) -> Result<AiFunction> {
     if ai_function.is_available && ai_function.is_enabled {
-        let perform_health_check = match ai_function.health_check_status {
-            AiFunctionHealthCheckStatus::NotWorking => true,
-            AiFunctionHealthCheckStatus::Ok => {
-                let mut result = false;
-                let last_valid_health_check_date = Utc::now() - Duration::minutes(30);
-
-                if let Some(health_check_at) = ai_function.health_check_at {
-                    if health_check_at < last_valid_health_check_date {
-                        result = true;
-                    }
-                }
-
-                result
-            }
-        };
-        let ai_function = if perform_health_check {
-            function_health_check(context.clone(), &ai_function).await?
-        } else {
-            ai_function
-        };
-
         let perform_setup = match ai_function.setup_status {
             AiFunctionSetupStatus::NotPerformed => true,
             AiFunctionSetupStatus::Performed => false,
         };
 
-        if let AiFunctionHealthCheckStatus::Ok = ai_function.health_check_status {
-            let ai_function = if perform_setup {
-                function_setup(context.clone(), &ai_function).await?
-            } else {
-                ai_function
-            };
-
-            return Ok(ai_function);
-        }
+        let ai_function = if perform_setup {
+            function_setup(context.clone(), &ai_function).await?
+        } else {
+            ai_function
+        };
 
         return Ok(ai_function);
     }
@@ -204,49 +134,6 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
             ai_function.id,
             setup_execution_time,
             AiFunctionSetupStatus::NotPerformed,
-        )
-        .await?;
-
-    Ok(result)
-}
-
-pub async fn function_warmup(
-    context: Arc<Context>,
-    ai_function: &AiFunction,
-) -> Result<AiFunction> {
-    let start = Utc::now();
-
-    let response = reqwest::Client::new()
-        .post(format!("{}/warmup", ai_function.base_function_url))
-        .send()
-        .await;
-
-    let end = Utc::now();
-    let warmup_execution_time = (end - start).num_seconds() as i32;
-
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let response: WarmupResponse = response.json().await?;
-
-            let result = context
-                .octopus_database
-                .update_ai_function_warmup_status(
-                    ai_function.id,
-                    warmup_execution_time,
-                    response.warmup,
-                )
-                .await?;
-
-            return Ok(result);
-        }
-    }
-
-    let result = context
-        .octopus_database
-        .update_ai_function_warmup_status(
-            ai_function.id,
-            warmup_execution_time,
-            AiFunctionWarmupStatus::NotPerformed,
         )
         .await?;
 
@@ -427,7 +314,6 @@ pub async fn update_chat_message(
         .update_chat_message_from_function(
             chat_message.id,
             ai_function.id,
-            ai_function_response.estimated_response_at,
             status,
             ai_function_response.progress,
             response,

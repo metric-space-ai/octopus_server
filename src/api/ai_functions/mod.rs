@@ -2,7 +2,7 @@ use crate::{
     ai,
     ai::AiFunctionResponse,
     context::Context,
-    entity::{AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ROLE_ADMIN},
+    entity::{AiFunctionSetupStatus, ROLE_ADMIN},
     error::AppError,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
@@ -42,9 +42,7 @@ pub struct AiFunctionPost {
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
 pub enum AiFunctionOperation {
-    HealthCheck,
     Setup,
-    Warmup,
 }
 
 #[derive(Clone, Debug, Deserialize, ToSchema, Validate)]
@@ -195,7 +193,6 @@ pub async fn direct_call(
 
     if !ai_function.is_available
         || !ai_function.is_enabled
-        || ai_function.health_check_status != AiFunctionHealthCheckStatus::Ok
         || ai_function.setup_status != AiFunctionSetupStatus::Performed
     {
         return Err(AppError::Gone);
@@ -278,14 +275,8 @@ pub async fn operation(
     let cloned_input = input.clone();
     tokio::spawn(async move {
         let ai_function = match cloned_input.operation {
-            AiFunctionOperation::HealthCheck => {
-                ai::function_health_check(cloned_context, &cloned_ai_function).await
-            }
             AiFunctionOperation::Setup => {
                 ai::function_setup(cloned_context, &cloned_ai_function).await
-            }
-            AiFunctionOperation::Warmup => {
-                ai::function_warmup(cloned_context, &cloned_ai_function).await
             }
         };
 
@@ -295,9 +286,7 @@ pub async fn operation(
     });
 
     let execution_time = match input.operation {
-        AiFunctionOperation::HealthCheck => ai_function.health_check_execution_time,
         AiFunctionOperation::Setup => ai_function.setup_execution_time,
-        AiFunctionOperation::Warmup => ai_function.warmup_execution_time,
     };
 
     let estimated_operation_end_at = Utc::now() + Duration::seconds(execution_time as i64 + 1);
