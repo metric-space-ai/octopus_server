@@ -184,7 +184,7 @@ impl OctopusDatabase {
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
-            ORDER BY created_at ASC
+            ORDER BY created_at DESC
             LIMIT 1"#,
             chat_id
         )
