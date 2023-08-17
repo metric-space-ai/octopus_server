@@ -274,7 +274,7 @@ pub async fn latest(
     get,
     path = "/api/v1/chat-messages/:chat_id",
     responses(
-        (status = 200, description = "List of chat messages.", body = [ChatMessage]),
+        (status = 200, description = "List of chat messages.", body = [ChatMessageExtended]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
@@ -324,7 +324,7 @@ pub async fn list(
     get,
     path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
     responses(
-        (status = 200, description = "Chat message read.", body = ChatMessage),
+        (status = 200, description = "Chat message read.", body = ChatMessageExtended),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
