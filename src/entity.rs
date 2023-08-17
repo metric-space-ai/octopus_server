@@ -76,6 +76,16 @@ pub struct ChatActivity {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatAudit {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub chat_message_id: Uuid,
+    pub user_id: Uuid,
+    pub trail: serde_json::Value,
+    pub created_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "chat_message_statuses", rename_all = "snake_case")]
 pub enum ChatMessageStatus {

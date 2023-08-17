@@ -16,7 +16,7 @@ use async_openai::{
 };
 use axum::http::StatusCode;
 use base64::{alphabet, engine, Engine};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
@@ -140,6 +140,14 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
     Ok(result)
 }
 
+#[derive(Clone, Debug, Serialize)]
+pub struct ChatAuditTrail {
+    pub id: Uuid,
+    pub content: String,
+    pub role: String,
+    pub created_at: DateTime<Utc>,
+}
+
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
@@ -162,6 +170,8 @@ pub async fn open_ai_request(
         }
     }
 
+    let mut chat_audit_trails = vec![];
+
     let chat_messages = context
         .octopus_database
         .get_chat_messages_by_chat_id(chat_message.chat_id)
@@ -175,13 +185,29 @@ pub async fn open_ai_request(
 
         messages.push(chat_completion_request_message);
 
+        let chat_audit_trail = ChatAuditTrail {
+            id: chat_message_tmp.id,
+            content: chat_message_tmp.message.clone(),
+            role: "user".to_string(),
+            created_at: chat_message_tmp.created_at,
+        };
+        chat_audit_trails.push(chat_audit_trail);
+
         if let Some(response) = chat_message_tmp.response {
             let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
                 .role(Role::Assistant)
-                .content(response)
+                .content(response.clone())
                 .build()?;
 
             messages.push(chat_completion_request_message);
+
+            let chat_audit_trail = ChatAuditTrail {
+                id: chat_message_tmp.id,
+                content: response,
+                role: "assistant".to_string(),
+                created_at: chat_message_tmp.created_at,
+            };
+            chat_audit_trails.push(chat_audit_trail);
         }
     }
 
@@ -201,6 +227,18 @@ pub async fn open_ai_request(
 
         functions.push(function);
     }
+
+    let trail = serde_json::to_value(&chat_audit_trails)?;
+
+    context
+        .octopus_database
+        .insert_chat_audit(
+            chat_message.chat_id,
+            chat_message.id,
+            chat_message.user_id,
+            trail,
+        )
+        .await?;
 
     if functions.is_empty() {
         let function = ChatCompletionFunctionsArgs::default()

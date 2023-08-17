@@ -1,9 +1,9 @@
 use crate::{
     entity::{
-        AiFunction, AiFunctionSetupStatus, Chat, ChatActivity, ChatMessage, ChatMessageExtended,
-        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, PasswordResetToken, Profile, Session, User, Workspace,
-        WorkspacesType,
+        AiFunction, AiFunctionSetupStatus, Chat, ChatActivity, ChatAudit, ChatMessage,
+        ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
+        Company, EstimatedSeconds, ExamplePrompt, PasswordResetToken, Profile, Session, User,
+        Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -133,6 +133,19 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_activities)
+    }
+
+    pub async fn get_chat_audits(&self) -> Result<Vec<ChatAudit>> {
+        let chat_audits = sqlx::query_as!(
+            ChatAudit,
+            "SELECT id, chat_id, chat_message_id, user_id, trail, created_at
+            FROM chat_audits
+            ORDER BY created_at DESC"
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_audits)
     }
 
     pub async fn get_chat_messages_estimated_response_at(&self) -> Result<EstimatedSeconds> {
@@ -435,6 +448,30 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_activity)
+    }
+
+    pub async fn insert_chat_audit(
+        &self,
+        chat_id: Uuid,
+        chat_message_id: Uuid,
+        user_id: Uuid,
+        trail: serde_json::Value,
+    ) -> Result<ChatAudit> {
+        let chat_audit = sqlx::query_as!(
+            ChatAudit,
+            "INSERT INTO chat_audits
+            (chat_id, chat_message_id, user_id, trail)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, chat_id, chat_message_id, user_id, trail, created_at",
+            chat_id,
+            chat_message_id,
+            user_id,
+            trail
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_audit)
     }
 
     pub async fn insert_chat_message(
@@ -954,6 +991,40 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat)
+    }
+
+    pub async fn try_get_chat_audit_by_id(&self, id: Uuid) -> Result<Option<ChatAudit>> {
+        let chat_audit = sqlx::query_as!(
+            ChatAudit,
+            "SELECT id, chat_id, chat_message_id, user_id, trail, created_at
+            FROM chat_audits
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_audit)
+    }
+
+    #[allow(dead_code)]
+    pub async fn try_get_chat_audit_by_chat_message_id(
+        &self,
+        chat_message_id: Uuid,
+    ) -> Result<Option<ChatAudit>> {
+        let chat_audit = sqlx::query_as!(
+            ChatAudit,
+            "SELECT id, chat_id, chat_message_id, user_id, trail, created_at
+            FROM chat_audits
+            WHERE chat_message_id = $1
+            ORDER BY created_at DESC
+            LIMIT 1",
+            chat_message_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_audit)
     }
 
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {

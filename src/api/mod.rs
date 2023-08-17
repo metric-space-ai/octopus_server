@@ -23,9 +23,9 @@ use crate::{
     context::Context,
     entity::{
         AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
-        Chat, ChatActivity, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
-        ChatMessageStatus, ChatPicture, ExamplePrompt, PasswordResetToken, Profile, User,
-        Workspace, WorkspacesType,
+        Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile,
+        ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt, PasswordResetToken,
+        Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -52,6 +52,7 @@ use utoipa_swagger_ui::SwaggerUi;
 mod ai_functions;
 mod auth;
 mod chat_activities;
+mod chat_audits;
 mod chat_message_files;
 mod chat_message_pictures;
 mod chat_messages;
@@ -86,6 +87,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ChangePasswordPut,
                 Chat,
                 ChatActivity,
+                ChatAudit,
                 ChatMessage,
                 ChatMessageExtended,
                 ChatMessageFile,
@@ -130,6 +132,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             change_password::change_password,
             chat_activities::create,
             chat_activities::list,
+            chat_audits::list,
+            chat_audits::read,
             chat_messages::create,
             chat_messages::delete,
             chat_messages::flag,
@@ -183,6 +187,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "change_password", description = "Change password API."),
             (name = "chats", description = "Chats API."),
             (name = "chat_activities", description = "Chat activities API."),
+            (name = "chat_audits", description = "Chat audits API."),
             (name = "chat_messages", description = "Chat messages API."),
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_message_pictures", description = "Chat message pictures API."),
@@ -230,6 +235,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/chat-activities/:chat_id",
             get(chat_activities::list).post(chat_activities::create),
         )
+        .route("/api/v1/chat-audits", get(chat_audits::list))
+        .route("/api/v1/chat-audits/:chat_audit_id", get(chat_audits::read))
         .route(
             "/api/v1/chat-messages/:chat_id",
             get(chat_messages::list).post(chat_messages::create),

@@ -228,6 +228,9 @@ pub async fn delete(
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
+    params(
+        ("chat_id" = String, Path, description = "Chat id")
+    ),
     security(
         ("api_key" = [])
     )
@@ -277,6 +280,9 @@ pub async fn latest(
         (status = 200, description = "List of chat messages.", body = [ChatMessageExtended]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
+    ),
+    params(
+        ("chat_id" = String, Path, description = "Chat id")
     ),
     security(
         ("api_key" = [])
