@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at\n            FROM example_prompts\n            WHERE is_visible = $1\n            AND example_prompt_category_id = $2\n            AND deleted_at IS NULL\n            ORDER BY priority DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "example_prompt_category_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "background_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "prompt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "16f2722914f3fd69658d1073516d1edeb7e9ff9db94b9b2ecf49dd87fde078a7"
+}

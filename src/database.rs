@@ -2,8 +2,8 @@ use crate::{
     entity::{
         AiFunction, AiFunctionSetupStatus, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, PasswordResetToken, Profile, Session, User,
-        Workspace, WorkspacesType,
+        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, PasswordResetToken,
+        Profile, Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -320,7 +320,7 @@ impl OctopusDatabase {
 
         let example_prompts = sqlx::query_as!(
             ExamplePrompt,
-            "SELECT id, is_visible, priority, prompt, created_at, deleted_at, updated_at
+            "SELECT id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at
             FROM example_prompts
             WHERE is_visible = $1
             AND deleted_at IS NULL
@@ -331,6 +331,47 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompts)
+    }
+
+    pub async fn get_example_prompts_by_example_prompt_category_id(
+        &self,
+        example_prompt_category_id: Uuid,
+    ) -> Result<Vec<ExamplePrompt>> {
+        let is_visible = true;
+
+        let example_prompts = sqlx::query_as!(
+            ExamplePrompt,
+            "SELECT id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at
+            FROM example_prompts
+            WHERE is_visible = $1
+            AND example_prompt_category_id = $2
+            AND deleted_at IS NULL
+            ORDER BY priority DESC",
+            is_visible,
+            example_prompt_category_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(example_prompts)
+    }
+
+    pub async fn get_example_prompt_categories(&self) -> Result<Vec<ExamplePromptCategory>> {
+        let is_visible = true;
+
+        let example_prompt_categories: Vec<ExamplePromptCategory> = sqlx::query_as!(
+            ExamplePromptCategory,
+            "SELECT id, description, is_visible, title, created_at, deleted_at, updated_at
+            FROM example_prompt_categories
+            WHERE is_visible = $1
+            AND deleted_at IS NULL
+            ORDER BY title ASC",
+            is_visible
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_categories)
     }
 
     pub async fn get_workspaces_by_company_id_and_type(
@@ -575,24 +616,52 @@ impl OctopusDatabase {
 
     pub async fn insert_example_prompt(
         &self,
+        example_prompt_category_id: Uuid,
+        background_file_name: Option<String>,
         is_visible: bool,
         priority: i32,
         prompt: &str,
+        title: &str,
     ) -> Result<ExamplePrompt> {
         let example_prompt = sqlx::query_as!(
             ExamplePrompt,
             "INSERT INTO example_prompts
-            (is_visible, priority, prompt)
-            VALUES ($1, $2, $3)
-            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
+            (example_prompt_category_id, background_file_name, is_visible, priority, prompt, title)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at",
+            example_prompt_category_id,
+            background_file_name,
             is_visible,
             priority,
-            prompt
+            prompt,
+            title
         )
         .fetch_one(&*self.pool)
         .await?;
 
         Ok(example_prompt)
+    }
+
+    pub async fn insert_example_prompt_category(
+        &self,
+        description: &str,
+        is_visible: bool,
+        title: &str,
+    ) -> Result<ExamplePromptCategory> {
+        let example_prompt_category = sqlx::query_as!(
+            ExamplePromptCategory,
+            "INSERT INTO example_prompt_categories
+            (description, is_visible, title)
+            VALUES ($1, $2, $3)
+            RETURNING id, description, is_visible, title, created_at, deleted_at, updated_at",
+            description,
+            is_visible,
+            title
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_category)
     }
 
     pub async fn insert_password_reset_token(
@@ -847,6 +916,21 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt)
+    }
+
+    pub async fn try_delete_example_prompt_category_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let example_prompt_category = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE example_prompt_categories
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_category)
     }
 
     pub async fn try_delete_password_reset_token_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
@@ -1208,7 +1292,7 @@ impl OctopusDatabase {
     pub async fn try_get_example_prompt_by_id(&self, id: Uuid) -> Result<Option<ExamplePrompt>> {
         let example_prompt = sqlx::query_as!(
             ExamplePrompt,
-            "SELECT id, is_visible, priority, prompt, created_at, deleted_at, updated_at
+            "SELECT id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at
             FROM example_prompts
             WHERE id = $1
             AND deleted_at IS NULL",
@@ -1232,6 +1316,38 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_id)
+    }
+
+    pub async fn try_get_example_prompt_category_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<ExamplePromptCategory>> {
+        let example_prompt_category = sqlx::query_as!(
+            ExamplePromptCategory,
+            "SELECT id, description, is_visible, title, created_at, deleted_at, updated_at
+            FROM example_prompt_categories
+            WHERE id = $1
+            AND deleted_at IS NULL",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_category)
+    }
+
+    pub async fn try_get_example_prompt_category_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let example_prompt_category_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id
+            FROM example_prompt_categories
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_category_id)
     }
 
     pub async fn try_get_password_reset_token_by_token(
@@ -1587,28 +1703,59 @@ impl OctopusDatabase {
         Ok(chat)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_example_prompt(
         &self,
         id: Uuid,
+        example_prompt_category_id: Uuid,
+        background_file_name: Option<String>,
         is_visible: bool,
         priority: i32,
         prompt: &str,
+        title: &str,
     ) -> Result<ExamplePrompt> {
         let example_prompt = sqlx::query_as!(
             ExamplePrompt,
             "UPDATE example_prompts
-            SET is_visible = $2, priority = $3, prompt = $4, updated_at = current_timestamp(0)
+            SET example_prompt_category_id = $2, background_file_name = $3, is_visible = $4, priority = $5, prompt = $6, title = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
+            RETURNING id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at",
             id,
+            example_prompt_category_id,
+            background_file_name,
             is_visible,
             priority,
-            prompt
+            prompt,
+            title
         )
         .fetch_one(&*self.pool)
         .await?;
 
         Ok(example_prompt)
+    }
+
+    pub async fn update_example_prompt_category(
+        &self,
+        id: Uuid,
+        description: &str,
+        is_visible: bool,
+        title: &str,
+    ) -> Result<ExamplePromptCategory> {
+        let example_prompt_category = sqlx::query_as!(
+            ExamplePromptCategory,
+            "UPDATE example_prompt_categories
+            SET description = $2, is_visible = $3, title = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, description, is_visible, title, created_at, deleted_at, updated_at",
+            id,
+            description,
+            is_visible,
+            title
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(example_prompt_category)
     }
 
     pub async fn update_profile(

@@ -1,0 +1,61 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE example_prompt_categories\n            SET description = $2, is_visible = $3, title = $4, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, description, is_visible, title, created_at, deleted_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "ac575b5ca2727d9539805aaee441ea335b5accb7e80f15f10d5c08e5ff249287"
+}

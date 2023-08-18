@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE example_prompts\n            SET example_prompt_category_id = $2, background_file_name = $3, is_visible = $4, priority = $5, prompt = $6, title = $7, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, example_prompt_category_id, background_file_name, is_visible, priority, prompt, title, created_at, deleted_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "example_prompt_category_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "background_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "is_visible",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 4,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "prompt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "title",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Varchar",
+        "Bool",
+        "Int4",
+        "Text",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "6927766bc320020b4eed2653a4864ab33b421c530018a9a8c6b3c24cb56ea7db"
+}

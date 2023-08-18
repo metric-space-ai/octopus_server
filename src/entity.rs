@@ -183,9 +183,23 @@ pub struct EstimatedSeconds {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ExamplePrompt {
     pub id: Uuid,
+    pub example_prompt_category_id: Uuid,
+    pub background_file_name: Option<String>,
     pub is_visible: bool,
     pub priority: i32,
     pub prompt: String,
+    pub title: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ExamplePromptCategory {
+    pub id: Uuid,
+    pub description: String,
+    pub is_visible: bool,
+    pub title: String,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE example_prompts\n            SET is_visible = $2, priority = $3, prompt = $4, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
+  "query": "SELECT id, description, is_visible, title, created_at, deleted_at, updated_at\n            FROM example_prompt_categories\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -10,18 +10,18 @@
       },
       {
         "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
         "name": "is_visible",
         "type_info": "Bool"
       },
       {
-        "ordinal": 2,
-        "name": "priority",
-        "type_info": "Int4"
-      },
-      {
         "ordinal": 3,
-        "name": "prompt",
-        "type_info": "Text"
+        "name": "title",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 4,
@@ -41,10 +41,7 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Bool",
-        "Int4",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -57,5 +54,5 @@
       false
     ]
   },
-  "hash": "24eb7249ab29dd8caaacaa2bcc82067be2dd3df60a92843cf408f0e0093e30d5"
+  "hash": "9235b7c8adf0b343ec2faafbf22123e0655e25ac285382d1190c4dedc0d4bdf0"
 }

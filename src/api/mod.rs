@@ -14,6 +14,7 @@ use crate::{
         },
         chat_messages::{ChatMessageFlagPut, ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
+        example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
@@ -24,8 +25,8 @@ use crate::{
     entity::{
         AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
         Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile,
-        ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt, PasswordResetToken,
-        Profile, User, Workspace, WorkspacesType,
+        ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt, ExamplePromptCategory,
+        PasswordResetToken, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -58,6 +59,7 @@ mod chat_message_pictures;
 mod chat_messages;
 mod chat_pictures;
 mod chats;
+mod example_prompt_categories;
 mod example_prompts;
 mod password_resets;
 mod profile_pictures;
@@ -99,6 +101,9 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ChatPicture,
                 ChatPut,
                 ExamplePrompt,
+                ExamplePromptCategory,
+                ExamplePromptCategoryPost,
+                ExamplePromptCategoryPut,
                 ExamplePromptPost,
                 ExamplePromptPut,
                 LoginPost,
@@ -159,9 +164,15 @@ pub async fn router(context: Arc<Context>) -> Router {
             chats::list,
             chats::read,
             chats::update,
+            example_prompt_categories::create,
+            example_prompt_categories::delete,
+            example_prompt_categories::list,
+            example_prompt_categories::read,
+            example_prompt_categories::update,
             example_prompts::create,
             example_prompts::delete,
             example_prompts::list,
+            example_prompts::list_by_category,
             example_prompts::read,
             example_prompts::update,
             login::login,
@@ -192,6 +203,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_message_pictures", description = "Chat message pictures API."),
             (name = "chat_pictures", description = "Chat pictures API."),
+            (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -313,10 +325,24 @@ pub async fn router(context: Arc<Context>) -> Router {
             get(example_prompts::list).post(example_prompts::create),
         )
         .route(
+            "/api/v1/example-prompts/by-category/:example_prompt_category_id",
+            get(example_prompts::list_by_category),
+        )
+        .route(
             "/api/v1/example-prompts/:id",
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
+        )
+        .route(
+            "/api/v1/example-prompt-categories",
+            get(example_prompt_categories::list).post(example_prompt_categories::create),
+        )
+        .route(
+            "/api/v1/example-prompt-categories/:id",
+            delete(example_prompt_categories::delete)
+                .get(example_prompt_categories::read)
+                .put(example_prompt_categories::update),
         )
         .route("/api/v1/password-resets", post(password_resets::request))
         .route(

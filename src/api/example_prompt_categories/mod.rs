@@ -17,32 +17,26 @@ use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct ExamplePromptPost {
-    pub example_prompt_category_id: Uuid,
-    pub background_file_name: Option<String>,
+pub struct ExamplePromptCategoryPost {
+    pub description: String,
     pub is_visible: bool,
-    pub priority: i32,
-    pub prompt: String,
     pub title: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct ExamplePromptPut {
-    pub example_prompt_category_id: Uuid,
-    pub background_file_name: Option<String>,
+pub struct ExamplePromptCategoryPut {
+    pub description: String,
     pub is_visible: bool,
-    pub priority: i32,
-    pub prompt: String,
     pub title: String,
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/example-prompts",
-    request_body = ExamplePromptPost,
+    path = "/api/v1/example-prompt-categories",
+    request_body = ExamplePromptCategoryPost,
     responses(
-        (status = 201, description = "Example prompt created.", body = ExamplePrompt),
+        (status = 201, description = "Example prompt category created.", body = ExamplePromptCategory),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
@@ -52,37 +46,30 @@ pub struct ExamplePromptPut {
 pub async fn create(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Json(input): Json<ExamplePromptPost>,
+    Json(input): Json<ExamplePromptCategoryPost>,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
-    let example_prompt = context
+    let example_prompt_category = context
         .octopus_database
-        .insert_example_prompt(
-            input.example_prompt_category_id,
-            input.background_file_name,
-            input.is_visible,
-            input.priority,
-            &input.prompt,
-            &input.title,
-        )
+        .insert_example_prompt_category(&input.description, input.is_visible, &input.title)
         .await?;
 
-    Ok((StatusCode::CREATED, Json(example_prompt)).into_response())
+    Ok((StatusCode::CREATED, Json(example_prompt_category)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     delete,
-    path = "/api/v1/example-prompts/:id",
+    path = "/api/v1/example-prompt-categories/:id",
     responses(
-        (status = 204, description = "Example prompt deleted."),
+        (status = 204, description = "Example prompt category deleted."),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "Example prompt category id")
     ),
     security(
         ("api_key" = [])
@@ -97,7 +84,7 @@ pub async fn delete(
 
     context
         .octopus_database
-        .try_delete_example_prompt_by_id(id)
+        .try_delete_example_prompt_category_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -107,9 +94,9 @@ pub async fn delete(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/example-prompts",
+    path = "/api/v1/example-prompt-categories",
     responses(
-        (status = 200, description = "List of Example prompts.", body = [ExamplePrompt]),
+        (status = 200, description = "List of Example prompt category categories.", body = [ExamplePromptCategory]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
@@ -122,58 +109,25 @@ pub async fn list(
 ) -> Result<impl IntoResponse, AppError> {
     require_authenticated_session(extracted_session).await?;
 
-    let example_prompts = context.octopus_database.get_example_prompts().await?;
-
-    Ok((StatusCode::OK, Json(example_prompts)).into_response())
-}
-
-#[axum_macros::debug_handler]
-#[utoipa::path(
-    get,
-    path = "/api/v1/example-prompts/by-category/:example_prompt_category_id",
-    responses(
-        (status = 200, description = "List of Example prompts by example prompt category.", body = [ExamplePrompt]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
-    ),
-    params(
-        ("example_prompt_category_id" = String, Path, description = "Example prompt category id")
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn list_by_category(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Path(example_prompt_category_id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
-
-    let example_prompt_category = context
+    let example_prompt_categories = context
         .octopus_database
-        .try_get_example_prompt_category_by_id(example_prompt_category_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    let example_prompts = context
-        .octopus_database
-        .get_example_prompts_by_example_prompt_category_id(example_prompt_category.id)
+        .get_example_prompt_categories()
         .await?;
 
-    Ok((StatusCode::OK, Json(example_prompts)).into_response())
+    Ok((StatusCode::OK, Json(example_prompt_categories)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/example-prompts/:id",
+    path = "/api/v1/example-prompt-categories/:id",
     responses(
-        (status = 200, description = "Example prompt read.", body = ExamplePrompt),
+        (status = 200, description = "Example prompt category read.", body = ExamplePromptCategory),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "Example prompt category id")
     ),
     security(
         ("api_key" = [])
@@ -186,27 +140,27 @@ pub async fn read(
 ) -> Result<impl IntoResponse, AppError> {
     require_authenticated_session(extracted_session).await?;
 
-    let example_prompt = context
+    let example_prompt_category = context
         .octopus_database
-        .try_get_example_prompt_by_id(id)
+        .try_get_example_prompt_category_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    Ok((StatusCode::OK, Json(example_prompt)).into_response())
+    Ok((StatusCode::OK, Json(example_prompt_category)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     put,
-    path = "/api/v1/example-prompts/:id",
-    request_body = ExamplePromptPut,
+    path = "/api/v1/example-prompt-categories/:id",
+    request_body = ExamplePromptCategoryPut,
     responses(
-        (status = 200, description = "Example prompt updated.", body = ExamplePrompt),
+        (status = 200, description = "Example prompt category updated.", body = ExamplePromptCategory),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Example prompt not found.", body = ResponseError),
+        (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
-        ("id" = String, Path, description = "Example prompt id")
+        ("id" = String, Path, description = "Example prompt category id")
     ),
     security(
         ("api_key" = [])
@@ -216,38 +170,30 @@ pub async fn update(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
-    Json(input): Json<ExamplePromptPut>,
+    Json(input): Json<ExamplePromptCategoryPut>,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     context
         .octopus_database
-        .try_get_example_prompt_id_by_id(id)
+        .try_get_example_prompt_category_id_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let example_prompt = context
+    let example_prompt_category = context
         .octopus_database
-        .update_example_prompt(
-            id,
-            input.example_prompt_category_id,
-            input.background_file_name,
-            input.is_visible,
-            input.priority,
-            &input.prompt,
-            &input.title,
-        )
+        .update_example_prompt_category(id, &input.description, input.is_visible, &input.title)
         .await?;
 
-    Ok((StatusCode::OK, Json(example_prompt)).into_response())
+    Ok((StatusCode::OK, Json(example_prompt_category)).into_response())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
         app,
-        entity::{ExamplePrompt, ExamplePromptCategory, User},
+        entity::{ExamplePromptCategory, User},
         session::SessionResponse,
         Args,
     };
@@ -278,7 +224,6 @@ mod tests {
         let router = app.router;
         let second_router = router.clone();
         let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -381,44 +326,6 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
         app.context
             .octopus_database
             .try_delete_user_by_id(user_id)
@@ -428,12 +335,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -458,8 +359,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -500,68 +399,6 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
-
         let email = format!(
             "{}{}{}",
             Word().fake::<String>(),
@@ -572,7 +409,7 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = fourth_router
+        let response = second_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -602,7 +439,7 @@ mod tests {
 
         let user2_id = body.id;
 
-        let response = fifth_router
+        let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -629,24 +466,21 @@ mod tests {
 
         let session_id = body.id;
 
+        let description = "sample description";
         let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = sixth_router
+        let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/example-prompt-categories")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
+                            "description": &description,
                             "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
                             "title": &title,
                         })
                         .to_string(),
@@ -675,12 +509,6 @@ mod tests {
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
-            .await
-            .unwrap();
     }
 
     #[tokio::test]
@@ -697,7 +525,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -800,49 +627,13 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -864,12 +655,6 @@ mod tests {
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
-            .await
-            .unwrap();
     }
 
     #[tokio::test]
@@ -888,7 +673,6 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
         let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -992,44 +776,6 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
         let email = format!(
             "{}{}{}",
             Word().fake::<String>(),
@@ -1040,7 +786,7 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = fifth_router
+        let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1071,7 +817,7 @@ mod tests {
         let company2_id = body.company_id;
         let user2_id = body.id;
 
-        let response = sixth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1098,11 +844,13 @@ mod tests {
 
         let session_id = body.id;
 
-        let response = seventh_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1134,12 +882,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company2_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -1230,13 +972,15 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1274,7 +1018,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1377,49 +1120,11 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/example-prompt-categories")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1431,7 +1136,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Vec<ExamplePrompt> = serde_json::from_slice(&body).unwrap();
+        let body: Vec<ExamplePromptCategory> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
 
@@ -1444,12 +1149,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -1474,7 +1173,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1577,49 +1275,11 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/example-prompts")
+                    .uri("/api/v1/example-prompt-categories")
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -1643,523 +1303,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
             .try_delete_example_prompt_category_by_id(example_prompt_category_id)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_by_category_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
-
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/example-prompts/by-category/{example_prompt_category_id}"
-                    ))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Vec<ExamplePrompt> = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.is_empty());
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_by_category_401() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
-
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/example-prompts/by-category/{example_prompt_category_id}"
-                    ))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
-            .await
-            .unwrap();
-    }
-
-    #[tokio::test]
-    async fn list_by_category_404() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            openai_api_key: None,
-            port: None,
-        };
-        let app = app::get_app(args).await.unwrap();
-        let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
-
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
-
-        let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
-
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!(
-                        "/api/v1/example-prompts/by-category/{example_prompt_category_id}"
-                    ))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(company_id)
             .await
             .unwrap();
     }
@@ -2178,7 +1322,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2281,49 +1424,13 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2335,11 +1442,11 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
 
+        assert_eq!(body.description, description);
         assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.title, title);
 
         app.context
             .octopus_database
@@ -2350,12 +1457,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -2380,7 +1481,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2483,49 +1583,13 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -2544,12 +1608,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -2640,13 +1698,15 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = third_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2684,7 +1744,6 @@ mod tests {
         let second_router = router.clone();
         let third_router = router.clone();
         let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2787,62 +1846,23 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
+        let description = "sample description 2";
+        let is_visible = false;
+        let title = "sample title 2";
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
-
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
+                            "description": &description,
                             "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
                             "title": &title,
                         })
                         .to_string(),
@@ -2855,11 +1875,11 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
 
+        assert_eq!(body.description, description);
         assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.title, title);
 
         app.context
             .octopus_database
@@ -2870,12 +1890,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
             .await
             .unwrap();
 
@@ -2902,7 +1916,6 @@ mod tests {
         let fourth_router = router.clone();
         let fifth_router = router.clone();
         let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3005,44 +2018,6 @@ mod tests {
 
         let example_prompt_category_id = body.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
-
         let email = format!(
             "{}{}{}",
             Word().fake::<String>(),
@@ -3053,7 +2028,7 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = fifth_router
+        let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -3084,7 +2059,7 @@ mod tests {
         let company2_id = body.company_id;
         let user2_id = body.id;
 
-        let response = sixth_router
+        let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -3111,24 +2086,23 @@ mod tests {
 
         let session_id = body.id;
 
+        let description = "sample description 2";
         let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
+        let title = "sample title 2";
 
-        let response = seventh_router
+        let response = sixth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
+                            "description": &description,
                             "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
                             "title": &title,
                         })
                         .to_string(),
@@ -3166,12 +2140,6 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
             .try_delete_example_prompt_category_by_id(example_prompt_category_id)
             .await
             .unwrap();
@@ -3190,7 +2158,6 @@ mod tests {
         let router = app.router;
         let second_router = router.clone();
         let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3258,7 +2225,7 @@ mod tests {
 
         let session_id = body.id;
 
-        let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
+        let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
 
         let description = "sample description";
         let is_visible = true;
@@ -3267,52 +2234,16 @@ mod tests {
         let response = third_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/example-prompt-categories/{example_prompt_category_id}"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
                             "description": &description,
                             "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
-
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
-
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/example-prompts/{example_prompt_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
                             "title": &title,
                         })
                         .to_string(),
@@ -3333,12 +2264,6 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_company_by_id(company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
             .await
             .unwrap();
     }

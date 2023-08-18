@@ -162,6 +162,20 @@ CREATE INDEX chat_messages_created_at ON chat_messages(created_at);
 CREATE INDEX chat_messages_deleted_at ON chat_messages(deleted_at);
 CREATE INDEX chat_messages_updated_at ON chat_messages(updated_at);
 
+CREATE TABLE chat_audits(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    chat_id UUID NOT NULL REFERENCES chats ON DELETE CASCADE,
+    chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users ON DELETE CASCADE,
+    trail JSON NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+);
+
+CREATE INDEX chat_audits_chat_id ON chat_audits(chat_id);
+CREATE INDEX chat_audits_chat_message_id ON chat_audits(chat_message_id);
+CREATE INDEX chat_audits_user_id ON chat_audits(user_id);
+CREATE INDEX chat_audits_created_at ON chat_audits(created_at);
+
 CREATE TABLE chat_message_files(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     chat_message_id UUID NOT NULL REFERENCES chat_messages ON DELETE CASCADE,
@@ -201,11 +215,26 @@ CREATE TABLE chat_pictures(
 CREATE INDEX chat_pictures_chat_id ON chat_pictures(chat_id);
 CREATE INDEX chat_pictures_deleted_at ON chat_pictures(deleted_at);
 
+CREATE TABLE example_prompt_categories(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    description TEXT NOT NULL,
+    is_visible BOOLEAN NOT NULL DEFAULT true,
+    title VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+);
+
+CREATE INDEX example_prompt_categories_deleted_at ON example_prompt_categories(deleted_at);
+
 CREATE TABLE example_prompts(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    example_prompt_category_id UUID NOT NULL REFERENCES example_prompt_categories ON DELETE CASCADE,
+    background_file_name VARCHAR(256),
     is_visible BOOLEAN NOT NULL DEFAULT true,
     priority INT NOT NULL DEFAULT 0,
     prompt TEXT NOT NULL,
+    title VARCHAR(256) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     deleted_at TIMESTAMP WITH TIME ZONE,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)

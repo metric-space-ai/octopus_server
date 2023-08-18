@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO example_prompts\n            (is_visible, priority, prompt)\n            VALUES ($1, $2, $3)\n            RETURNING id, is_visible, priority, prompt, created_at, deleted_at, updated_at",
+  "query": "SELECT id, description, is_visible, title, created_at, deleted_at, updated_at\n            FROM example_prompt_categories\n            WHERE is_visible = $1\n            AND deleted_at IS NULL\n            ORDER BY title ASC",
   "describe": {
     "columns": [
       {
@@ -10,18 +10,18 @@
       },
       {
         "ordinal": 1,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
         "name": "is_visible",
         "type_info": "Bool"
       },
       {
-        "ordinal": 2,
-        "name": "priority",
-        "type_info": "Int4"
-      },
-      {
         "ordinal": 3,
-        "name": "prompt",
-        "type_info": "Text"
+        "name": "title",
+        "type_info": "Varchar"
       },
       {
         "ordinal": 4,
@@ -41,9 +41,7 @@
     ],
     "parameters": {
       "Left": [
-        "Bool",
-        "Int4",
-        "Text"
+        "Bool"
       ]
     },
     "nullable": [
@@ -56,5 +54,5 @@
       false
     ]
   },
-  "hash": "e300fd7d1c9bce99ab712c85c8ea851aee8a7aab3c53fae7702f89b73b9f5a35"
+  "hash": "8c1c8935bfe054296effe00f3ce86f02810cade08828ed2bcdfb0fd1e1dcb18c"
 }
