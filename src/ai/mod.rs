@@ -273,54 +273,105 @@ pub async fn open_ai_request(
         .messages(messages)
         .functions(functions)
         .function_call("auto")
-        .build()?;
+        .build();
 
-    let response_message = client
-        .chat()
-        .create(request)
-        .await?
-        .choices
-        .get(0)
-        .ok_or(AppError::BadResponse)?
-        .message
-        .clone();
-
-    if let Some(function_call) = response_message.function_call {
-        let function_name = function_call.name;
-        let function_args: serde_json::Value = function_call.arguments.parse()?;
-        let ai_function = context
-            .octopus_database
-            .try_get_ai_function_by_name(&function_name)
-            .await?;
-
-        if let Some(ai_function) = ai_function {
-            if function_name == "function_foo_sync" {
-                function_foo_sync::handle_function_foo_sync(
-                    &ai_function,
-                    &chat_message,
-                    context.clone(),
-                    &function_args,
-                )
+    match request {
+        Err(e) => {
+            let content = format!("OpenAIError: {}", e);
+            let chat_message = context
+                .octopus_database
+                .update_chat_message(chat_message.id, 100, &content, ChatMessageStatus::Answered)
                 .await?;
-            } else if function_name == "function_translator" {
-                function_translator::handle_function_translator(
-                    &ai_function,
-                    &chat_message,
-                    context.clone(),
-                    &function_args,
-                )
-                .await?;
+
+            return Ok(chat_message);
+        }
+        Ok(request) => {
+            let response_message = client.chat().create(request).await;
+
+            match response_message {
+                Err(e) => {
+                    let content = format!("OpenAIError: {}", e);
+                    let chat_message = context
+                        .octopus_database
+                        .update_chat_message(
+                            chat_message.id,
+                            100,
+                            &content,
+                            ChatMessageStatus::Answered,
+                        )
+                        .await?;
+
+                    return Ok(chat_message);
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.get(0);
+
+                    match response_message {
+                        None => {
+                            let content = "BadResponse";
+                            context
+                                .octopus_database
+                                .update_chat_message(
+                                    chat_message.id,
+                                    100,
+                                    content,
+                                    ChatMessageStatus::Answered,
+                                )
+                                .await?;
+
+                            return Err(Box::new(AppError::BadResponse));
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(function_call) = response_message.function_call {
+                                let function_name = function_call.name;
+                                let function_args: serde_json::Value =
+                                    function_call.arguments.parse()?;
+                                let ai_function = context
+                                    .octopus_database
+                                    .try_get_ai_function_by_name(&function_name)
+                                    .await?;
+
+                                if let Some(ai_function) = ai_function {
+                                    if function_name == "function_foo_sync" {
+                                        function_foo_sync::handle_function_foo_sync(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
+                                    } else if function_name == "function_translator" {
+                                        function_translator::handle_function_translator(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
+                                    }
+                                }
+                            }
+
+                            if let Some(content) = response_message.content {
+                                let chat_message = context
+                                    .octopus_database
+                                    .update_chat_message(
+                                        chat_message.id,
+                                        100,
+                                        &content,
+                                        ChatMessageStatus::Answered,
+                                    )
+                                    .await?;
+
+                                return Ok(chat_message);
+                            }
+                        }
+                    }
+                }
             }
         }
-    }
-
-    if let Some(content) = response_message.content {
-        let chat_message = context
-            .octopus_database
-            .update_chat_message(chat_message.id, 100, &content, ChatMessageStatus::Answered)
-            .await?;
-
-        return Ok(chat_message);
     }
 
     Ok(chat_message)

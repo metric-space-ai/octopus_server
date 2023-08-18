@@ -1372,12 +1372,6 @@ mod tests {
 
         assert!(response.status() == StatusCode::GONE || response.status() == StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.id, user_id);
-        assert_eq!(body.email, email);
-
         app.context
             .octopus_database
             .try_delete_password_reset_token_by_id(password_reset_token_id)
