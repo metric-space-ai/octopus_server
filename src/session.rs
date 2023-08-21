@@ -46,8 +46,15 @@ pub async fn require_authenticated_session(
     extracted_session: ExtractedSession,
 ) -> Result<Session, AppError> {
     match extracted_session.session {
-        Some(session) => Ok(session),
-        None => Err(AppError::Forbidden),
+        Some(session) => {
+            let now = Utc::now();
+            if session.expired_at < now {
+                return Err(AppError::Unauthorized);
+            }
+
+            Ok(session)
+        }
+        None => Err(AppError::Unauthorized),
     }
 }
 
@@ -71,7 +78,7 @@ pub async fn secured(
         }
     }
 
-    Err(AppError::Forbidden)
+    Err(AppError::Unauthorized)
 }
 
 pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {

@@ -108,7 +108,9 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated_session(extracted_session)
+        .await
+        .map_err(|_| AppError::Forbidden)?;
 
     let session_user = context
         .octopus_database
@@ -166,7 +168,9 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated_session(extracted_session)
+        .await
+        .map_err(|_| AppError::Forbidden)?;
 
     let session_user = context
         .octopus_database
@@ -215,7 +219,9 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated_session(extracted_session)
+        .await
+        .map_err(|_| AppError::Forbidden)?;
 
     let session_user = context
         .octopus_database
@@ -270,7 +276,9 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<WorkspacePut>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated_session(extracted_session)
+        .await
+        .map_err(|_| AppError::Forbidden)?;
     input.validate()?;
 
     let session_user = context

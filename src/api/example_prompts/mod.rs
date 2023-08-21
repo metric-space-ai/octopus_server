@@ -1,8 +1,8 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
+    entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PUBLIC_USER},
     error::AppError,
-    session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    session::{ensure_secured, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -120,7 +120,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_PUBLIC_USER).await?;
 
     let example_prompts = context.octopus_database.get_example_prompts().await?;
 
@@ -147,7 +147,7 @@ pub async fn list_by_category(
     extracted_session: ExtractedSession,
     Path(example_prompt_category_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_PUBLIC_USER).await?;
 
     let example_prompt_category = context
         .octopus_database
@@ -184,7 +184,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_PUBLIC_USER).await?;
 
     let example_prompt = context
         .octopus_database
