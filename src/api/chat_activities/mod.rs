@@ -18,7 +18,7 @@ use uuid::Uuid;
     path = "/api/v1/chat-activities/:chat_id",
     responses(
         (status = 201, description = "Chat activity created.", body = ChatActivity),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
@@ -39,7 +39,7 @@ pub async fn create(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat = context
         .octopus_database
@@ -54,7 +54,7 @@ pub async fn create(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_activity = context
@@ -71,7 +71,7 @@ pub async fn create(
     path = "/api/v1/chat-activities/:chat_id",
     responses(
         (status = 200, description = "List of the latest chat activities.", body = [ChatActivity]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -88,7 +88,7 @@ pub async fn list(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat = context.octopus_database.try_get_chat_by_id(chat_id).await?;
 
@@ -100,7 +100,7 @@ pub async fn list(
             .ok_or(AppError::NotFound)?;
 
         if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::Forbidden);
         }
 
         let chat_activities = context
@@ -319,7 +319,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_401() {
+    async fn create_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -535,7 +535,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -977,7 +977,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1214,7 +1214,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

@@ -33,7 +33,7 @@ pub struct ProfilePut {
     path = "/api/v1/profiles/:user_id",
     responses(
         (status = 200, description = "User profile read.", body = Profile),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),
     params(
@@ -54,7 +54,7 @@ pub async fn read(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let user = context
         .octopus_database
@@ -74,7 +74,7 @@ pub async fn read(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     Ok((StatusCode::OK, Json(profile)).into_response())
@@ -87,7 +87,7 @@ pub async fn read(
     request_body = ProfilePut,
     responses(
         (status = 200, description = "User profile updated.", body = Profile),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),
     params(
@@ -110,7 +110,7 @@ pub async fn update(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let user = context
         .octopus_database
@@ -130,7 +130,7 @@ pub async fn update(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let profile = context
@@ -490,7 +490,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -621,7 +621,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -643,7 +643,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401_different_company_admin() {
+    async fn read_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -814,7 +814,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1353,7 +1353,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401() {
+    async fn update_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1497,7 +1497,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1519,7 +1519,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401_different_company_admin() {
+    async fn update_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1703,7 +1703,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

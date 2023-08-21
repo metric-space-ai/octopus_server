@@ -22,6 +22,7 @@ pub enum AppError {
     Concurrency(tokio::task::JoinError),
     Conflict,
     File,
+    Forbidden,
     Generic(Box<dyn Error + Send + Sync>),
     Gone,
     Header(ToStrError),
@@ -55,6 +56,7 @@ impl IntoResponse for AppError {
             }
             AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
             AppError::File => (StatusCode::BAD_REQUEST, "File error."),
+            AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden."),
             AppError::Generic(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Generic error."),
             AppError::Gone => (StatusCode::GONE, "Resource gone."),
             AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header."),

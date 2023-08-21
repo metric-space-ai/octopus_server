@@ -76,7 +76,7 @@ pub struct AiFunctionPut {
     request_body = AiFunctionPost,
     responses(
         (status = 201, description = "AI Function created.", body = AiFunction),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     security(
@@ -136,7 +136,7 @@ pub async fn create(
     path = "/api/v1/ai-functions/:id",
     responses(
         (status = 204, description = "AI Function deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
@@ -169,7 +169,7 @@ pub async fn delete(
     request_body = AiFunctionDirectCallPost,
     responses(
         (status = 201, description = "AI Function direct call executed.", body = AiFunctionResponse),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
         (status = 410, description = "Resource gone.", body = ResponseError),
     ),
@@ -221,7 +221,7 @@ pub async fn direct_call(
     path = "/api/v1/ai-functions",
     responses(
         (status = 200, description = "List of AI Functions.", body = [AiFunction]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -245,7 +245,7 @@ pub async fn list(
     request_body = AiFunctionOperationPost,
     responses(
         (status = 201, description = "AI Function operation scheduled.", body = AiFunctionOperationResponse),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
@@ -304,7 +304,7 @@ pub async fn operation(
     path = "/api/v1/ai-functions/:id",
     responses(
         (status = 200, description = "AI Function read.", body = AiFunction),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
@@ -337,7 +337,7 @@ pub async fn read(
     request_body = AiFunctionPut,
     responses(
         (status = 200, description = "AI Function updated.", body = AiFunction),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
         (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
@@ -597,7 +597,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_401() {
+    async fn create_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -763,7 +763,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1176,7 +1176,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401() {
+    async fn delete_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1411,7 +1411,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1760,7 +1760,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1923,7 +1923,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -2138,7 +2138,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2301,7 +2301,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -2668,7 +2668,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401() {
+    async fn update_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2930,7 +2930,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

@@ -32,7 +32,7 @@ pub struct Params {
     path = "/api/v1/chat-pictures/:chat_id",
     responses(
         (status = 201, description = "Chat picture created.", body = ChatPicture),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
         (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
@@ -58,7 +58,7 @@ pub async fn create(
         .ok_or(AppError::NotFound)?;
 
     if chat.user_id != session.user_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_picture_exists = context
@@ -118,7 +118,7 @@ pub async fn create(
     path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 204, description = "Chat picture deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
@@ -143,7 +143,7 @@ pub async fn delete(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_picture = context
         .octopus_database
@@ -152,7 +152,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_picture.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat = context
@@ -173,7 +173,7 @@ pub async fn delete(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     context
@@ -194,7 +194,7 @@ pub async fn delete(
     path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 200, description = "Chat picture read.", body = ChatPicture),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
@@ -219,7 +219,7 @@ pub async fn read(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_picture = context
         .octopus_database
@@ -228,7 +228,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_picture.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat = context
@@ -244,7 +244,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     Ok((StatusCode::OK, Json(chat_picture)).into_response())
@@ -256,7 +256,7 @@ pub async fn read(
     path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 200, description = "Chat picture updated.", body = ChatPicture),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
     ),
     params(
@@ -282,7 +282,7 @@ pub async fn update(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_picture = context
         .octopus_database
@@ -291,7 +291,7 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_picture.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat = context
@@ -312,7 +312,7 @@ pub async fn update(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     while let Some(field) = multipart.next_field().await? {

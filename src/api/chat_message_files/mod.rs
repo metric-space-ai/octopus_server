@@ -26,7 +26,7 @@ pub struct Params {
     path = "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
     responses(
         (status = 204, description = "Chat message file deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message file not found.", body = ResponseError),
     ),
     params(
@@ -54,7 +54,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     if chat_message_id != chat_message_file.chat_message_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_message = context
@@ -64,7 +64,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     if chat_message.user_id != session.user_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     context
@@ -82,7 +82,7 @@ pub async fn delete(
     path = "/api/v1/chat-message-files/:chat_message_id",
     responses(
         (status = 200, description = "List of chat message files.", body = [ChatMessageFile]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -102,7 +102,7 @@ pub async fn list(
 
     if let Some(chat_message) = chat_message {
         if chat_message.user_id != session.user_id {
-            return Err(AppError::Unauthorized);
+            return Err(AppError::Forbidden);
         }
 
         let chat_message_files = context
@@ -122,7 +122,7 @@ pub async fn list(
     path = "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
     responses(
         (status = 200, description = "Chat message file read.", body = ChatMessageFile),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message file not found.", body = ResponseError),
     ),
     params(
@@ -150,7 +150,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if chat_message_id != chat_message_file.chat_message_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_message = context
@@ -160,7 +160,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if chat_message.user_id != session.user_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     Ok((StatusCode::OK, Json(chat_message_file)).into_response())
@@ -413,7 +413,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401() {
+    async fn delete_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -671,7 +671,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -717,7 +717,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401_different_company_admin() {
+    async fn delete_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -974,7 +974,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1473,7 +1473,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1730,7 +1730,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -2016,7 +2016,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2273,7 +2273,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

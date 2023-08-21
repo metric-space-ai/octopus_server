@@ -37,7 +37,7 @@ pub struct ExamplePromptCategoryPut {
     request_body = ExamplePromptCategoryPost,
     responses(
         (status = 201, description = "Example prompt category created.", body = ExamplePromptCategory),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -65,7 +65,7 @@ pub async fn create(
     path = "/api/v1/example-prompt-categories/:id",
     responses(
         (status = 204, description = "Example prompt category deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
@@ -97,7 +97,7 @@ pub async fn delete(
     path = "/api/v1/example-prompt-categories",
     responses(
         (status = 200, description = "List of Example prompt category categories.", body = [ExamplePromptCategory]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -123,7 +123,7 @@ pub async fn list(
     path = "/api/v1/example-prompt-categories/:id",
     responses(
         (status = 200, description = "Example prompt category read.", body = ExamplePromptCategory),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
@@ -156,7 +156,7 @@ pub async fn read(
     request_body = ExamplePromptCategoryPut,
     responses(
         (status = 200, description = "Example prompt category updated.", body = ExamplePromptCategory),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_401() {
+    async fn create_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -490,7 +490,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -658,7 +658,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401() {
+    async fn delete_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -859,7 +859,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1160,7 +1160,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1287,7 +1287,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1468,7 +1468,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1597,7 +1597,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1901,7 +1901,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401() {
+    async fn update_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2112,7 +2112,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

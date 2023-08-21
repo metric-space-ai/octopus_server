@@ -50,7 +50,7 @@ pub struct Params {
     request_body = ChatMessagePost,
     responses(
         (status = 201, description = "Chat message created.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
         (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
@@ -73,7 +73,7 @@ pub async fn create(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     input.validate()?;
 
@@ -100,12 +100,12 @@ pub async fn create(
             if session_user.id != chat.user_id
                 && !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
             {
-                return Err(AppError::Unauthorized);
+                return Err(AppError::Forbidden);
             }
         }
         WorkspacesType::Public => {
             if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-                return Err(AppError::Unauthorized);
+                return Err(AppError::Forbidden);
             }
         }
     }
@@ -158,7 +158,7 @@ pub async fn create(
     path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
     responses(
         (status = 204, description = "Chat message deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
     params(
@@ -183,7 +183,7 @@ pub async fn delete(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_message = context
         .octopus_database
@@ -192,7 +192,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_message.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let user = context
@@ -207,7 +207,7 @@ pub async fn delete(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     context
@@ -225,7 +225,7 @@ pub async fn delete(
     path = "/api/v1/chat-messages/:chat_id/latest",
     responses(
         (status = 200, description = "Chat message latest.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
@@ -246,7 +246,7 @@ pub async fn latest(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat = context
         .octopus_database
@@ -261,7 +261,7 @@ pub async fn latest(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_message = context
@@ -278,7 +278,7 @@ pub async fn latest(
     path = "/api/v1/chat-messages/:chat_id",
     responses(
         (status = 200, description = "List of chat messages.", body = [ChatMessageExtended]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
     params(
@@ -299,7 +299,7 @@ pub async fn list(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat = context
         .octopus_database
@@ -314,7 +314,7 @@ pub async fn list(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat.user_id && session_user.company_id != user.company_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_messages = context
@@ -331,7 +331,7 @@ pub async fn list(
     path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
     responses(
         (status = 200, description = "Chat message read.", body = ChatMessageExtended),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
     params(
@@ -356,7 +356,7 @@ pub async fn read(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_message = context
         .octopus_database
@@ -365,7 +365,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_message.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let user = context
@@ -375,7 +375,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if session_user.id != chat_message.user_id && session_user.company_id != user.company_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     Ok((StatusCode::OK, Json(chat_message)).into_response())
@@ -387,7 +387,7 @@ pub async fn read(
     path = "/api/v1/chat-messages/:chat_id/:chat_message_id",
     responses(
         (status = 200, description = "Chat message response regeneration.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
     params(
@@ -412,7 +412,7 @@ pub async fn regenerate(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_message = context
         .octopus_database
@@ -421,7 +421,7 @@ pub async fn regenerate(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_message.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let user = context
@@ -436,7 +436,7 @@ pub async fn regenerate(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let estimated_seconds = context
@@ -481,7 +481,7 @@ pub async fn regenerate(
     request_body = ChatMessagePut,
     responses(
         (status = 200, description = "Chat message updated.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
     params(
@@ -508,7 +508,7 @@ pub async fn update(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let original_chat_message = context
         .octopus_database
@@ -517,7 +517,7 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != original_chat_message.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let user = context
@@ -532,7 +532,7 @@ pub async fn update(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let estimated_seconds = context
@@ -595,7 +595,7 @@ pub async fn update(
     request_body = ChatMessageFlagPut,
     responses(
         (status = 200, description = "Chat message flagged.", body = ChatMessage),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message not found.", body = ResponseError),
     ),
     params(
@@ -622,7 +622,7 @@ pub async fn flag(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let chat_message = context
         .octopus_database
@@ -631,7 +631,7 @@ pub async fn flag(
         .ok_or(AppError::NotFound)?;
 
     if chat_id != chat_message.chat_id {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let user = context
@@ -646,7 +646,7 @@ pub async fn flag(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let chat_message = context
@@ -883,7 +883,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_401() {
+    async fn create_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1106,7 +1106,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -1967,7 +1967,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401() {
+    async fn delete_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2214,7 +2214,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -2254,7 +2254,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_401_different_company_admin() {
+    async fn delete_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2500,7 +2500,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -2941,7 +2941,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -3187,7 +3187,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -3560,7 +3560,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn latest_401() {
+    async fn latest_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -3806,7 +3806,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -4179,7 +4179,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -4425,7 +4425,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -4867,7 +4867,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn regenerate_401() {
+    async fn regenerate_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -5114,7 +5114,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -5154,7 +5154,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn regenerate_401_different_company_admin() {
+    async fn regenerate_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -5400,7 +5400,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -5849,7 +5849,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401() {
+    async fn update_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -6103,7 +6103,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -6143,7 +6143,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn update_401_different_company_admin() {
+    async fn update_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -6396,7 +6396,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -6863,7 +6863,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn flag_401() {
+    async fn flag_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -7125,7 +7125,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -7165,7 +7165,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn flag_401_different_company_admin() {
+    async fn flag_403_different_company_admin() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -7426,7 +7426,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

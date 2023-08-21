@@ -24,7 +24,7 @@ use uuid::Uuid;
     path = "/api/v1/profile-pictures/:user_id",
     responses(
         (status = 204, description = "User profile picture deleted."),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),
     params(
@@ -45,7 +45,7 @@ pub async fn delete(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let user = context
         .octopus_database
@@ -65,7 +65,7 @@ pub async fn delete(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let old_path = profile
@@ -90,7 +90,7 @@ pub async fn delete(
     path = "/api/v1/profile-pictures/:user_id",
     responses(
         (status = 200, description = "User profile picture updated.", body = Profile),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),
     params(
@@ -112,7 +112,7 @@ pub async fn update(
         .octopus_database
         .try_get_user_by_id(session.user_id)
         .await?
-        .ok_or(AppError::Unauthorized)?;
+        .ok_or(AppError::Forbidden)?;
 
     let user = context
         .octopus_database
@@ -132,7 +132,7 @@ pub async fn update(
             .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
             || session_user.company_id != user.company_id)
     {
-        return Err(AppError::Unauthorized);
+        return Err(AppError::Forbidden);
     }
 
     let old_path = profile

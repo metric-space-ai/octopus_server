@@ -19,7 +19,7 @@ use uuid::Uuid;
     path = "/api/v1/chat-audits",
     responses(
         (status = 200, description = "List of chat audits.", body = [ChatAudit]),
-        (status = 401, description = "Unauthorized request.", body = ResponseError)
+        (status = 403, description = "Forbidden.", body = ResponseError)
     ),
     security(
         ("api_key" = [])
@@ -42,7 +42,7 @@ pub async fn list(
     path = "/api/v1/chat-audits/:chat_audit_id",
     responses(
         (status = 200, description = "Chat audit read.", body = ChatAudit),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat audit not found.", body = ResponseError),
     ),
     params(
@@ -328,7 +328,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_401() {
+    async fn list_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -576,7 +576,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database
@@ -865,7 +865,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_401() {
+    async fn read_403() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1123,7 +1123,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         app.context
             .octopus_database

@@ -39,7 +39,7 @@ pub async fn ensure_secured(
         return Ok(secured);
     }
 
-    Err(AppError::Unauthorized)
+    Err(AppError::Forbidden)
 }
 
 pub async fn require_authenticated_session(
@@ -47,7 +47,7 @@ pub async fn require_authenticated_session(
 ) -> Result<Session, AppError> {
     match extracted_session.session {
         Some(session) => Ok(session),
-        None => Err(AppError::Unauthorized),
+        None => Err(AppError::Forbidden),
     }
 }
 
@@ -71,7 +71,7 @@ pub async fn secured(
         }
     }
 
-    Err(AppError::Unauthorized)
+    Err(AppError::Forbidden)
 }
 
 pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {
