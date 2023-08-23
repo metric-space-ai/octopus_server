@@ -1,4 +1,9 @@
-use crate::{api::auth, context::Context, entity::ROLE_PUBLIC_USER, error::AppError};
+use crate::{
+    api::auth,
+    context::Context,
+    entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+    error::AppError,
+};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -63,7 +68,7 @@ pub async fn register(
                     true,
                     context.config.pepper_id,
                     &pw_hash,
-                    &[ROLE_PUBLIC_USER.to_string()],
+                    &[ROLE_PUBLIC_USER.to_string(), ROLE_PRIVATE_USER.to_string()],
                 )
                 .await?;
 
