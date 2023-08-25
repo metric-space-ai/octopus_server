@@ -17,6 +17,7 @@ use async_openai::{
 use axum::http::StatusCode;
 use base64::{alphabet, engine, Engine};
 use chrono::{DateTime, Utc};
+use hyper::body::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
@@ -24,7 +25,14 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 
 mod function_foo_sync;
+mod function_orbit_camera;
 mod function_translator;
+
+#[derive(Debug)]
+pub struct AiFunctionResponseFile {
+    pub content: Bytes,
+    pub media_type: String,
+}
 
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AiFunctionResponseFileAttachement {
@@ -342,6 +350,14 @@ pub async fn open_ai_request(
                                             &function_args,
                                         )
                                         .await?;
+                                    } else if function_name == "function_orbit_camera" {
+                                        function_orbit_camera::handle_function_orbit_camera(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
                                     } else if function_name == "function_translator" {
                                         function_translator::handle_function_translator(
                                             &ai_function,
@@ -440,6 +456,49 @@ pub async fn update_chat_message(
                 .await?;
         }
     }
+
+    Ok(chat_message)
+}
+
+pub async fn update_chat_message_with_file_response(
+    ai_function: &AiFunction,
+    ai_function_response_file: &AiFunctionResponseFile,
+    context: Arc<Context>,
+    chat_message: &ChatMessage,
+) -> Result<ChatMessage> {
+    let status = ChatMessageStatus::Answered;
+    let response = None;
+    let progress = 100;
+
+    let chat_message = context
+        .octopus_database
+        .update_chat_message_from_function(
+            chat_message.id,
+            ai_function.id,
+            status,
+            progress,
+            response,
+        )
+        .await?;
+
+    let data = ai_function_response_file.content.to_vec();
+    let kind = infer::get(&data).ok_or(AppError::File)?;
+    let extension = kind.extension();
+
+    let file_name = format!("{}.{}", Uuid::new_v4(), extension);
+    let path = format!("{PUBLIC_DIR}/{file_name}");
+
+    let mut file = File::create(path)?;
+    file.write_all(&data)?;
+
+    context
+        .octopus_database
+        .insert_chat_message_file(
+            chat_message.id,
+            &file_name,
+            &ai_function_response_file.media_type,
+        )
+        .await?;
 
     Ok(chat_message)
 }

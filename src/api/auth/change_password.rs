@@ -87,7 +87,9 @@ pub async fn change_password(
             .octopus_database
             .try_get_hash_for_user_id(user_id)
             .await?;
-        let Some(hash) = hash else { return Err(AppError::NotRegistered) };
+        let Some(hash) = hash else {
+            return Err(AppError::NotRegistered);
+        };
 
         let old_password = input.old_password.ok_or(AppError::Forbidden)?;
         let is_valid = auth::verify_password(context.clone(), hash, old_password).await?;

@@ -40,7 +40,9 @@ pub async fn login(
         .octopus_database
         .try_get_hash_for_email(&input.email)
         .await?;
-    let Some(hash) = hash else { return Err(AppError::NotRegistered) };
+    let Some(hash) = hash else {
+        return Err(AppError::NotRegistered);
+    };
 
     let is_valid = auth::verify_password(context.clone(), hash, input.password).await?;
     if !is_valid {

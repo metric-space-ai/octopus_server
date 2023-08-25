@@ -34,6 +34,7 @@ pub struct AiFunction {
     pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
+    pub has_file_response: bool,
     pub health_check_execution_time: i32,
     pub health_check_status: AiFunctionHealthCheckStatus,
     pub health_check_url: String,

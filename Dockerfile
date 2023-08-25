@@ -1,4 +1,4 @@
-FROM rust:1.71.1-slim-bookworm AS chef
+FROM rust:1.72.0-slim-bookworm AS chef
 RUN apt-get update && apt-get install -y librust-openssl-dev
 RUN cargo install cargo-chef
 WORKDIR /octopus_server
@@ -21,7 +21,7 @@ COPY octopus_server /octopus_server/
 WORKDIR /octopus_server
 RUN cargo build --release
 
-FROM rust:1.71.1-slim-bookworm AS prod
+FROM rust:1.72.0-slim-bookworm AS prod
 ARG DATABASE_URL
 ARG OCTOPUS_PEPPER
 ARG OCTOPUS_PEPPER_ID

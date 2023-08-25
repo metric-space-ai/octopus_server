@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, base_function_url, description, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", setup_url, warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at\n            FROM ai_functions\n            WHERE deleted_at IS NULL\n            ORDER BY name ASC",
+  "query": "UPDATE ai_functions\n            SET base_function_url = $2, description = $3, device_map = $4, has_file_response = $5, health_check_url = $6, is_available = $7, is_enabled = $8, k8s_configuration = $9, name = $10, parameters = $11, setup_url = $12, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS \"health_check_status: _\", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS \"setup_status: _\", setup_url, warmup_execution_time, warmup_status AS \"warmup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at",
   "describe": {
     "columns": [
       {
@@ -25,11 +25,16 @@
       },
       {
         "ordinal": 4,
+        "name": "has_file_response",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
         "name": "health_check_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "health_check_status: _",
         "type_info": {
           "Custom": {
@@ -44,42 +49,42 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "health_check_url",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "is_available",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "k8s_configuration",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "parameters",
         "type_info": "Json"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "setup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
@@ -94,17 +99,17 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "setup_url",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "warmup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "warmup_status: _",
         "type_info": {
           "Custom": {
@@ -119,40 +124,54 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "updated_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "warmup_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid",
+        "Varchar",
+        "Text",
+        "Json",
+        "Bool",
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Text",
+        "Varchar",
+        "Json",
+        "Varchar"
+      ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -178,5 +197,5 @@
       true
     ]
   },
-  "hash": "be93c9fe7aed0d13aed610cf44754bcd8cb7b208e59932fed835b697945e6d71"
+  "hash": "aff7b88d30714a59dc906369de959065ae849655a187d2e37263b167659672b3"
 }

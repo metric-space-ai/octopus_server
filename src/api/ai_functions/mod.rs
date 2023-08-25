@@ -31,6 +31,7 @@ pub struct AiFunctionPost {
     pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
+    pub has_file_response: bool,
     pub health_check_url: String,
     pub is_available: bool,
     pub is_enabled: bool,
@@ -60,6 +61,7 @@ pub struct AiFunctionPut {
     pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
+    pub has_file_response: bool,
     pub health_check_url: String,
     pub is_available: bool,
     pub is_enabled: bool,
@@ -104,6 +106,7 @@ pub async fn create(
                     &input.base_function_url,
                     &input.description,
                     input.device_map,
+                    input.has_file_response,
                     &input.health_check_url,
                     input.is_available,
                     input.is_enabled,
@@ -380,6 +383,7 @@ pub async fn update(
             &input.base_function_url,
             &input.description,
             input.device_map,
+            input.has_file_response,
             &input.health_check_url,
             input.is_available,
             input.is_enabled,
@@ -520,6 +524,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -542,6 +547,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -717,6 +723,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -739,6 +746,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -879,6 +887,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -901,6 +910,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -950,6 +960,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1090,6 +1101,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -1112,6 +1124,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1273,6 +1286,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -1295,6 +1309,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1663,6 +1678,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -1685,6 +1701,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -1854,6 +1871,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -1876,6 +1894,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2039,6 +2058,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -2061,6 +2081,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2232,6 +2253,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -2254,6 +2276,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2541,6 +2564,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -2563,6 +2587,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2598,6 +2623,7 @@ mod tests {
 
         let ai_function_id = body.id;
 
+        let has_file_response = false;
         let is_available = false;
         let is_enabled = false;
 
@@ -2615,6 +2641,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2764,6 +2791,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -2786,6 +2814,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -2889,6 +2918,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = false;
         let is_enabled = false;
 
@@ -2906,6 +2936,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3059,6 +3090,7 @@ mod tests {
 
         let ai_function_id = "33847746-0030-4964-a496-f75d04499160";
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -3081,6 +3113,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3216,6 +3249,7 @@ mod tests {
 
         let session_id = body.id;
 
+        let has_file_response = false;
         let is_available = true;
         let is_enabled = true;
         let name = format!(
@@ -3238,6 +3272,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3293,6 +3328,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,
@@ -3328,6 +3364,7 @@ mod tests {
 
         let ai_function2_id = body.id;
 
+        let has_file_response = false;
         let is_available = false;
         let is_enabled = false;
 
@@ -3345,6 +3382,7 @@ mod tests {
                             "device_map": {
                                 "max_memory": {"0": "10GiB", "1": "10GiB", "cpu": "30GiB"}
                             },
+                            "has_file_response": &has_file_response,
                             "health_check_url": "http://127.0.0.1:5000/v1/health-check",
                             "is_available": &is_available,
                             "is_enabled": &is_enabled,

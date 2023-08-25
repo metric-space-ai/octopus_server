@@ -24,7 +24,9 @@ pub async fn verify_password(
     password: String,
 ) -> Result<bool, AppError> {
     tokio::task::spawn_blocking(move || {
-        let Ok(hash) = PasswordHash::new(&hash) else { return false };
+        let Ok(hash) = PasswordHash::new(&hash) else {
+            return false;
+        };
         let peppered = format!("{}{}", context.config.pepper, password);
         Argon2::default()
             .verify_password(peppered.as_bytes(), &hash)
