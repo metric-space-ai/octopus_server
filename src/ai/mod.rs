@@ -156,6 +156,18 @@ pub struct ChatAuditTrail {
     pub created_at: DateTime<Utc>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct FunctionSensitiveInformationPost {
+    pub device_map: serde_json::Value,
+    pub value1: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FunctionSensitiveInformationResponse {
+    pub is_sensitive: bool,
+    pub sensitive_part: Option<String>,
+}
+
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
@@ -178,6 +190,57 @@ pub async fn open_ai_request(
         }
     }
 
+    let ai_function = context
+        .octopus_database
+        .try_get_ai_function_by_name("function_sensitive_information")
+        .await?;
+
+    if let Some(ai_function) = ai_function {
+        if ai_function.is_available
+            && ai_function.is_enabled
+            && ai_function.setup_status == AiFunctionSetupStatus::Performed
+        {
+            let function_sensitive_information_post = FunctionSensitiveInformationPost {
+                device_map: ai_function.device_map.clone(),
+                value1: chat_message.message.clone(),
+            };
+            let response = reqwest::Client::new()
+                .post(ai_function.base_function_url.clone())
+                .json(&function_sensitive_information_post)
+                .send()
+                .await;
+
+            if let Ok(response) = response {
+                if response.status() == StatusCode::CREATED {
+                    let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
+
+                    if function_sensitive_information_response.is_sensitive {
+                        let response = match function_sensitive_information_response.sensitive_part
+                        {
+                            None => String::from("Question contains sensitive part"),
+                            Some(sensitive_part) => {
+                                format!("Question contains sensitive part: {sensitive_part}")
+                            }
+                        };
+
+                        let chat_message = context
+                            .octopus_database
+                            .update_chat_message_is_sensitive(
+                                chat_message.id,
+                                true,
+                                ChatMessageStatus::Answered,
+                                100,
+                                &response,
+                            )
+                            .await?;
+
+                        return Ok(chat_message);
+                    }
+                }
+            }
+        }
+    }
+
     let mut chat_audit_trails = vec![];
 
     let chat_messages = context
@@ -186,36 +249,38 @@ pub async fn open_ai_request(
         .await?;
 
     for chat_message_tmp in chat_messages {
-        let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-            .role(Role::User)
-            .content(chat_message_tmp.message.clone())
-            .build()?;
-
-        messages.push(chat_completion_request_message);
-
-        let chat_audit_trail = ChatAuditTrail {
-            id: chat_message_tmp.id,
-            content: chat_message_tmp.message.clone(),
-            role: "user".to_string(),
-            created_at: chat_message_tmp.created_at,
-        };
-        chat_audit_trails.push(chat_audit_trail);
-
-        if let Some(response) = chat_message_tmp.response {
+        if !chat_message_tmp.is_sensitive {
             let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-                .role(Role::Assistant)
-                .content(response.clone())
+                .role(Role::User)
+                .content(chat_message_tmp.message.clone())
                 .build()?;
 
             messages.push(chat_completion_request_message);
 
             let chat_audit_trail = ChatAuditTrail {
                 id: chat_message_tmp.id,
-                content: response,
-                role: "assistant".to_string(),
+                content: chat_message_tmp.message.clone(),
+                role: "user".to_string(),
                 created_at: chat_message_tmp.created_at,
             };
             chat_audit_trails.push(chat_audit_trail);
+
+            if let Some(response) = chat_message_tmp.response {
+                let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+                    .role(Role::Assistant)
+                    .content(response.clone())
+                    .build()?;
+
+                messages.push(chat_completion_request_message);
+
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: response,
+                    role: "assistant".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            }
         }
     }
 

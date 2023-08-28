@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -50,21 +50,26 @@
       },
       {
         "ordinal": 9,
+        "name": "is_sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -79,17 +84,17 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -111,6 +116,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
@@ -118,5 +124,5 @@
       false
     ]
   },
-  "hash": "63300c4169183949fa005c5b65e2ac9d9e16e9eb14902ad83ea41fe7d6aded2a"
+  "hash": "f6db1d1573785e9d074d153f3cb8bf78652f77063d169d3d77d1bf980fb61b74"
 }

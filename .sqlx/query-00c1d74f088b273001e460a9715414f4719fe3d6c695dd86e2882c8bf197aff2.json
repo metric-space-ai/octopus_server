@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE chat_messages\n            SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -50,21 +50,26 @@
       },
       {
         "ordinal": 9,
+        "name": "is_sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -79,17 +84,17 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -97,10 +102,9 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Text",
-        "Bool",
-        "Bool",
-        "Bool"
+        "Uuid",
+        "Timestamptz",
+        "Text"
       ]
     },
     "nullable": [
@@ -115,6 +119,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
@@ -122,5 +127,5 @@
       false
     ]
   },
-  "hash": "24cc6420523912aa5c63e6f14f9d70603787966273631e895e6079285edaabe4"
+  "hash": "00c1d74f088b273001e460a9715414f4719fe3d6c695dd86e2882c8bf197aff2"
 }
