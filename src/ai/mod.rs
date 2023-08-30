@@ -190,51 +190,54 @@ pub async fn open_ai_request(
         }
     }
 
-    let ai_function = context
-        .octopus_database
-        .try_get_ai_function_by_name("function_sensitive_information")
-        .await?;
+    if !chat_message.bypass_sensitive_information_filter {
+        let ai_function = context
+            .octopus_database
+            .try_get_ai_function_by_name("function_sensitive_information")
+            .await?;
 
-    if let Some(ai_function) = ai_function {
-        if ai_function.is_available
-            && ai_function.is_enabled
-            && ai_function.setup_status == AiFunctionSetupStatus::Performed
-        {
-            let function_sensitive_information_post = FunctionSensitiveInformationPost {
-                device_map: ai_function.device_map.clone(),
-                value1: chat_message.message.clone(),
-            };
-            let response = reqwest::Client::new()
-                .post(ai_function.base_function_url.clone())
-                .json(&function_sensitive_information_post)
-                .send()
-                .await;
+        if let Some(ai_function) = ai_function {
+            if ai_function.is_available
+                && ai_function.is_enabled
+                && ai_function.setup_status == AiFunctionSetupStatus::Performed
+            {
+                let function_sensitive_information_post = FunctionSensitiveInformationPost {
+                    device_map: ai_function.device_map.clone(),
+                    value1: chat_message.message.clone(),
+                };
+                let response = reqwest::Client::new()
+                    .post(ai_function.base_function_url.clone())
+                    .json(&function_sensitive_information_post)
+                    .send()
+                    .await;
 
-            if let Ok(response) = response {
-                if response.status() == StatusCode::CREATED {
-                    let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
+                if let Ok(response) = response {
+                    if response.status() == StatusCode::CREATED {
+                        let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
-                    if function_sensitive_information_response.is_sensitive {
-                        let response = match function_sensitive_information_response.sensitive_part
-                        {
-                            None => String::from("Question contains sensitive part"),
-                            Some(sensitive_part) => {
-                                format!("Question contains sensitive part: {sensitive_part}")
-                            }
-                        };
+                        if function_sensitive_information_response.is_sensitive {
+                            let response = match function_sensitive_information_response
+                                .sensitive_part
+                            {
+                                None => String::from("Question contains sensitive part"),
+                                Some(sensitive_part) => {
+                                    format!("Question contains sensitive part: {sensitive_part}")
+                                }
+                            };
 
-                        let chat_message = context
-                            .octopus_database
-                            .update_chat_message_is_sensitive(
-                                chat_message.id,
-                                true,
-                                ChatMessageStatus::Answered,
-                                100,
-                                &response,
-                            )
-                            .await?;
+                            let chat_message = context
+                                .octopus_database
+                                .update_chat_message_is_sensitive(
+                                    chat_message.id,
+                                    true,
+                                    ChatMessageStatus::Answered,
+                                    100,
+                                    &response,
+                                )
+                                .await?;
 
-                        return Ok(chat_message);
+                            return Ok(chat_message);
+                        }
                     }
                 }
             }

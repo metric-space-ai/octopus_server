@@ -21,11 +21,13 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct ChatMessagePost {
+    pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct ChatMessagePut {
+    pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
 }
 
@@ -76,6 +78,9 @@ pub async fn create(
         .ok_or(AppError::Forbidden)?;
 
     input.validate()?;
+
+    let bypass_sensitive_information_filter =
+        input.bypass_sensitive_information_filter.unwrap_or(false);
 
     let chat = context
         .octopus_database
@@ -134,6 +139,7 @@ pub async fn create(
         .insert_chat_message(
             chat.id,
             session_user.id,
+            bypass_sensitive_information_filter,
             estimated_response_at,
             &input.message,
         )
@@ -504,6 +510,9 @@ pub async fn update(
     let session = require_authenticated_session(extracted_session).await?;
     input.validate()?;
 
+    let bypass_sensitive_information_filter =
+        input.bypass_sensitive_information_filter.unwrap_or(false);
+
     let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
@@ -570,6 +579,7 @@ pub async fn update(
         .insert_chat_message(
             original_chat_message.chat_id,
             session_user.id,
+            bypass_sensitive_information_filter,
             estimated_response_at,
             &input.message,
         )

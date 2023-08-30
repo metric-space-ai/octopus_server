@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, estimated_response_at, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -45,31 +45,36 @@
       },
       {
         "ordinal": 8,
+        "name": "bypass_sensitive_information_filter",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -84,17 +89,17 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -103,6 +108,7 @@
       "Left": [
         "Uuid",
         "Uuid",
+        "Bool",
         "Timestamptz",
         "Text"
       ]
@@ -120,6 +126,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
@@ -127,5 +134,5 @@
       false
     ]
   },
-  "hash": "00c1d74f088b273001e460a9715414f4719fe3d6c695dd86e2882c8bf197aff2"
+  "hash": "0be4f09eee3728bcc59d86fbb8e19faf62c216dc1dc27a223f2e0945f537cd1a"
 }
