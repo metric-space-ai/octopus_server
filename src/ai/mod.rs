@@ -27,6 +27,7 @@ use uuid::Uuid;
 mod function_foo_sync;
 mod function_orbit_camera;
 mod function_translator;
+mod function_visual_questions_answering;
 
 #[derive(Debug)]
 pub struct AiFunctionResponseFile {
@@ -428,6 +429,15 @@ pub async fn open_ai_request(
                                         .await?;
                                     } else if function_name == "function_translator" {
                                         function_translator::handle_function_translator(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
+                                    } else if function_name == "function_visual_questions_answering"
+                                    {
+                                        function_visual_questions_answering::handle_function_visual_questions_answering(
                                             &ai_function,
                                             &chat_message,
                                             context.clone(),
