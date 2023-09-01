@@ -26,6 +26,7 @@ use uuid::Uuid;
 
 mod function_foo_sync;
 mod function_orbit_camera;
+mod function_text_to_image;
 mod function_translator;
 mod function_visual_questions_answering;
 
@@ -421,6 +422,14 @@ pub async fn open_ai_request(
                                         .await?;
                                     } else if function_name == "function_orbit_camera" {
                                         function_orbit_camera::handle_function_orbit_camera(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
+                                    } else if function_name == "function_text_to_image" {
+                                        function_text_to_image::handle_function_text_to_image(
                                             &ai_function,
                                             &chat_message,
                                             context.clone(),

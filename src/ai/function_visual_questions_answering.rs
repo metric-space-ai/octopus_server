@@ -16,7 +16,7 @@ use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize)]
-pub struct FunctionTranslatorPost {
+pub struct FunctionVisualQuestionsAnsweringPost {
     pub device_map: serde_json::Value,
     pub image: String,
     pub prompt: String,
@@ -58,7 +58,7 @@ async fn function_visual_questions_answering(
     image: &str,
     prompt: &str,
 ) -> Result<Option<AiFunctionResponse>> {
-    let function_visual_questions_answering_post = FunctionTranslatorPost {
+    let function_visual_questions_answering_post = FunctionVisualQuestionsAnsweringPost {
         device_map: ai_function.device_map.clone(),
         image: image.to_string(),
         prompt: prompt.to_string(),
@@ -74,7 +74,7 @@ async fn function_visual_questions_answering(
         if response.status() == StatusCode::CREATED {
             let response = response.text().await?;
 
-            let ai_function_response = AiFunctionResponse {
+            let ai_function_response: AiFunctionResponse = AiFunctionResponse {
                 id: Uuid::new_v4(),
                 progress: 100,
                 status: AiFunctionResponseStatus::Processed,

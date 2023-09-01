@@ -13,32 +13,24 @@ use std::sync::Arc;
 use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Serialize)]
-pub struct FunctionOrbitCameraPost {
+pub struct FunctionTextToImagePost {
     pub device_map: serde_json::Value,
-    pub position: u64,
-    pub tilt: String,
-    pub zoom: String,
-    pub resolution: String,
+    pub value1: String,
+    pub value2: String,
 }
 
-pub async fn handle_function_orbit_camera(
+pub async fn handle_function_text_to_image(
     ai_function: &AiFunction,
     chat_message: &ChatMessage,
     context: Arc<Context>,
     function_args: &Value,
 ) -> Result<Option<ChatMessage>> {
-    let position = function_args["position"]
-        .as_u64()
-        .ok_or(AppError::Casting)?;
-    let tilt = function_args["tilt"].as_str().ok_or(AppError::Casting)?;
-    let zoom = function_args["zoom"].as_str().ok_or(AppError::Casting)?;
-    let resolution = function_args["resolution"]
-        .as_str()
-        .ok_or(AppError::Casting)?;
+    let value1 = function_args["value1"].as_str().ok_or(AppError::Casting)?;
+    let value2 = function_args["value2"].as_str().ok_or(AppError::Casting)?;
     let mut failed_connection_attempts = 0;
 
     loop {
-        let response = function_orbit_camera(ai_function, position, tilt, zoom, resolution).await?;
+        let response = function_text_to_image(ai_function, value1, value2).await?;
         if let Some(response) = response {
             let chat_message: ChatMessage = update_chat_message_with_file_response(
                 ai_function,
@@ -63,24 +55,20 @@ pub async fn handle_function_orbit_camera(
     Ok(None)
 }
 
-async fn function_orbit_camera(
+async fn function_text_to_image(
     ai_function: &AiFunction,
-    position: u64,
-    tilt: &str,
-    zoom: &str,
-    resolution: &str,
+    value1: &str,
+    value2: &str,
 ) -> Result<Option<AiFunctionResponseFile>> {
-    let function_orbit_camera_post = FunctionOrbitCameraPost {
+    let function_text_to_image_post = FunctionTextToImagePost {
         device_map: ai_function.device_map.clone(),
-        position,
-        tilt: tilt.to_string(),
-        zoom: zoom.to_string(),
-        resolution: resolution.to_string(),
+        value1: value1.to_string(),
+        value2: value2.to_string(),
     };
 
     let response = reqwest::Client::new()
         .post(ai_function.base_function_url.clone())
-        .json(&function_orbit_camera_post)
+        .json(&function_text_to_image_post)
         .send()
         .await;
 
