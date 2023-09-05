@@ -2,7 +2,7 @@ use crate::{
     ai,
     ai::AiFunctionResponse,
     context::Context,
-    entity::{AiFunctionSetupStatus, ROLE_ADMIN},
+    entity::{AiFunctionSetupStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
@@ -90,7 +90,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<AiFunctionPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     let ai_function_exists = context
@@ -154,7 +154,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
     context
         .octopus_database
@@ -224,7 +224,7 @@ pub async fn direct_call(
     path = "/api/v1/ai-functions",
     responses(
         (status = 200, description = "List of AI Functions.", body = [AiFunction]),
-        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -234,7 +234,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    require_authenticated_session(extracted_session).await?;
 
     let ai_functions = context.octopus_database.get_ai_functions().await?;
 
@@ -264,7 +264,7 @@ pub async fn operation(
     Path(id): Path<Uuid>,
     Json(input): Json<AiFunctionOperationPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     let ai_function = context
@@ -307,7 +307,7 @@ pub async fn operation(
     path = "/api/v1/ai-functions/:id",
     responses(
         (status = 200, description = "AI Function read.", body = AiFunction),
-        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
     ),
     params(
@@ -322,7 +322,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    require_authenticated_session(extracted_session).await?;
 
     let ai_function = context
         .octopus_database
@@ -357,7 +357,7 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<AiFunctionPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
     context
@@ -409,13 +409,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        app,
-        entity::AiFunction,
-        entity::{User, ROLE_ADMIN, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
-        session::SessionResponse,
-        Args,
-    };
+    use crate::{app, entity::AiFunction, entity::User, session::SessionResponse, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -482,20 +476,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -846,20 +826,6 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
-
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1060,20 +1026,6 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
-
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1244,20 +1196,6 @@ mod tests {
         let company_id = body.company_id;
 
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -1512,20 +1450,6 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
-
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -1636,20 +1560,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -1777,7 +1687,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_403() {
+    async fn list_401() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -1829,20 +1739,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -1942,7 +1838,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
@@ -2016,20 +1912,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -2159,7 +2041,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn read_403() {
+    async fn read_401() {
         let args = Args {
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
@@ -2211,20 +2093,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -2324,7 +2192,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
@@ -2397,20 +2265,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -2522,20 +2376,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -2749,20 +2589,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
@@ -3047,20 +2873,6 @@ mod tests {
         let company_id = body.company_id;
         let user_id = body.id;
 
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
-
         let response = second_router
             .oneshot(
                 Request::builder()
@@ -3207,20 +3019,6 @@ mod tests {
 
         let company_id = body.company_id;
         let user_id = body.id;
-
-        app.context
-            .octopus_database
-            .update_user_roles(
-                user_id,
-                &[
-                    ROLE_ADMIN.to_string(),
-                    ROLE_COMPANY_ADMIN_USER.to_string(),
-                    ROLE_PRIVATE_USER.to_string(),
-                    ROLE_PUBLIC_USER.to_string(),
-                ],
-            )
-            .await
-            .unwrap();
 
         let response = second_router
             .oneshot(
