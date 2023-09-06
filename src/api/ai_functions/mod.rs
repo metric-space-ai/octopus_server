@@ -1,6 +1,6 @@
 use crate::{
     ai,
-    ai::AiFunctionResponse,
+    ai::{AiFunctionResponse, BASE_AI_FUNCTION_URL},
     context::Context,
     entity::{AiFunctionSetupStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
@@ -28,17 +28,11 @@ pub struct AiFunctionDirectCallPost {
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiFunctionPost {
-    pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
-    pub has_file_response: bool,
-    pub health_check_url: String,
-    pub is_available: bool,
     pub is_enabled: bool,
-    pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
-    pub setup_url: String,
 }
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
@@ -58,17 +52,11 @@ pub struct AiFunctionOperationResponse {
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiFunctionPut {
-    pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
-    pub has_file_response: bool,
-    pub health_check_url: String,
-    pub is_available: bool,
     pub is_enabled: bool,
-    pub k8s_configuration: Option<String>,
     pub name: String,
     pub parameters: serde_json::Value,
-    pub setup_url: String,
 }
 
 #[axum_macros::debug_handler]
@@ -100,20 +88,21 @@ pub async fn create(
 
     match ai_function_exists {
         None => {
+            let port = 8000;
+
             let ai_function = context
                 .octopus_database
                 .insert_ai_function(
-                    &input.base_function_url,
                     &input.description,
                     input.device_map,
-                    input.has_file_response,
-                    &input.health_check_url,
-                    input.is_available,
+                    true,
                     input.is_enabled,
-                    input.k8s_configuration,
                     &input.name,
+                    "original_file_name.py",
+                    "original_function_body",
                     input.parameters,
-                    &input.setup_url,
+                    port,
+                    "processed_function_body",
                 )
                 .await?;
 
@@ -194,24 +183,24 @@ pub async fn direct_call(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if !ai_function.is_available
-        || !ai_function.is_enabled
-        || ai_function.setup_status != AiFunctionSetupStatus::Performed
-    {
+    if !ai_function.is_enabled || ai_function.setup_status != AiFunctionSetupStatus::Performed {
         return Err(AppError::Gone);
     }
 
-    let response = reqwest::Client::new()
-        .post(ai_function.base_function_url.clone())
-        .json(&input.parameters)
-        .send()
-        .await;
+    if let Some(port) = ai_function.port {
+        let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+        let response = reqwest::Client::new()
+            .post(url)
+            .json(&input.parameters)
+            .send()
+            .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let ai_function_response: AiFunctionResponse = response.json().await?;
+        if let Ok(response) = response {
+            if response.status() == StatusCode::CREATED {
+                let ai_function_response: AiFunctionResponse = response.json().await?;
 
-            return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
+                return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
+            }
         }
     }
 
@@ -292,7 +281,7 @@ pub async fn operation(
         AiFunctionOperation::Setup => ai_function.setup_execution_time,
     };
 
-    let estimated_operation_end_at = Utc::now() + Duration::seconds(execution_time as i64 + 1);
+    let estimated_operation_end_at = Utc::now() + Duration::seconds(i64::from(execution_time) + 1);
 
     let ai_function_operation_response = AiFunctionOperationResponse {
         estimated_operation_end_at,
@@ -376,21 +365,22 @@ pub async fn update(
         return Err(AppError::Conflict);
     }
 
+    let port = 9000;
+
     let ai_function = context
         .octopus_database
         .update_ai_function(
             id,
-            &input.base_function_url,
             &input.description,
             input.device_map,
-            input.has_file_response,
-            &input.health_check_url,
-            input.is_available,
+            true,
             input.is_enabled,
-            input.k8s_configuration,
             &input.name,
+            "original_file_name.py",
+            "original_function_body",
             input.parameters,
-            &input.setup_url,
+            port,
+            "processed_function_body",
         )
         .await?;
 
@@ -557,7 +547,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -906,7 +895,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -1106,7 +1094,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -1277,7 +1264,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -1641,7 +1627,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -1820,7 +1805,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -1993,7 +1977,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -2017,7 +2000,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -2174,7 +2156,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -2457,7 +2438,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -2511,7 +2491,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -2670,7 +2649,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -3100,7 +3078,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name);
 
@@ -3156,7 +3133,6 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_available, is_available);
         assert_eq!(body.is_enabled, is_enabled);
         assert_eq!(body.name, name2);
 

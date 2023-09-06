@@ -1,5 +1,5 @@
 use crate::{
-    ai::{update_chat_message, AiFunctionResponse},
+    ai::{update_chat_message, AiFunctionResponse, BASE_AI_FUNCTION_URL},
     context::Context,
     entity::{AiFunction, ChatMessage},
     error::AppError,
@@ -69,17 +69,20 @@ async fn function_translator(
         text: text.to_string(),
     };
 
-    let response = reqwest::Client::new()
-        .post(ai_function.base_function_url.clone())
-        .json(&function_translator_post)
-        .send()
-        .await;
+    if let Some(port) = ai_function.port {
+        let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+        let response = reqwest::Client::new()
+            .post(url)
+            .json(&function_translator_post)
+            .send()
+            .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let response: AiFunctionResponse = response.json().await?;
+        if let Ok(response) = response {
+            if response.status() == StatusCode::CREATED {
+                let response: AiFunctionResponse = response.json().await?;
 
-            return Ok(Some(response));
+                return Ok(Some(response));
+            }
         }
     }
 

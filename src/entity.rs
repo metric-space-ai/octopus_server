@@ -21,39 +21,28 @@ pub enum AiFunctionSetupStatus {
     Performed,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
-#[sqlx(type_name = "ai_functions_warmup_statuses", rename_all = "snake_case")]
-pub enum AiFunctionWarmupStatus {
-    NotPerformed,
-    Performed,
-}
-
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiFunction {
     pub id: Uuid,
-    pub base_function_url: String,
     pub description: String,
     pub device_map: serde_json::Value,
     pub has_file_response: bool,
     pub health_check_execution_time: i32,
     pub health_check_status: AiFunctionHealthCheckStatus,
-    pub health_check_url: String,
-    pub is_available: bool,
     pub is_enabled: bool,
-    pub k8s_configuration: Option<String>,
     pub name: String,
+    pub original_file_name: String,
+    pub original_function_body: String,
     pub parameters: serde_json::Value,
+    pub port: Option<i32>,
+    pub processed_function_body: Option<String>,
     pub setup_execution_time: i32,
     pub setup_status: AiFunctionSetupStatus,
-    pub setup_url: String,
-    pub warmup_execution_time: i32,
-    pub warmup_status: AiFunctionWarmupStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,
     pub setup_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
-    pub warmup_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

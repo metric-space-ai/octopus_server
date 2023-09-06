@@ -36,6 +36,7 @@ pub enum AppError {
     PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
     Request(reqwest::Error),
+    Setup,
     Unauthorized,
     UserAlreadyExists,
     Uuid(uuid::Error),
@@ -72,6 +73,7 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
             AppError::Request(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Request error."),
+            AppError::Setup => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error."),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
                 (StatusCode::CONFLICT, "User with such email already exists.")

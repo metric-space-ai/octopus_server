@@ -43,7 +43,7 @@ impl OctopusDatabase {
     pub async fn get_ai_functions(&self) -> Result<Vec<AiFunction>> {
         let ai_functions = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", setup_url, warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
+            r#"SELECT id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_functions
             WHERE deleted_at IS NULL
             ORDER BY name ASC"#
@@ -55,20 +55,17 @@ impl OctopusDatabase {
     }
 
     pub async fn get_ai_functions_for_request(&self) -> Result<Vec<AiFunction>> {
-        let is_available = true;
         let is_enabled = true;
         let setup_status = AiFunctionSetupStatus::Performed;
 
         let ai_functions = sqlx::query_as::<_, AiFunction>(
-            "SELECT id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, setup_url, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
+            "SELECT id, description, device_map, has_file_response, health_check_execution_time, health_check_status, is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_functions
-            WHERE is_available = $1
-            AND is_enabled = $2
-            AND setup_status = $3
+            WHERE is_enabled = $1
+            AND setup_status = $2
             AND deleted_at IS NULL
             ORDER BY name ASC",
         )
-        .bind(is_available)
         .bind(is_enabled)
         .bind(setup_status)
         .fetch_all(&*self.pool)
@@ -417,35 +414,33 @@ impl OctopusDatabase {
     #[allow(clippy::too_many_arguments)]
     pub async fn insert_ai_function(
         &self,
-        base_function_url: &str,
         description: &str,
         device_map: serde_json::Value,
         has_file_response: bool,
-        health_check_url: &str,
-        is_available: bool,
         is_enabled: bool,
-        k8s_configuration: Option<String>,
         name: &str,
+        original_file_name: &str,
+        original_function_body: &str,
         parameters: serde_json::Value,
-        setup_url: &str,
+        port: i32,
+        processed_function_body: &str,
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as!(
             AiFunction,
             r#"INSERT INTO ai_functions
-            (base_function_url, description, device_map, has_file_response, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_url)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            RETURNING id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", setup_url, warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at"#,
-            base_function_url,
+            (description, device_map, has_file_response, is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            RETURNING id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             description,
             device_map,
             has_file_response,
-            health_check_url,
-            is_available,
             is_enabled,
-            k8s_configuration,
             name,
+            original_file_name,
+            original_function_body,
             parameters,
-            setup_url,
+            port,
+            processed_function_body,
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -999,7 +994,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", setup_url, warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
+            r#"SELECT id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_functions
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -1014,7 +1009,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_name(&self, name: &str) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", setup_url, warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at
+            r#"SELECT id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_functions
             WHERE name = $1
             AND deleted_at IS NULL"#,
@@ -1500,36 +1495,34 @@ impl OctopusDatabase {
     pub async fn update_ai_function(
         &self,
         id: Uuid,
-        base_function_url: &str,
         description: &str,
         device_map: serde_json::Value,
         has_file_response: bool,
-        health_check_url: &str,
-        is_available: bool,
         is_enabled: bool,
-        k8s_configuration: Option<String>,
         name: &str,
+        original_file_name: &str,
+        original_function_body: &str,
         parameters: serde_json::Value,
-        setup_url: &str,
+        port: i32,
+        processed_function_body: &str,
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as!(
             AiFunction,
             r#"UPDATE ai_functions
-            SET base_function_url = $2, description = $3, device_map = $4, has_file_response = $5, health_check_url = $6, is_available = $7, is_enabled = $8, k8s_configuration = $9, name = $10, parameters = $11, setup_url = $12, updated_at = current_timestamp(0)
+            SET description = $2, device_map = $3, has_file_response = $4, is_enabled = $5, name = $6, original_file_name = $7, original_function_body = $8, parameters = $9, port = $10, processed_function_body = $11, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status AS "setup_status: _", setup_url, warmup_execution_time, warmup_status AS "warmup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at"#,
+            RETURNING id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS "setup_status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
-            base_function_url,
             description,
             device_map,
             has_file_response,
-            health_check_url,
-            is_available,
             is_enabled,
-            k8s_configuration,
             name,
+            original_file_name,
+            original_function_body,
             parameters,
-            setup_url,
+            port,
+            processed_function_body,
         )
         .fetch_one(&*self.pool)
         .await?;
@@ -1547,7 +1540,7 @@ impl OctopusDatabase {
             "UPDATE ai_functions
             SET setup_execution_time = $2, setup_status = $3, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, base_function_url, description, device_map, has_file_response, health_check_execution_time, health_check_status, health_check_url, is_available, is_enabled, k8s_configuration, name, parameters, setup_execution_time, setup_status, setup_url, warmup_execution_time, warmup_status, created_at, deleted_at, health_check_at, setup_at, updated_at, warmup_at",
+            RETURNING id, description, device_map, has_file_response, health_check_execution_time, health_check_status, is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(setup_execution_time)

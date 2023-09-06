@@ -1,8 +1,8 @@
 use crate::{
     context::Context,
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
-        ChatMessage, ChatMessageStatus,
+        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ChatMessage,
+        ChatMessageStatus,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -29,6 +29,8 @@ mod function_orbit_camera;
 mod function_text_to_image;
 mod function_translator;
 mod function_visual_questions_answering;
+
+pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 
 #[derive(Debug)]
 pub struct AiFunctionResponseFile {
@@ -81,16 +83,11 @@ pub struct SetupResponse {
     pub setup: AiFunctionSetupStatus,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct WarmupResponse {
-    pub warmup: AiFunctionWarmupStatus,
-}
-
 pub async fn function_prepare(
     context: Arc<Context>,
     ai_function: AiFunction,
 ) -> Result<AiFunction> {
-    if ai_function.is_available && ai_function.is_enabled {
+    if ai_function.is_enabled {
         let perform_setup = match ai_function.setup_status {
             AiFunctionSetupStatus::NotPerformed => true,
             AiFunctionSetupStatus::Performed => false,
@@ -112,42 +109,50 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
     let start = Utc::now();
 
     let setup_post = SetupPost { force_setup: false };
-    let response = reqwest::Client::new()
-        .post(&ai_function.setup_url)
-        .json(&setup_post)
-        .send()
-        .await;
 
-    let end = Utc::now();
-    let setup_execution_time = (end - start).num_seconds() as i32;
+    if let Some(port) = ai_function.port {
+        let url = format!("{BASE_AI_FUNCTION_URL}:{port}/setup");
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let response: SetupResponse = response.json().await?;
+        let response: std::result::Result<reqwest::Response, reqwest::Error> =
+            reqwest::Client::new()
+                .post(url)
+                .json(&setup_post)
+                .send()
+                .await;
 
-            let result = context
-                .octopus_database
-                .update_ai_function_setup_status(
-                    ai_function.id,
-                    setup_execution_time,
-                    response.setup,
-                )
-                .await?;
+        let end = Utc::now();
+        let setup_execution_time = (end - start).num_seconds() as i32;
 
-            return Ok(result);
+        if let Ok(response) = response {
+            if response.status() == StatusCode::CREATED {
+                let response: SetupResponse = response.json().await?;
+
+                let result = context
+                    .octopus_database
+                    .update_ai_function_setup_status(
+                        ai_function.id,
+                        setup_execution_time,
+                        response.setup,
+                    )
+                    .await?;
+
+                return Ok(result);
+            }
         }
+
+        let result = context
+            .octopus_database
+            .update_ai_function_setup_status(
+                ai_function.id,
+                setup_execution_time,
+                AiFunctionSetupStatus::NotPerformed,
+            )
+            .await?;
+
+        return Ok(result);
     }
 
-    let result = context
-        .octopus_database
-        .update_ai_function_setup_status(
-            ai_function.id,
-            setup_execution_time,
-            AiFunctionSetupStatus::NotPerformed,
-        )
-        .await?;
-
-    Ok(result)
+    Err(Box::new(AppError::Setup))
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -199,46 +204,51 @@ pub async fn open_ai_request(
             .await?;
 
         if let Some(ai_function) = ai_function {
-            if ai_function.is_available
-                && ai_function.is_enabled
+            if ai_function.is_enabled
                 && ai_function.setup_status == AiFunctionSetupStatus::Performed
             {
                 let function_sensitive_information_post = FunctionSensitiveInformationPost {
                     device_map: ai_function.device_map.clone(),
                     value1: chat_message.message.clone(),
                 };
-                let response = reqwest::Client::new()
-                    .post(ai_function.base_function_url.clone())
-                    .json(&function_sensitive_information_post)
-                    .send()
-                    .await;
 
-                if let Ok(response) = response {
-                    if response.status() == StatusCode::CREATED {
-                        let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
+                if let Some(port) = ai_function.port {
+                    let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+                    let response = reqwest::Client::new()
+                        .post(url)
+                        .json(&function_sensitive_information_post)
+                        .send()
+                        .await;
 
-                        if function_sensitive_information_response.is_sensitive {
-                            let response = match function_sensitive_information_response
-                                .sensitive_part
-                            {
-                                None => String::from("Question contains sensitive part"),
-                                Some(sensitive_part) => {
-                                    format!("Question contains sensitive part: {sensitive_part}")
-                                }
-                            };
+                    if let Ok(response) = response {
+                        if response.status() == StatusCode::CREATED {
+                            let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
-                            let chat_message = context
-                                .octopus_database
-                                .update_chat_message_is_sensitive(
-                                    chat_message.id,
-                                    true,
-                                    ChatMessageStatus::Answered,
-                                    100,
-                                    &response,
-                                )
-                                .await?;
+                            if function_sensitive_information_response.is_sensitive {
+                                let response = match function_sensitive_information_response
+                                    .sensitive_part
+                                {
+                                    None => String::from("Question contains sensitive part"),
+                                    Some(sensitive_part) => {
+                                        format!(
+                                            "Question contains sensitive part: {sensitive_part}"
+                                        )
+                                    }
+                                };
 
-                            return Ok(chat_message);
+                                let chat_message = context
+                                    .octopus_database
+                                    .update_chat_message_is_sensitive(
+                                        chat_message.id,
+                                        true,
+                                        ChatMessageStatus::Answered,
+                                        100,
+                                        &response,
+                                    )
+                                    .await?;
+
+                                return Ok(chat_message);
+                            }
                         }
                     }
                 }
@@ -355,7 +365,7 @@ pub async fn open_ai_request(
 
     match request {
         Err(e) => {
-            let content = format!("OpenAIError: {}", e);
+            let content = format!("OpenAIError: {e}");
             let chat_message = context
                 .octopus_database
                 .update_chat_message(chat_message.id, 100, &content, ChatMessageStatus::Answered)
@@ -368,7 +378,7 @@ pub async fn open_ai_request(
 
             match response_message {
                 Err(e) => {
-                    let content = format!("OpenAIError: {}", e);
+                    let content = format!("OpenAIError: {e}");
                     let chat_message = context
                         .octopus_database
                         .update_chat_message(
@@ -523,13 +533,12 @@ pub async fn update_chat_message(
                 .to_string();
             let content = content.strip_suffix('\'').ok_or(AppError::InternalError)?;
             let data = engine.decode(content)?;
-            let extension = (file_attachement
+            let extension = (*(file_attachement
                 .file_name
                 .split('.')
                 .collect::<Vec<&str>>()
                 .last()
-                .ok_or(AppError::File)?)
-            .to_string();
+                .ok_or(AppError::File)?)).to_string();
 
             let file_name = format!("{}.{}", Uuid::new_v4(), extension);
             let path = format!("{PUBLIC_DIR}/{file_name}");

@@ -1,7 +1,7 @@
 use crate::{
     ai::{
         update_chat_message, AiFunctionResponse, AiFunctionResponseResponse,
-        AiFunctionResponseStatus,
+        AiFunctionResponseStatus, BASE_AI_FUNCTION_URL,
     },
     context::Context,
     entity::{AiFunction, ChatMessage},
@@ -64,25 +64,28 @@ async fn function_visual_questions_answering(
         prompt: prompt.to_string(),
     };
 
-    let response = reqwest::Client::new()
-        .post(ai_function.base_function_url.clone())
-        .json(&function_visual_questions_answering_post)
-        .send()
-        .await;
+    if let Some(port) = ai_function.port {
+        let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+        let response = reqwest::Client::new()
+            .post(url)
+            .json(&function_visual_questions_answering_post)
+            .send()
+            .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let response = response.text().await?;
+        if let Ok(response) = response {
+            if response.status() == StatusCode::CREATED {
+                let response = response.text().await?;
 
-            let ai_function_response: AiFunctionResponse = AiFunctionResponse {
-                id: Uuid::new_v4(),
-                progress: 100,
-                status: AiFunctionResponseStatus::Processed,
-                response: Some(AiFunctionResponseResponse::String(response)),
-                file_attachements: vec![],
-            };
+                let ai_function_response: AiFunctionResponse = AiFunctionResponse {
+                    id: Uuid::new_v4(),
+                    progress: 100,
+                    status: AiFunctionResponseStatus::Processed,
+                    response: Some(AiFunctionResponseResponse::String(response)),
+                    file_attachements: vec![],
+                };
 
-            return Ok(Some(ai_function_response));
+                return Ok(Some(ai_function_response));
+            }
         }
     }
 

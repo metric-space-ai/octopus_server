@@ -1,5 +1,5 @@
 use crate::{
-    ai::{update_chat_message_with_file_response, AiFunctionResponseFile},
+    ai::{update_chat_message_with_file_response, AiFunctionResponseFile, BASE_AI_FUNCTION_URL},
     context::Context,
     entity::{AiFunction, ChatMessage},
     error::AppError,
@@ -78,25 +78,28 @@ async fn function_orbit_camera(
         resolution: resolution.to_string(),
     };
 
-    let response = reqwest::Client::new()
-        .post(ai_function.base_function_url.clone())
-        .json(&function_orbit_camera_post)
-        .send()
-        .await;
+    if let Some(port) = ai_function.port {
+        let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+        let response = reqwest::Client::new()
+            .post(url)
+            .json(&function_orbit_camera_post)
+            .send()
+            .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let headers_map = response.headers();
-            let content_type_header = headers_map.get(CONTENT_TYPE).ok_or(AppError::File)?;
-            let media_type = content_type_header.to_str()?.to_string();
-            let content = response.bytes().await?;
+        if let Ok(response) = response {
+            if response.status() == StatusCode::CREATED {
+                let headers_map = response.headers();
+                let content_type_header = headers_map.get(CONTENT_TYPE).ok_or(AppError::File)?;
+                let media_type = content_type_header.to_str()?.to_string();
+                let content = response.bytes().await?;
 
-            let ai_function_response_file = AiFunctionResponseFile {
-                content,
-                media_type,
-            };
+                let ai_function_response_file = AiFunctionResponseFile {
+                    content,
+                    media_type,
+                };
 
-            return Ok(Some(ai_function_response_file));
+                return Ok(Some(ai_function_response_file));
+            }
         }
     }
 
