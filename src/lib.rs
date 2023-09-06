@@ -12,6 +12,7 @@ mod database;
 mod email_service;
 mod entity;
 mod error;
+mod server_resources;
 mod session;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
@@ -50,6 +51,10 @@ pub async fn run() -> Result<()> {
 
     let addr = SocketAddr::from(([0, 0, 0, 0], app.context.config.port));
     info!("listening on {}", addr);
+
+    let server_resources = server_resources::get().await?;
+    info!("server_resources {:?}", server_resources);
+
     axum::Server::bind(&addr)
         .serve(app.router.into_make_service())
         .await?;

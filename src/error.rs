@@ -33,6 +33,7 @@ pub enum AppError {
     NotFound,
     NotRegistered,
     OpenAI(OpenAIError),
+    Parsing,
     PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
     Request(reqwest::Error),
@@ -68,6 +69,7 @@ impl IntoResponse for AppError {
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
             AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
+            AppError::Parsing => (StatusCode::INTERNAL_SERVER_ERROR, "Parsing error."),
             AppError::PasswordDoesNotMatch => (StatusCode::BAD_REQUEST, "Password does not match."),
             AppError::PasswordHash(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
