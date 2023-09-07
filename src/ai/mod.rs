@@ -291,13 +291,15 @@ pub async fn open_ai_request(
         .await?;
 
     for ai_function in ai_functions {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name(ai_function.name)
-            .description(ai_function.description)
-            .parameters(json!(ai_function.parameters))
-            .build()?;
+        if ai_function.name != "function_sensitive_information" {
+            let function = ChatCompletionFunctionsArgs::default()
+                .name(ai_function.name)
+                .description(ai_function.description)
+                .parameters(json!(ai_function.parameters))
+                .build()?;
 
-        functions.push(function);
+            functions.push(function);
+        }
     }
 
     let trail = serde_json::to_value(&chat_audit_trails)?;
