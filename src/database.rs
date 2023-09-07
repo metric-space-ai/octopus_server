@@ -1707,18 +1707,20 @@ impl OctopusDatabase {
         &self,
         id: Uuid,
         is_sensitive: bool,
+        message: &str,
         status: ChatMessageStatus,
         progress: i32,
         response: &str,
     ) -> Result<ChatMessage> {
         let chat_message = sqlx::query_as::<_, ChatMessage>(
             "UPDATE chat_messages
-            SET is_sensitive = $2, status = $3, progress = $4, response = $5, updated_at = current_timestamp(0)
+            SET is_sensitive = $2, message = $3, status = $4, progress = $5, response = $6, updated_at = current_timestamp(0)
             WHERE id = $1
             RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(is_sensitive)
+        .bind(message)
         .bind(status)
         .bind(progress)
         .bind(response)
