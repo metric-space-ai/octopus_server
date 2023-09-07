@@ -272,7 +272,7 @@ pub async fn latest(
 
     let chat_message = context
         .octopus_database
-        .get_chat_messages_by_chat_id_latest(chat_id)
+        .get_chat_messages_extended_by_chat_id_latest(chat_id)
         .await?;
 
     Ok((StatusCode::OK, Json(chat_message)).into_response())

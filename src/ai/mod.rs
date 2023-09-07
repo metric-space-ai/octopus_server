@@ -225,25 +225,17 @@ pub async fn open_ai_request(
                             let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
                             if function_sensitive_information_response.is_sensitive {
-                                let response = match function_sensitive_information_response
-                                    .sensitive_part
-                                {
-                                    None => String::from("Question contains sensitive part"),
-                                    Some(sensitive_part) => {
-                                        format!(
-                                            "Question contains sensitive part: {sensitive_part}"
-                                        )
-                                    }
-                                };
+                                let message = "The sensitive information filter detected sensitive content in this message. Because of that, we anonymized this message.";
 
                                 let chat_message = context
                                     .octopus_database
                                     .update_chat_message_is_sensitive(
                                         chat_message.id,
                                         true,
+                                        message,
                                         ChatMessageStatus::Answered,
                                         100,
-                                        &response,
+                                        message,
                                     )
                                     .await?;
 
@@ -307,13 +299,15 @@ pub async fn open_ai_request(
         .await?;
 
     for ai_function in ai_functions {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name(ai_function.name)
-            .description(ai_function.description)
-            .parameters(json!(ai_function.parameters))
-            .build()?;
+        if ai_function.name != "function_sensitive_information" {
+            let function = ChatCompletionFunctionsArgs::default()
+                .name(ai_function.name)
+                .description(ai_function.description)
+                .parameters(json!(ai_function.parameters))
+                .build()?;
 
-        functions.push(function);
+            functions.push(function);
+        }
     }
 
     let trail = serde_json::to_value(&chat_audit_trails)?;
