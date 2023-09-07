@@ -224,6 +224,34 @@ impl OctopusDatabase {
         Ok(chat_messages_extended)
     }
 
+    pub async fn get_chat_messages_extended_by_chat_id_latest(
+        &self,
+        chat_id: Uuid,
+    ) -> Result<Option<ChatMessageExtended>> {
+        let chat_message = self.get_chat_messages_by_chat_id_latest(chat_id).await?;
+
+        match chat_message {
+            None => Ok(None),
+            Some(chat_message) => {
+                let chat_message_files = self
+                    .get_chat_message_files_by_chat_message_id(chat_message.id)
+                    .await?;
+                let chat_message_pictures = self
+                    .get_chat_message_pictures_by_chat_message_ids(&[chat_message.id])
+                    .await?;
+                let chat_message_extended = self
+                    .map_to_chat_message_extended(
+                        &chat_message,
+                        chat_message_files,
+                        chat_message_pictures,
+                    )
+                    .await?;
+
+                Ok(Some(chat_message_extended))
+            }
+        }
+    }
+
     pub async fn get_chat_messages_by_chat_id_and_status(
         &self,
         chat_id: Uuid,
