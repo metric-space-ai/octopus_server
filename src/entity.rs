@@ -6,38 +6,70 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(
-    type_name = "ai_functions_health_check_statuses",
+    type_name = "ai_functions_request_content_types",
     rename_all = "snake_case"
 )]
-pub enum AiFunctionHealthCheckStatus {
-    NotWorking,
-    Ok,
+pub enum AiFunctionRequestContentType {
+    ApplicationJson,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
-#[sqlx(type_name = "ai_functions_setup_statuses", rename_all = "snake_case")]
-pub enum AiFunctionSetupStatus {
-    NotPerformed,
-    Performed,
+#[sqlx(
+    type_name = "ai_functions_response_content_types",
+    rename_all = "snake_case"
+)]
+pub enum AiFunctionResponseContentType {
+    ApplicationJson,
+    ImageJpeg,
+    ImagePng,
+    TextPlain,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiFunction {
     pub id: Uuid,
+    pub ai_service_id: Uuid,
     pub description: String,
-    pub device_map: serde_json::Value,
-    pub has_file_response: bool,
-    pub health_check_execution_time: i32,
-    pub health_check_status: AiFunctionHealthCheckStatus,
     pub is_enabled: bool,
     pub name: String,
+    pub parameters: serde_json::Value,
+    pub request_content_type: AiFunctionRequestContentType,
+    pub response_content_type: AiFunctionResponseContentType,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(
+    type_name = "ai_services_health_check_statuses",
+    rename_all = "snake_case"
+)]
+pub enum AiServiceHealthCheckStatus {
+    NotWorking,
+    Ok,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_services_setup_statuses", rename_all = "snake_case")]
+pub enum AiServiceSetupStatus {
+    NotPerformed,
+    Performed,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct AiService {
+    pub id: Uuid,
+    pub device_map: serde_json::Value,
+    pub health_check_execution_time: i32,
+    pub health_check_status: AiServiceHealthCheckStatus,
+    pub is_enabled: bool,
     pub original_file_name: String,
     pub original_function_body: String,
-    pub parameters: serde_json::Value,
     pub port: Option<i32>,
     pub processed_function_body: Option<String>,
     pub setup_execution_time: i32,
-    pub setup_status: AiFunctionSetupStatus,
+    pub setup_status: AiServiceSetupStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,

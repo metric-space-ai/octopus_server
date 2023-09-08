@@ -4,9 +4,10 @@ use crate::{
         AiFunctionResponseStatus,
     },
     api::{
-        ai_functions::{
-            AiFunctionDirectCallPost, AiFunctionOperation, AiFunctionOperationPost,
-            AiFunctionOperationResponse, AiFunctionPost, AiFunctionPut,
+        ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
+        ai_services::{
+            AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse, AiServicePost,
+            AiServicePut,
         },
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
@@ -23,10 +24,11 @@ use crate::{
     },
     context::Context,
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, Chat, ChatActivity,
-        ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
-        ChatMessageStatus, ChatPicture, ExamplePrompt, ExamplePromptCategory, PasswordResetToken,
-        Profile, User, Workspace, WorkspacesType,
+        AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, Chat, ChatActivity, ChatAudit,
+        ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
+        ChatPicture, ExamplePrompt, ExamplePromptCategory, PasswordResetToken, Profile, User,
+        Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -52,6 +54,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod ai_functions;
+mod ai_services;
 mod auth;
 mod chat_activities;
 mod chat_audits;
@@ -75,18 +78,22 @@ pub async fn router(context: Arc<Context>) -> Router {
         components(
             schemas(
                 AiFunction,
-                AiFunctionDirectCallPost,
-                AiFunctionHealthCheckStatus,
-                AiFunctionOperation,
-                AiFunctionOperationPost,
-                AiFunctionOperationResponse,
-                AiFunctionPost,
                 AiFunctionPut,
+                AiFunctionRequestContentType,
                 AiFunctionResponse,
+                AiFunctionResponseContentType,
                 AiFunctionResponseFileAttachement,
                 AiFunctionResponseResponse,
                 AiFunctionResponseStatus,
-                AiFunctionSetupStatus,
+                AiFunctionDirectCallPost,
+                AiService,
+                AiServiceHealthCheckStatus,
+                AiServiceOperation,
+                AiServiceOperationPost,
+                AiServiceOperationResponse,
+                AiServicePost,
+                AiServicePut,
+                AiServiceSetupStatus,
                 ChangePasswordPut,
                 Chat,
                 ChatActivity,
@@ -130,13 +137,17 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         modifiers(&SecurityAddon),
         paths(
-            ai_functions::create,
             ai_functions::delete,
             ai_functions::direct_call,
             ai_functions::list,
-            ai_functions::operation,
             ai_functions::read,
             ai_functions::update,
+            ai_services::create,
+            ai_services::delete,
+            ai_services::list,
+            ai_services::operation,
+            ai_services::read,
+            ai_services::update,
             change_password::change_password,
             chat_activities::create,
             chat_activities::list,
@@ -199,6 +210,7 @@ pub async fn router(context: Arc<Context>) -> Router {
         ),
         tags(
             (name = "ai_functions", description = "AI functions API."),
+            (name = "ai_services", description = "AI services API."),
             (name = "change_password", description = "Change password API."),
             (name = "chats", description = "Chats API."),
             (name = "chat_activities", description = "Chat activities API."),
@@ -311,19 +323,29 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(chats::delete).get(chats::read).put(chats::update),
         )
         .route(
-            "/api/v1/ai-functions",
-            get(ai_functions::list).post(ai_functions::create),
-        )
-        .route(
             "/api/v1/ai-functions/direct-call",
             post(ai_functions::direct_call),
         )
         .route(
-            "/api/v1/ai-functions/:id",
+            "/api/v1/ai-functions/:ai_service_id",
+            get(ai_functions::list),
+        )
+        .route(
+            "/api/v1/ai-functions/:ai_service_id/:ai_function_id",
             delete(ai_functions::delete)
                 .get(ai_functions::read)
-                .post(ai_functions::operation)
                 .put(ai_functions::update),
+        )
+        .route(
+            "/api/v1/ai-services",
+            get(ai_services::list).post(ai_services::create),
+        )
+        .route(
+            "/api/v1/ai-services/:id",
+            delete(ai_services::delete)
+                .get(ai_services::read)
+                .post(ai_services::operation)
+                .put(ai_services::update),
         )
         .route(
             "/api/v1/example-prompts",

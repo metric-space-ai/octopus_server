@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, description, device_map, has_file_response, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, name, original_file_name, original_function_body, parameters, port, processed_function_body, setup_execution_time, setup_status AS \"setup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_functions\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, port, processed_function_body, setup_execution_time, setup_status AS \"setup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_services\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -10,30 +10,20 @@
       },
       {
         "ordinal": 1,
-        "name": "description",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 2,
         "name": "device_map",
         "type_info": "Json"
       },
       {
-        "ordinal": 3,
-        "name": "has_file_response",
-        "type_info": "Bool"
-      },
-      {
-        "ordinal": 4,
+        "ordinal": 2,
         "name": "health_check_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 5,
+        "ordinal": 3,
         "name": "health_check_status: _",
         "type_info": {
           "Custom": {
-            "name": "ai_functions_health_check_statuses",
+            "name": "ai_services_health_check_statuses",
             "kind": {
               "Enum": [
                 "not_working",
@@ -44,51 +34,41 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 4,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
-        "name": "name",
-        "type_info": "Varchar"
-      },
-      {
-        "ordinal": 8,
+        "ordinal": 5,
         "name": "original_file_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 9,
+        "ordinal": 6,
         "name": "original_function_body",
         "type_info": "Text"
       },
       {
-        "ordinal": 10,
-        "name": "parameters",
-        "type_info": "Json"
-      },
-      {
-        "ordinal": 11,
+        "ordinal": 7,
         "name": "port",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 8,
         "name": "processed_function_body",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 9,
         "name": "setup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 10,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
-            "name": "ai_functions_setup_statuses",
+            "name": "ai_services_setup_statuses",
             "kind": {
               "Enum": [
                 "not_performed",
@@ -99,27 +79,27 @@
         }
       },
       {
-        "ordinal": 15,
+        "ordinal": 11,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 16,
+        "ordinal": 12,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 17,
+        "ordinal": 13,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 14,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -138,10 +118,6 @@
       false,
       false,
       false,
-      false,
-      false,
-      false,
-      true,
       true,
       false,
       false,
@@ -152,5 +128,5 @@
       false
     ]
   },
-  "hash": "b1b76677a655bb3376c43ea976aa66705ba76897dabde0d565b84517a43e0576"
+  "hash": "e82388c35808c20ecacffbc5b8d0ebe7ae66b8d716eca01716e144645d3b856b"
 }

@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{
-        AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, ChatMessage,
+        AiFunction, AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, ChatMessage,
         ChatMessageStatus,
     },
     error::AppError,
@@ -23,13 +23,13 @@ use serde_json::json;
 use std::{fs::File, io::Write, sync::Arc};
 use utoipa::ToSchema;
 use uuid::Uuid;
-
+/*
 mod function_foo_sync;
 mod function_orbit_camera;
 mod function_text_to_image;
 mod function_translator;
 mod function_visual_questions_answering;
-
+*/
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 
 #[derive(Debug)]
@@ -70,7 +70,7 @@ pub struct AiFunctionResponse {
 
 #[derive(Debug, Deserialize)]
 pub struct HealthCheckResponse {
-    pub status: AiFunctionHealthCheckStatus,
+    pub status: AiServiceHealthCheckStatus,
 }
 
 #[derive(Debug, Serialize)]
@@ -80,37 +80,34 @@ pub struct SetupPost {
 
 #[derive(Debug, Deserialize)]
 pub struct SetupResponse {
-    pub setup: AiFunctionSetupStatus,
+    pub setup: AiServiceSetupStatus,
 }
 
-pub async fn function_prepare(
-    context: Arc<Context>,
-    ai_function: AiFunction,
-) -> Result<AiFunction> {
-    if ai_function.is_enabled {
-        let perform_setup = match ai_function.setup_status {
-            AiFunctionSetupStatus::NotPerformed => true,
-            AiFunctionSetupStatus::Performed => false,
+pub async fn service_prepare(context: Arc<Context>, ai_service: AiService) -> Result<AiService> {
+    if ai_service.is_enabled {
+        let perform_setup = match ai_service.setup_status {
+            AiServiceSetupStatus::NotPerformed => true,
+            AiServiceSetupStatus::Performed => false,
         };
 
-        let ai_function = if perform_setup {
-            function_setup(context.clone(), &ai_function).await?
+        let ai_service = if perform_setup {
+            service_setup(context.clone(), &ai_service).await?
         } else {
-            ai_function
+            ai_service
         };
 
-        return Ok(ai_function);
+        return Ok(ai_service);
     }
 
-    Ok(ai_function)
+    Ok(ai_service)
 }
 
-pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> Result<AiFunction> {
+pub async fn service_setup(context: Arc<Context>, ai_service: &AiService) -> Result<AiService> {
     let start = Utc::now();
 
     let setup_post = SetupPost { force_setup: false };
 
-    if let Some(port) = ai_function.port {
+    if let Some(port) = ai_service.port {
         let url = format!("{BASE_AI_FUNCTION_URL}:{port}/setup");
 
         let response: std::result::Result<reqwest::Response, reqwest::Error> =
@@ -129,8 +126,8 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
 
                 let result = context
                     .octopus_database
-                    .update_ai_function_setup_status(
-                        ai_function.id,
+                    .update_ai_service_setup_status(
+                        ai_service.id,
                         setup_execution_time,
                         response.setup,
                     )
@@ -142,10 +139,10 @@ pub async fn function_setup(context: Arc<Context>, ai_function: &AiFunction) -> 
 
         let result = context
             .octopus_database
-            .update_ai_function_setup_status(
-                ai_function.id,
+            .update_ai_service_setup_status(
+                ai_service.id,
                 setup_execution_time,
-                AiFunctionSetupStatus::NotPerformed,
+                AiServiceSetupStatus::NotPerformed,
             )
             .await?;
 
@@ -198,6 +195,7 @@ pub async fn open_ai_request(
     }
 
     if !chat_message.bypass_sensitive_information_filter {
+        /*
         let ai_function = context
             .octopus_database
             .try_get_ai_function_by_name("function_sensitive_information")
@@ -246,6 +244,7 @@ pub async fn open_ai_request(
                 }
             }
         }
+        */
     }
 
     let mut chat_audit_trails = vec![];
@@ -292,7 +291,7 @@ pub async fn open_ai_request(
     }
 
     let mut functions = vec![];
-
+    /*
     let ai_functions = context
         .octopus_database
         .get_ai_functions_for_request()
@@ -309,6 +308,7 @@ pub async fn open_ai_request(
             functions.push(function);
         }
     }
+    */
 
     let trail = serde_json::to_value(&chat_audit_trails)?;
 
@@ -405,7 +405,7 @@ pub async fn open_ai_request(
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
-
+                            /*
                             if let Some(function_call) = response_message.function_call {
                                 let function_name = function_call.name;
                                 let function_args: serde_json::Value =
@@ -460,7 +460,7 @@ pub async fn open_ai_request(
                                     }
                                 }
                             }
-
+                            */
                             if let Some(content) = response_message.content {
                                 let chat_message = context
                                     .octopus_database
