@@ -6,8 +6,7 @@ use crate::{
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
         ai_services::{
-            AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse, AiServicePost,
-            AiServicePut,
+            AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse, AiServicePut,
         },
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
@@ -91,7 +90,6 @@ pub async fn router(context: Arc<Context>) -> Router {
                 AiServiceOperation,
                 AiServiceOperationPost,
                 AiServiceOperationResponse,
-                AiServicePost,
                 AiServicePut,
                 AiServiceSetupStatus,
                 ChangePasswordPut,
@@ -339,6 +337,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/ai-services",
             get(ai_services::list).post(ai_services::create),
+        )
+        .route(
+            "/api/v1/ai-services/:id/configuration",
+            put(ai_services::configuration),
         )
         .route(
             "/api/v1/ai-services/:id",

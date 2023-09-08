@@ -8,7 +8,7 @@ use axum::{
 use http::header::ToStrError;
 use serde::Serialize;
 use serde_json::json;
-use std::error::Error;
+use std::{error::Error, string::FromUtf8Error};
 use strum_macros::Display;
 use utoipa::ToSchema;
 use validator::ValidationErrors;
@@ -37,9 +37,9 @@ pub enum AppError {
     PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
     Request(reqwest::Error),
-    Setup,
     Unauthorized,
     UserAlreadyExists,
+    Utf8(FromUtf8Error),
     Uuid(uuid::Error),
     Validation(ValidationErrors),
 }
@@ -75,11 +75,11 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
             AppError::Request(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Request error."),
-            AppError::Setup => (StatusCode::INTERNAL_SERVER_ERROR, "Setup error."),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
                 (StatusCode::CONFLICT, "User with such email already exists.")
             }
+            AppError::Utf8(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Utf8 error."),
             AppError::Uuid(_error) => (StatusCode::BAD_REQUEST, "Invalid API key."),
             AppError::Validation(_error) => (StatusCode::BAD_REQUEST, "Validation problem."),
         };
@@ -101,6 +101,12 @@ impl From<argon2::password_hash::Error> for AppError {
 impl From<Box<dyn Error + Send + Sync>> for AppError {
     fn from(inner: Box<dyn Error + Send + Sync>) -> Self {
         AppError::Generic(inner)
+    }
+}
+
+impl From<FromUtf8Error> for AppError {
+    fn from(inner: FromUtf8Error) -> Self {
+        AppError::Utf8(inner)
     }
 }
 

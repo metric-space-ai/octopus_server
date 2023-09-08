@@ -37,4 +37,5 @@ COPY --from=builder /octopus_server/migrations ./migrations
 COPY --from=builder /octopus_server/docker-entrypoint.sh ./
 RUN chmod +x docker-entrypoint.sh
 RUN mkdir ./public/
+RUN mkdir ./services/
 ENTRYPOINT ["./docker-entrypoint.sh"]

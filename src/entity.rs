@@ -1,6 +1,8 @@
+use crate::error::AppError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
+use std::str::FromStr;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -13,7 +15,19 @@ pub enum AiFunctionRequestContentType {
     ApplicationJson,
 }
 
+impl FromStr for AiFunctionRequestContentType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "application_json" => Ok(AiFunctionRequestContentType::ApplicationJson),
+            _ => Ok(AiFunctionRequestContentType::ApplicationJson),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[serde(rename_all = "snake_case")]
 #[sqlx(
     type_name = "ai_functions_response_content_types",
     rename_all = "snake_case"
@@ -23,6 +37,20 @@ pub enum AiFunctionResponseContentType {
     ImageJpeg,
     ImagePng,
     TextPlain,
+}
+
+impl FromStr for AiFunctionResponseContentType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "application_json" => Ok(AiFunctionResponseContentType::ApplicationJson),
+            "image_jpeg" => Ok(AiFunctionResponseContentType::ImageJpeg),
+            "image_png" => Ok(AiFunctionResponseContentType::ImagePng),
+            "text_plain" => Ok(AiFunctionResponseContentType::TextPlain),
+            _ => Ok(AiFunctionResponseContentType::ApplicationJson),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
@@ -57,19 +85,34 @@ pub enum AiServiceSetupStatus {
     Performed,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_services_statuses", rename_all = "snake_case")]
+pub enum AiServiceStatus {
+    Configuration,
+    Error,
+    Initial,
+    MaliciousCodeDetected,
+    ParsingFinished,
+    ParsingStarted,
+    Running,
+    Setup,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiService {
     pub id: Uuid,
-    pub device_map: serde_json::Value,
+    pub device_map: Option<serde_json::Value>,
     pub health_check_execution_time: i32,
     pub health_check_status: AiServiceHealthCheckStatus,
     pub is_enabled: bool,
     pub original_file_name: String,
     pub original_function_body: String,
-    pub port: Option<i32>,
+    pub port: i32,
     pub processed_function_body: Option<String>,
+    pub progress: i32,
     pub setup_execution_time: i32,
     pub setup_status: AiServiceSetupStatus,
+    pub status: AiServiceStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,
@@ -242,6 +285,11 @@ pub struct PasswordResetToken {
     pub deleted_at: Option<DateTime<Utc>>,
     pub expires_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
+pub struct Port {
+    pub max: Option<i32>,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

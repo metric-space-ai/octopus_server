@@ -12,6 +12,7 @@ mod database;
 mod email_service;
 mod entity;
 mod error;
+mod parser;
 mod server_resources;
 mod session;
 

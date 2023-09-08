@@ -119,20 +119,21 @@ pub async fn direct_call(
         return Err(AppError::Gone);
     }
 
-    if let Some(port) = ai_service.port {
-        let url = format!("{BASE_AI_FUNCTION_URL}:{port}/{}", ai_function.name);
-        let response = reqwest::Client::new()
-            .post(url)
-            .json(&input.parameters)
-            .send()
-            .await;
+    let url = format!(
+        "{BASE_AI_FUNCTION_URL}:{}/{}",
+        ai_service.port, ai_function.name
+    );
+    let response = reqwest::Client::new()
+        .post(url)
+        .json(&input.parameters)
+        .send()
+        .await;
 
-        if let Ok(response) = response {
-            if response.status() == StatusCode::CREATED {
-                let ai_function_response: AiFunctionResponse = response.json().await?;
+    if let Ok(response) = response {
+        if response.status() == StatusCode::CREATED {
+            let ai_function_response: AiFunctionResponse = response.json().await?;
 
-                return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
-            }
+            return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
         }
     }
 
@@ -252,7 +253,7 @@ pub async fn update(
 
     let ai_function = context
         .octopus_database
-        .update_ai_function(ai_function.id, input.is_enabled)
+        .update_ai_function_is_enabled(ai_function.id, input.is_enabled)
         .await?;
 
     Ok((StatusCode::OK, Json(ai_function)).into_response())

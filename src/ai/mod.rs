@@ -114,49 +114,40 @@ pub async fn service_setup(context: Arc<Context>, ai_service: &AiService) -> Res
 
     let setup_post = SetupPost { force_setup: false };
 
-    if let Some(port) = ai_service.port {
-        let url = format!("{BASE_AI_FUNCTION_URL}:{port}/setup");
+    let url = format!("{BASE_AI_FUNCTION_URL}:{}/setup", ai_service.port);
 
-        let response: std::result::Result<reqwest::Response, reqwest::Error> =
-            reqwest::Client::new()
-                .post(url)
-                .json(&setup_post)
-                .send()
-                .await;
+    let response: std::result::Result<reqwest::Response, reqwest::Error> = reqwest::Client::new()
+        .post(url)
+        .json(&setup_post)
+        .send()
+        .await;
 
-        let end = Utc::now();
-        let setup_execution_time = (end - start).num_seconds() as i32;
+    let end = Utc::now();
+    let setup_execution_time = (end - start).num_seconds() as i32;
 
-        if let Ok(response) = response {
-            if response.status() == StatusCode::CREATED {
-                let response: SetupResponse = response.json().await?;
+    if let Ok(response) = response {
+        if response.status() == StatusCode::CREATED {
+            let response: SetupResponse = response.json().await?;
 
-                let result = context
-                    .octopus_database
-                    .update_ai_service_setup_status(
-                        ai_service.id,
-                        setup_execution_time,
-                        response.setup,
-                    )
-                    .await?;
+            let result = context
+                .octopus_database
+                .update_ai_service_setup_status(ai_service.id, setup_execution_time, response.setup)
+                .await?;
 
-                return Ok(result);
-            }
+            return Ok(result);
         }
-
-        let result = context
-            .octopus_database
-            .update_ai_service_setup_status(
-                ai_service.id,
-                setup_execution_time,
-                AiServiceSetupStatus::NotPerformed,
-            )
-            .await?;
-
-        return Ok(result);
     }
 
-    Err(Box::new(AppError::Setup))
+    let result = context
+        .octopus_database
+        .update_ai_service_setup_status(
+            ai_service.id,
+            setup_execution_time,
+            AiServiceSetupStatus::NotPerformed,
+        )
+        .await?;
+
+    Ok(result)
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -177,6 +168,62 @@ pub struct FunctionSensitiveInformationPost {
 pub struct FunctionSensitiveInformationResponse {
     pub is_sensitive: bool,
     pub sensitive_part: Option<String>,
+}
+
+pub async fn open_ai_code_check(code: &str) -> Result<bool> {
+    let client = Client::new();
+
+    let mut messages = vec![];
+
+    let content = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {}", code);
+
+    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+        .role(Role::User)
+        .content(content)
+        .build()?;
+
+    messages.push(chat_completion_request_message);
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model("gpt-4-0613")
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::info!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = client.chat().create(request).await;
+
+            match response_message {
+                Err(e) => {
+                    tracing::info!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.get(0);
+
+                    match response_message {
+                        None => {
+                            tracing::info!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(content) = response_message.content {
+                                if content == "YES" {
+                                    return Ok(true);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(false)
 }
 
 pub async fn open_ai_request(

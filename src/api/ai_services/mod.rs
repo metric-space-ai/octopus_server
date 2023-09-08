@@ -1,12 +1,13 @@
 use crate::{
     ai,
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
+    entity::{AiServiceStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
+    parser,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -18,18 +19,6 @@ use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct AiFunctionDirectCallPost {
-    pub name: String,
-    pub parameters: serde_json::Value,
-}
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct AiServicePost {
-    pub device_map: serde_json::Value,
-    pub is_enabled: bool,
-}
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
 pub enum AiServiceOperation {
@@ -52,6 +41,11 @@ pub struct AiServicePut {
     pub is_enabled: bool,
 }
 
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct AiServiceConfigurationPut {
+    pub device_map: serde_json::Value,
+}
+
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
@@ -59,6 +53,7 @@ pub struct AiServicePut {
     request_body = AiServicePost,
     responses(
         (status = 201, description = "AI Service created.", body = AiService),
+        (status = 400, description = "Bad request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -68,37 +63,94 @@ pub struct AiServicePut {
 pub async fn create(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Json(input): Json<AiServicePost>,
+    mut multipart: Multipart,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    while let Some(field) = multipart.next_field().await? {
+        let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
+        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+
+        if content_type == "application/octet-stream" {
+            let data = field.bytes().await?.clone().to_vec();
+
+            let port = context.octopus_database.get_ai_services_max_port().await?;
+
+            let port = port.max.unwrap_or(9999) + 1;
+            let original_function_body = String::from_utf8(data)?;
+
+            let ai_service = context
+                .octopus_database
+                .insert_ai_service(&original_file_name, &original_function_body, port)
+                .await?;
+
+            let cloned_context = context.clone();
+            let cloned_ai_service = ai_service.clone();
+            tokio::spawn(async move {
+                let ai_service =
+                    parser::ai_service_malicious_code_check(cloned_ai_service, cloned_context)
+                        .await;
+
+                if let Err(e) = ai_service {
+                    debug!("Error: {:?}", e);
+                }
+            });
+
+            return Ok((StatusCode::CREATED, Json(ai_service)).into_response());
+        }
+    }
+
+    Err(AppError::BadRequest)
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/ai-services/:id/configuration",
+    request_body = AiServiceConfigurationPut,
+    responses(
+        (status = 200, description = "AI Service configured.", body = AiService),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn configuration(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+    Json(input): Json<AiServiceConfigurationPut>,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
-    let port = 8000;
+    context
+        .octopus_database
+        .try_get_ai_service_id_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
 
     let ai_service = context
         .octopus_database
-        .insert_ai_service(
-            input.device_map,
-            input.is_enabled,
-            "original_file_name.py",
-            "original_function_body",
-            port,
-            "processed_function_body",
-        )
+        .update_ai_service_device_map(id, input.device_map, AiServiceStatus::ParsingStarted)
         .await?;
-    /*
+
     let cloned_context = context.clone();
     let cloned_ai_service = ai_service.clone();
     tokio::spawn(async move {
-        let ai_service = ai::service_prepare(cloned_context, cloned_ai_service).await;
+        let ai_service = parser::ai_service_parsing(cloned_ai_service, cloned_context).await;
 
         if let Err(e) = ai_service {
             debug!("Error: {:?}", e);
         }
     });
-    */
 
-    Ok((StatusCode::CREATED, Json(ai_service)).into_response())
+    Ok((StatusCode::OK, Json(ai_service)).into_response())
 }
 
 #[axum_macros::debug_handler]

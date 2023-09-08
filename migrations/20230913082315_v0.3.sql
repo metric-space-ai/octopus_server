@@ -9,10 +9,11 @@ DROP TYPE ai_functions_warmup_statuses;
 
 CREATE TYPE ai_services_health_check_statuses AS ENUM('not_working', 'ok');
 CREATE TYPE ai_services_setup_statuses AS ENUM('not_performed', 'performed');
+CREATE TYPE ai_services_statuses AS ENUM('configuration', 'error', 'initial', 'malicious_code_detected', 'parsing_finished', 'parsing_started', 'running', 'setup');
 
 CREATE TABLE ai_services(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    device_map JSON NOT NULL,
+    device_map JSON,
     health_check_execution_time INT NOT NULL DEFAULT 0,
     health_check_status ai_services_health_check_statuses NOT NULL DEFAULT 'not_working',
     is_enabled BOOLEAN NOT NULL DEFAULT false,
@@ -20,8 +21,10 @@ CREATE TABLE ai_services(
     original_function_body TEXT NOT NULL,
     port INT NOT NULL,
     processed_function_body TEXT,
+    progress INT NOT NULL DEFAULT 0,
     setup_execution_time INT NOT NULL DEFAULT 0,
     setup_status ai_services_setup_statuses NOT NULL DEFAULT 'not_performed',
+    status ai_services_statuses NOT NULL DEFAULT 'initial',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
     deleted_at TIMESTAMP WITH TIME ZONE,
     health_check_at TIMESTAMP WITH TIME ZONE,
