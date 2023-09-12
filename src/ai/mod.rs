@@ -5,7 +5,7 @@ use crate::{
         ChatMessage, ChatMessageStatus,
     },
     error::AppError,
-    Result, PUBLIC_DIR,
+    Result, DOMAIN, PUBLIC_DIR,
 };
 use async_openai::{
     types::{
@@ -244,7 +244,7 @@ pub async fn open_ai_request(
 
     let chat_messages = context
         .octopus_database
-        .get_chat_messages_by_chat_id(chat_message.chat_id)
+        .get_chat_messages_extended_by_chat_id(chat_message.chat_id)
         .await?;
 
     for chat_message_tmp in chat_messages {
@@ -279,6 +279,29 @@ pub async fn open_ai_request(
                     created_at: chat_message_tmp.created_at,
                 };
                 chat_audit_trails.push(chat_audit_trail);
+            } else if !chat_message_tmp.chat_message_files.is_empty() {
+                let mut urls = String::new();
+                for chat_message_file in chat_message_tmp.chat_message_files {
+                    urls.push_str(&format!("{DOMAIN}{}", chat_message_file.file_name));
+                }
+
+                if !urls.is_empty() {
+                    let chat_completion_request_message =
+                        ChatCompletionRequestMessageArgs::default()
+                            .role(Role::Assistant)
+                            .content(urls.clone())
+                            .build()?;
+
+                    messages.push(chat_completion_request_message);
+
+                    let chat_audit_trail = ChatAuditTrail {
+                        id: chat_message_tmp.id,
+                        content: urls,
+                        role: "assistant".to_string(),
+                        created_at: chat_message_tmp.created_at,
+                    };
+                    chat_audit_trails.push(chat_audit_trail);
+                };
             }
         }
     }
