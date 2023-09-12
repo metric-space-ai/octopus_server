@@ -24,6 +24,7 @@ use std::{fs::File, io::Write, sync::Arc};
 use utoipa::ToSchema;
 use uuid::Uuid;
 /*
+mod function_find_part;
 mod function_foo_sync;
 mod function_orbit_camera;
 mod function_text_to_image;
@@ -223,17 +224,20 @@ pub async fn open_ai_request(
                             let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
                             if function_sensitive_information_response.is_sensitive {
-                                let message = "The sensitive information filter detected sensitive content in this message. Because of that, we anonymized this message.";
+                                let message = format!(
+                                    "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
+                                    chat_message.message
+                                );
 
                                 let chat_message = context
                                     .octopus_database
                                     .update_chat_message_is_sensitive(
                                         chat_message.id,
                                         true,
-                                        message,
+                                        &message,
                                         ChatMessageStatus::Answered,
                                         100,
-                                        message,
+                                        &message,
                                     )
                                     .await?;
 
@@ -439,7 +443,15 @@ pub async fn open_ai_request(
                                     .await?;
 
                                 if let Some(ai_function) = ai_function {
-                                    if function_name == "function_foo_sync" {
+                                    if function_name == "function_find_part" {
+                                        function_find_part::handle_function_find_part(
+                                            &ai_function,
+                                            &chat_message,
+                                            context.clone(),
+                                            &function_args,
+                                        )
+                                        .await?;
+                                    } else if function_name == "function_foo_sync" {
                                         function_foo_sync::handle_function_foo_sync(
                                             &ai_function,
                                             &chat_message,
