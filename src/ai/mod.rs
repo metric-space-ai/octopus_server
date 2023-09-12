@@ -218,17 +218,20 @@ pub async fn open_ai_request(
                         let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
                         if function_sensitive_information_response.is_sensitive {
-                            let message = "The sensitive information filter detected sensitive content in this message. Because of that, we anonymized this message.";
+                            let message = format!(
+                                "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
+                                chat_message.message
+                            );
 
                             let chat_message = context
                                 .octopus_database
                                 .update_chat_message_is_sensitive(
                                     chat_message.id,
                                     true,
-                                    message,
+                                    &message,
                                     ChatMessageStatus::Answered,
                                     100,
-                                    message,
+                                    &message,
                                 )
                                 .await?;
 
