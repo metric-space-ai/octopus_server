@@ -177,7 +177,7 @@ impl OctopusDatabase {
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
@@ -196,7 +196,7 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
@@ -274,7 +274,7 @@ impl OctopusDatabase {
         status: ChatMessageStatus,
     ) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as::<_, ChatMessage>(
-            "SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at
+            "SELECT id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND status = $2
@@ -564,7 +564,7 @@ impl OctopusDatabase {
             r#"INSERT INTO chat_messages
             (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)
             VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at"#,
             chat_id,
             user_id,
             bypass_sensitive_information_filter,
@@ -1182,7 +1182,7 @@ impl OctopusDatabase {
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -1254,6 +1254,7 @@ impl OctopusDatabase {
             ai_function_id: chat_message.ai_function_id,
             chat_id: chat_message.chat_id,
             user_id: chat_message.user_id,
+            ai_function_call: chat_message.ai_function_call.clone(),
             bad_reply_comment: chat_message.bad_reply_comment.clone(),
             bad_reply_is_harmful: chat_message.bad_reply_is_harmful,
             bad_reply_is_not_helpful: chat_message.bad_reply_is_not_helpful,
@@ -1655,12 +1656,31 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET progress = $2, response = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(progress)
         .bind(response)
         .bind(status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(chat_message)
+    }
+
+    pub async fn update_chat_message_ai_function_call(
+        &self,
+        id: Uuid,
+        ai_function_call: serde_json::Value,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET ai_function_call = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(ai_function_call)
         .fetch_one(&*self.pool)
         .await?;
 
@@ -1680,7 +1700,7 @@ impl OctopusDatabase {
             r#"UPDATE chat_messages
             SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS "status: _", created_at, deleted_at, updated_at"#,
             id,
             bad_reply_comment,
             bad_reply_is_harmful,
@@ -1705,7 +1725,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_id = $2, status = $3, progress = $4, response = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_id)
@@ -1731,7 +1751,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET estimated_response_at = $2, message = $3, status = $4, progress = $5, response = $6, created_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(estimated_response_at)
@@ -1758,7 +1778,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET is_sensitive = $2, message = $3, status = $4, progress = $5, response = $6, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(is_sensitive)
