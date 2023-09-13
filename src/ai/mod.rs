@@ -37,6 +37,12 @@ pub struct AiFunctionResponseFile {
     pub media_type: String,
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct AiFunctionCall {
+    pub arguments: serde_json::Value,
+    pub name: String,
+}
+
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct AiFunctionResponseFileAttachement {
     pub content: String,
@@ -429,6 +435,18 @@ pub async fn open_ai_request(
                                 let function_name = function_call.name;
                                 let function_args: serde_json::Value =
                                     function_call.arguments.parse()?;
+                                let ai_function_call = AiFunctionCall {
+                                    arguments: function_args.clone(),
+                                    name: function_name.clone(),
+                                };
+                                let ai_function_call = serde_json::to_value(ai_function_call)?;
+                                let chat_message = context
+                                    .octopus_database
+                                    .update_chat_message_ai_function_call(
+                                        chat_message.id,
+                                        ai_function_call,
+                                    )
+                                    .await?;
                                 let ai_function = context
                                     .octopus_database
                                     .try_get_ai_function_by_name(&function_name)
