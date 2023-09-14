@@ -7,7 +7,6 @@ use crate::{
 };
 use axum::http::StatusCode;
 use http::header::CONTENT_TYPE;
-use serde::Serialize;
 use serde_json::value::Value;
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};
