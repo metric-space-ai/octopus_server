@@ -11,6 +11,7 @@ use std::{str::FromStr, sync::Arc};
 
 mod addons;
 mod configuration;
+mod detectors;
 mod fixes;
 mod replacers;
 
@@ -47,6 +48,8 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         code_lines.push(line.to_string());
     }
 
+    let app_threaded = detectors::detect_app_threaded(&code_lines).await?;
+
     if let Some(device_map) = ai_service.device_map.clone() {
         code_lines = replacers::replace_device_map(code_lines, device_map).await?;
     }
@@ -61,8 +64,16 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = fixes::fix_urls(code_lines).await?;
 
     code_lines = addons::add_health_check(code_lines).await?;
+    code_lines = addons::add_handle_exception(code_lines).await?;
 
     code_lines = replacers::replace_function_names(code_lines, ai_service.id).await?;
+
+    let last_return_jsonify_line = detectors::detect_last_return_jsonify_line(&code_lines).await?;
+
+    code_lines = replacers::cut_code(code_lines, last_return_jsonify_line).await?;
+
+    code_lines = addons::add_argparse(code_lines).await?;
+    code_lines = addons::add_daemon(code_lines, &ai_service, app_threaded).await?;
 
     for code_line in &code_lines {
         tracing::info!("{}", code_line);

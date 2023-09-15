@@ -1,4 +1,7 @@
-use crate::{api, config, context::Context, database::OctopusDatabase, Args, Result};
+use crate::{
+    api, config, context::Context, database::OctopusDatabase, process_manager::ProcessManager,
+    Args, Result,
+};
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
 use std::{sync::Arc, time::Duration};
@@ -27,7 +30,8 @@ pub async fn get_context(args: Args) -> Result<Arc<Context>> {
         .connect(&config.database_url)
         .await?;
     let octopus_database = OctopusDatabase::new(pool);
-    let context = Arc::new(Context::new(config, octopus_database));
+    let process_manager = ProcessManager::new();
+    let context = Arc::new(Context::new(config, octopus_database, process_manager));
 
     Ok(context)
 }

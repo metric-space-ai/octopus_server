@@ -3,7 +3,7 @@ use crate::{
     context::Context,
     entity::{AiServiceStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
-    parser,
+    parser, process_manager,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
 use axum::{
@@ -112,6 +112,7 @@ pub async fn create(
         (status = 200, description = "AI Service configured.", body = AiService),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Service not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "AI Service id")
@@ -129,11 +130,17 @@ pub async fn configuration(
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
-    context
+    let ai_service = context
         .octopus_database
-        .try_get_ai_service_id_by_id(id)
+        .try_get_ai_service_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    if ai_service.status == AiServiceStatus::Initial
+        || ai_service.status == AiServiceStatus::MaliciousCodeDetected
+    {
+        return Err(AppError::Conflict);
+    }
 
     let ai_service = context
         .octopus_database
@@ -183,6 +190,57 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/ai-services/:id/installation",
+    responses(
+        (status = 200, description = "AI Service configured.", body = AiService),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn installation(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if ai_service.status == AiServiceStatus::Initial
+        || ai_service.status == AiServiceStatus::MaliciousCodeDetected
+        || ai_service.status == AiServiceStatus::ParsingStarted
+    {
+        return Err(AppError::Conflict);
+    }
+
+    let cloned_context = context.clone();
+    let cloned_ai_service = ai_service.clone();
+    tokio::spawn(async move {
+        let ai_service =
+            process_manager::install_and_run_ai_service(cloned_ai_service, cloned_context).await;
+
+        if let Err(e) = ai_service {
+            debug!("Error: {:?}", e);
+        }
+    });
+
+    Ok((StatusCode::OK, Json(ai_service)).into_response())
 }
 
 #[axum_macros::debug_handler]

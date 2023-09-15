@@ -25,6 +25,9 @@ pub async fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
             && code_line.contains('=')
             && (code_line.contains("'''") || code_line.contains("\"\"\""))
         {
+            if code_line.contains('{') {
+                config_lines.push("{".to_string());
+            }
             config_section_identified = true;
             config_section_identified_line = i;
         }
@@ -38,6 +41,12 @@ pub async fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
             && (code_line.contains("'''") || code_line.contains("\"\"\""))
             && !config_lines.is_empty()
         {
+            if code_line.contains(']') {
+                config_lines.push("]".to_string());
+            }
+            if code_line.contains('}') {
+                config_lines.push("}".to_string());
+            }
             config_section_identified = false;
         }
     }

@@ -91,6 +91,8 @@ pub enum AiServiceStatus {
     Configuration,
     Error,
     Initial,
+    InstallationFinished,
+    InstallationStarted,
     MaliciousCodeDetected,
     ParsingFinished,
     ParsingStarted,

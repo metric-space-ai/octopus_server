@@ -2,8 +2,7 @@ use crate::{
     context::Context,
     entity::{
         AiFunction, AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, ChatMessage,
-        ChatMessageStatus,
-        User,
+        ChatMessageStatus, User,
     },
     error::AppError,
     Result, DOMAIN, PUBLIC_DIR,
@@ -250,7 +249,7 @@ pub async fn open_ai_request(
         }
     }
 
-        /*
+    /*
     let mut content_safety_enabled = true;
 
     let inspection_disabling = context

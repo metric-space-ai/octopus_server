@@ -27,8 +27,8 @@ use crate::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
         AiServiceHealthCheckStatus, AiServiceSetupStatus, Chat, ChatActivity, ChatAudit,
         ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus,
-        ChatPicture, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, PasswordResetToken, Profile, User,
-        Workspace, WorkspacesType,
+        ChatPicture, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, PasswordResetToken,
+        Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -354,6 +354,10 @@ pub async fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/ai-services/:id/configuration",
             put(ai_services::configuration),
+        )
+        .route(
+            "/api/v1/ai-services/:id/installation",
+            put(ai_services::installation),
         )
         .route(
             "/api/v1/ai-services/:id",

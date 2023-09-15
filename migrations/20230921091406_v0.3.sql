@@ -9,7 +9,7 @@ DROP TYPE ai_functions_warmup_statuses;
 
 CREATE TYPE ai_services_health_check_statuses AS ENUM('not_working', 'ok');
 CREATE TYPE ai_services_setup_statuses AS ENUM('not_performed', 'performed');
-CREATE TYPE ai_services_statuses AS ENUM('configuration', 'error', 'initial', 'malicious_code_detected', 'parsing_finished', 'parsing_started', 'running', 'setup');
+CREATE TYPE ai_services_statuses AS ENUM('configuration', 'error', 'initial', 'installation_finished', 'installation_started', 'malicious_code_detected', 'parsing_finished', 'parsing_started', 'running', 'setup');
 
 CREATE TABLE ai_services(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

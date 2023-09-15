@@ -1,6 +1,18 @@
 use crate::{error::AppError, Result};
 use uuid::Uuid;
 
+pub async fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String>> {
+    let mut parsed_code_lines = vec![];
+
+    for (i, code_line) in code_lines.iter().enumerate() {
+        if i <= line {
+            parsed_code_lines.push(code_line.to_string());
+        }
+    }
+
+    Ok(parsed_code_lines)
+}
+
 pub async fn replace_device_map(
     code_lines: Vec<String>,
     device_map: serde_json::Value,
@@ -79,7 +91,7 @@ pub async fn replace_function_names(
                 last_saved_line = i;
             }
         }
-        if last_saved_line < i {
+        if i == 0 || last_saved_line < i {
             parsed_code_lines.push(code_line.clone());
         }
     }

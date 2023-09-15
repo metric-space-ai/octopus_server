@@ -3,8 +3,8 @@ use crate::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
         AiServiceSetupStatus, AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, PasswordResetToken, Port,
-        Profile, Session, User, Workspace, WorkspacesType,
+        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
+        PasswordResetToken, Port, Profile, Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };

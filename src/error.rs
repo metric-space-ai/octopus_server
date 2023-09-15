@@ -36,6 +36,7 @@ pub enum AppError {
     Parsing,
     PasswordDoesNotMatch,
     PasswordHash(argon2::password_hash::Error),
+    ProcessManagerLock,
     Request(reqwest::Error),
     Unauthorized,
     UserAlreadyExists,
@@ -74,6 +75,10 @@ impl IntoResponse for AppError {
             AppError::PasswordHash(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Password hash problem.")
             }
+            AppError::ProcessManagerLock => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ProcessManager lock error.",
+            ),
             AppError::Request(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Request error."),
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
