@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -60,26 +60,31 @@
       },
       {
         "ordinal": 11,
-        "name": "is_sensitive",
+        "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
         "ordinal": 12,
+        "name": "is_sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -94,17 +99,17 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -133,6 +138,7 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
@@ -140,5 +146,5 @@
       false
     ]
   },
-  "hash": "1c9936aa7500004784fc67ec5947ddfddfb2d66ecd1702f70a87f70a5f35ad8e"
+  "hash": "5434c0a1e8134e30e1236d85c19d0928b0d589390887c881afd10fe17bcae8ee"
 }

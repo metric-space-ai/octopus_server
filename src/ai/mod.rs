@@ -199,7 +199,7 @@ pub async fn open_ai_request(
         }
     }
 
-    if !chat_message.bypass_sensitive_information_filter {
+    if !chat_message.bypass_sensitive_information_filter || !chat_message.is_anonymized {
         let ai_function = context
             .octopus_database
             .try_get_ai_function_by_name("function_sensitive_information")
@@ -225,20 +225,13 @@ pub async fn open_ai_request(
                         let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
 
                         if function_sensitive_information_response.is_sensitive {
-                            let message = format!(
-                                "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
-                                chat_message.message
-                            );
-
                             let chat_message = context
                                 .octopus_database
                                 .update_chat_message_is_sensitive(
                                     chat_message.id,
                                     true,
-                                    &message,
                                     ChatMessageStatus::Answered,
                                     100,
-                                    &message,
                                 )
                                 .await?;
 
@@ -258,7 +251,7 @@ pub async fn open_ai_request(
         .await?;
 
     for chat_message_tmp in chat_messages {
-        if !chat_message_tmp.is_sensitive {
+        if !chat_message_tmp.is_sensitive || chat_message.is_anonymized {
             let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
                 .role(Role::User)
                 .content(chat_message_tmp.message.clone())
