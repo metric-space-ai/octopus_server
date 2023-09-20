@@ -16,6 +16,7 @@ use crate::{
         chats::ChatPut,
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
+        inspection_disablings::InspectionDisablingPost,
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
@@ -26,7 +27,7 @@ use crate::{
         AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
         Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile,
         ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt, ExamplePromptCategory,
-        PasswordResetToken, Profile, User, Workspace, WorkspacesType,
+        InspectionDisabling, PasswordResetToken, Profile, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     session::{SessionResponse, SessionResponseData},
@@ -61,6 +62,7 @@ mod chat_pictures;
 mod chats;
 mod example_prompt_categories;
 mod example_prompts;
+mod inspection_disablings;
 mod password_resets;
 mod profile_pictures;
 mod profiles;
@@ -106,6 +108,8 @@ pub async fn router(context: Arc<Context>) -> Router {
                 ExamplePromptCategoryPut,
                 ExamplePromptPost,
                 ExamplePromptPut,
+                InspectionDisabling,
+                InspectionDisablingPost,
                 LoginPost,
                 PasswordResetPost,
                 PasswordResetPut,
@@ -139,6 +143,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_activities::list,
             chat_audits::list,
             chat_audits::read,
+            chat_messages::anonymize,
             chat_messages::create,
             chat_messages::delete,
             chat_messages::flag,
@@ -175,6 +180,9 @@ pub async fn router(context: Arc<Context>) -> Router {
             example_prompts::list_by_category,
             example_prompts::read,
             example_prompts::update,
+            inspection_disablings::create,
+            inspection_disablings::delete,
+            inspection_disablings::read,
             login::login,
             logout::logout,
             password_resets::change_password,
@@ -205,6 +213,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "chat_pictures", description = "Chat pictures API."),
             (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
+            (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "password_resets", description = "Password resets API."),
@@ -347,6 +356,12 @@ pub async fn router(context: Arc<Context>) -> Router {
             delete(example_prompt_categories::delete)
                 .get(example_prompt_categories::read)
                 .put(example_prompt_categories::update),
+        )
+        .route(
+            "/api/v1/inspection-disablings/:user_id",
+            delete(inspection_disablings::delete)
+                .get(inspection_disablings::read)
+                .post(inspection_disablings::create),
         )
         .route("/api/v1/password-resets", post(password_resets::request))
         .route(

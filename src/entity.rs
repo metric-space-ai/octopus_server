@@ -215,6 +215,15 @@ pub struct ExamplePromptCategory {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct InspectionDisabling {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub content_safety_disabled_until: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct PasswordResetToken {
     pub id: Uuid,
     pub user_id: Uuid,

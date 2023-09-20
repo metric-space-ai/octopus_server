@@ -70,7 +70,7 @@ pub async fn delete(
 
     let old_path = profile
         .photo_file_name
-        .map(|photo_file_name| format!("{PUBLIC_DIR}/{}", photo_file_name));
+        .map(|photo_file_name| format!("{PUBLIC_DIR}/{photo_file_name}"));
 
     let profile = context
         .octopus_database
@@ -137,7 +137,7 @@ pub async fn update(
 
     let old_path = profile
         .photo_file_name
-        .map(|photo_file_name| format!("{PUBLIC_DIR}/{}", photo_file_name));
+        .map(|photo_file_name| format!("{PUBLIC_DIR}/{photo_file_name}"));
 
     while let Some(field) = multipart.next_field().await? {
         let extension = (*field

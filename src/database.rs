@@ -2,8 +2,8 @@ use crate::{
     entity::{
         AiFunction, AiFunctionSetupStatus, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, PasswordResetToken,
-        Profile, Session, User, Workspace, WorkspacesType,
+        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
+        PasswordResetToken, Profile, Session, User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -696,6 +696,26 @@ impl OctopusDatabase {
         Ok(example_prompt_category)
     }
 
+    pub async fn insert_inspection_disabling(
+        &self,
+        user_id: Uuid,
+        content_safety_disabled_until: DateTime<Utc>,
+    ) -> Result<InspectionDisabling> {
+        let inspection_disabling = sqlx::query_as!(
+            InspectionDisabling,
+            "INSERT INTO inspection_disablings
+            (user_id, content_safety_disabled_until)
+            VALUES ($1, $2)
+            RETURNING id, user_id, content_safety_disabled_until, created_at, updated_at",
+            user_id,
+            content_safety_disabled_until
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(inspection_disabling)
+    }
+
     pub async fn insert_password_reset_token(
         &self,
         user_id: Uuid,
@@ -963,6 +983,22 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category)
+    }
+
+    pub async fn try_delete_inspection_disabling_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let inspection_disabling = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM inspection_disablings
+                WHERE user_id = $1
+                RETURNING id",
+        )
+        .bind(user_id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(inspection_disabling)
     }
 
     pub async fn try_delete_password_reset_token_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
@@ -1384,6 +1420,23 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category_id)
+    }
+
+    pub async fn try_get_inspection_disabling_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<InspectionDisabling>> {
+        let inspection_disabling = sqlx::query_as!(
+            InspectionDisabling,
+            "SELECT id, user_id, content_safety_disabled_until, created_at, updated_at
+            FROM inspection_disablings
+            WHERE user_id = $1",
+            user_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(inspection_disabling)
     }
 
     pub async fn try_get_password_reset_token_by_token(
@@ -1861,6 +1914,28 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category)
+    }
+
+    pub async fn update_inspection_disabling(
+        &self,
+        id: Uuid,
+        user_id: Uuid,
+        content_safety_disabled_until: DateTime<Utc>,
+    ) -> Result<InspectionDisabling> {
+        let inspection_disabling = sqlx::query_as!(
+            InspectionDisabling,
+            "UPDATE inspection_disablings
+            SET user_id = $2, content_safety_disabled_until = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, content_safety_disabled_until, created_at, updated_at",
+            id,
+            user_id,
+            content_safety_disabled_until
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(inspection_disabling)
     }
 
     pub async fn update_profile(

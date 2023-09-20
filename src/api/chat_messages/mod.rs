@@ -145,7 +145,8 @@ pub async fn anonymize(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::open_ai_request(cloned_context, cloned_chat_message).await;
+        let chat_message =
+            ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
             debug!("Error: {:?}", e);
@@ -258,7 +259,8 @@ pub async fn create(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::open_ai_request(cloned_context, cloned_chat_message).await;
+        let chat_message =
+            ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
             debug!("Error: {:?}", e);
@@ -673,7 +675,8 @@ pub async fn regenerate(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::open_ai_request(cloned_context, cloned_chat_message).await;
+        let chat_message =
+            ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
             debug!("Error: {:?}", e);
@@ -791,7 +794,8 @@ pub async fn update(
     let cloned_context = context.clone();
     let cloned_chat_message = new_chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::open_ai_request(cloned_context, cloned_chat_message).await;
+        let chat_message =
+            ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
             debug!("Error: {:?}", e);

@@ -292,7 +292,7 @@ pub async fn operation(
         AiFunctionOperation::Setup => ai_function.setup_execution_time,
     };
 
-    let estimated_operation_end_at = Utc::now() + Duration::seconds(execution_time as i64 + 1);
+    let estimated_operation_end_at = Utc::now() + Duration::seconds(i64::from(execution_time) + 1);
 
     let ai_function_operation_response = AiFunctionOperationResponse {
         estimated_operation_end_at,

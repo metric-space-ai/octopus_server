@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::{
         AiFunction, AiFunctionHealthCheckStatus, AiFunctionSetupStatus, AiFunctionWarmupStatus,
-        ChatMessage, ChatMessageStatus,
+        ChatMessage, ChatMessageStatus, User,
     },
     error::AppError,
     Result, DOMAIN, PUBLIC_DIR,
@@ -180,6 +180,7 @@ pub struct FunctionSensitiveInformationResponse {
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
+    user: User,
 ) -> Result<ChatMessage> {
     let client = Client::new();
 
@@ -199,7 +200,27 @@ pub async fn open_ai_request(
         }
     }
 
-    if !chat_message.bypass_sensitive_information_filter || !chat_message.is_anonymized {
+    let mut content_safety_enabled = true;
+
+    let inspection_disabling = context
+        .octopus_database
+        .try_get_inspection_disabling_by_user_id(user.id)
+        .await?;
+
+    if let Some(inspection_disabling) = inspection_disabling {
+        if inspection_disabling.content_safety_disabled_until > Utc::now() {
+            content_safety_enabled = false;
+        } else {
+            context
+                .octopus_database
+                .try_delete_inspection_disabling_by_user_id(user.id)
+                .await?;
+        }
+    }
+
+    if content_safety_enabled
+        && (!chat_message.bypass_sensitive_information_filter || !chat_message.is_anonymized)
+    {
         let ai_function = context
             .octopus_database
             .try_get_ai_function_by_name("function_sensitive_information")
@@ -377,7 +398,7 @@ pub async fn open_ai_request(
 
     match request {
         Err(e) => {
-            let content = format!("OpenAIError: {}", e);
+            let content = format!("OpenAIError: {e}");
             let chat_message = context
                 .octopus_database
                 .update_chat_message(chat_message.id, 100, &content, ChatMessageStatus::Answered)
@@ -390,7 +411,7 @@ pub async fn open_ai_request(
 
             match response_message {
                 Err(e) => {
-                    let content = format!("OpenAIError: {}", e);
+                    let content = format!("OpenAIError: {e}");
                     let chat_message = context
                         .octopus_database
                         .update_chat_message(
@@ -565,12 +586,12 @@ pub async fn update_chat_message(
                 .to_string();
             let content = content.strip_suffix('\'').ok_or(AppError::InternalError)?;
             let data = engine.decode(content)?;
-            let extension = (file_attachement
+            let extension = (*(file_attachement
                 .file_name
                 .split('.')
                 .collect::<Vec<&str>>()
                 .last()
-                .ok_or(AppError::File)?)
+                .ok_or(AppError::File)?))
             .to_string();
 
             let file_name = format!("{}.{}", Uuid::new_v4(), extension);

@@ -304,7 +304,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.setup_required == true || body.setup_required == false);
+        assert!(body.setup_required || !body.setup_required);
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -362,7 +362,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.setup_required, false);
+        assert!(!body.setup_required);
 
         app.context
             .octopus_database
