@@ -171,6 +171,7 @@ pub struct ChatMessage {
     pub bad_reply_is_not_true: bool,
     pub bypass_sensitive_information_filter: bool,
     pub estimated_response_at: DateTime<Utc>,
+    pub is_anonymized: bool,
     pub is_sensitive: bool,
     pub message: String,
     pub progress: i32,
@@ -196,6 +197,7 @@ pub struct ChatMessageExtended {
     pub chat_message_files: Vec<ChatMessageFile>,
     pub chat_message_pictures: Vec<ChatMessagePicture>,
     pub estimated_response_at: DateTime<Utc>,
+    pub is_anonymized: bool,
     pub is_sensitive: bool,
     pub message: String,
     pub progress: i32,
@@ -273,6 +275,15 @@ pub struct ExamplePromptCategory {
     pub title: String,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct InspectionDisabling {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub content_safety_disabled_until: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
 
