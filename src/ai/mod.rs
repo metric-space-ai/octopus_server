@@ -219,7 +219,8 @@ pub async fn open_ai_request(
     }
 
     if content_safety_enabled
-        && (!chat_message.bypass_sensitive_information_filter || !chat_message.is_anonymized)
+        && !chat_message.bypass_sensitive_information_filter
+        && !chat_message.is_anonymized
     {
         let ai_function = context
             .octopus_database
