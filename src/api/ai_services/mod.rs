@@ -84,17 +84,7 @@ pub async fn create(
                 .insert_ai_service(&original_file_name, &original_function_body, port)
                 .await?;
 
-            let cloned_context = context.clone();
-            let cloned_ai_service = ai_service.clone();
-            tokio::spawn(async move {
-                let ai_service =
-                    parser::ai_service_malicious_code_check(cloned_ai_service, cloned_context)
-                        .await;
-
-                if let Err(e) = ai_service {
-                    debug!("Error: {:?}", e);
-                }
-            });
+            let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;
 
             return Ok((StatusCode::CREATED, Json(ai_service)).into_response());
         }
@@ -147,15 +137,7 @@ pub async fn configuration(
         .update_ai_service_device_map(id, input.device_map, AiServiceStatus::ParsingStarted)
         .await?;
 
-    let cloned_context = context.clone();
-    let cloned_ai_service = ai_service.clone();
-    tokio::spawn(async move {
-        let ai_service = parser::ai_service_parsing(cloned_ai_service, cloned_context).await;
-
-        if let Err(e) = ai_service {
-            debug!("Error: {:?}", e);
-        }
-    });
+    let ai_service = parser::ai_service_parsing(ai_service, context).await?;
 
     Ok((StatusCode::OK, Json(ai_service)).into_response())
 }
@@ -304,7 +286,8 @@ pub async fn operation(
     tokio::spawn(async move {
         let ai_service = match cloned_input.operation {
             AiServiceOperation::Setup => {
-                ai::service_setup(cloned_context, &cloned_ai_service).await
+                ai::service_setup(cloned_ai_service.id, cloned_context, cloned_ai_service.port)
+                    .await
             }
         };
 
@@ -409,7 +392,7 @@ pub async fn update(
     let cloned_context = context.clone();
     let cloned_ai_service = ai_service.clone();
     tokio::spawn(async move {
-        let ai_service = ai::service_prepare(cloned_context, cloned_ai_service).await;
+        let ai_service = ai::service_prepare(cloned_ai_service, cloned_context).await;
 
         if let Err(e) = ai_service {
             debug!("Error: {:?}", e);

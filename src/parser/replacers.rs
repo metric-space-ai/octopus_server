@@ -27,7 +27,7 @@ pub async fn replace_device_map(
             if code_line.contains('}') {
                 ends_in_same_line = true;
             }
-            parsed_code_lines.push(format!("    \"device_map\": {},", device_map));
+            parsed_code_lines.push(format!("    \"device_map\": {device_map},"));
         }
         if !remove_mode {
             parsed_code_lines.push(code_line);
@@ -62,18 +62,18 @@ pub async fn replace_function_names(
         }
 
         if functions_section_identified && code_line.contains("\"name\":") {
-            let name = code_line
+            let name = (*code_line
                 .split(':')
                 .collect::<Vec<&str>>()
                 .last()
-                .ok_or(AppError::Parsing)?
-                .to_string()
-                .strip_prefix(" \"")
-                .ok_or(AppError::Parsing)?
-                .to_string()
-                .strip_suffix("\",")
-                .ok_or(AppError::Parsing)?
-                .to_string();
+                .ok_or(AppError::Parsing)?)
+            .to_string()
+            .strip_prefix(" \"")
+            .ok_or(AppError::Parsing)?
+            .to_string()
+            .strip_suffix("\",")
+            .ok_or(AppError::Parsing)?
+            .to_string();
 
             function_names.push(name);
         }
@@ -83,10 +83,8 @@ pub async fn replace_function_names(
     for (i, code_line) in code_lines.iter().enumerate() {
         for function_name in &function_names {
             if code_line.contains(function_name) {
-                let new_line = code_line.replace(
-                    function_name,
-                    &format!("{}-{}", ai_service_id, function_name),
-                );
+                let new_line =
+                    code_line.replace(function_name, &format!("{ai_service_id}-{function_name}"));
                 parsed_code_lines.push(new_line);
                 last_saved_line = i;
             }

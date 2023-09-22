@@ -45,6 +45,7 @@ CREATE TABLE ai_functions(
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     ai_service_id UUID NOT NULL REFERENCES ai_services ON DELETE CASCADE,
     description TEXT NOT NULL,
+    formatted_name VARCHAR(256) NOT NULL,
     is_enabled BOOLEAN NOT NULL DEFAULT false,
     name VARCHAR(256) NOT NULL,
     parameters JSON NOT NULL,
@@ -57,6 +58,7 @@ CREATE TABLE ai_functions(
 );
 
 CREATE INDEX ai_functions_is_enabled ON ai_functions(is_enabled);
+CREATE INDEX ai_functions_formatted_name ON ai_functions(formatted_name);
 CREATE INDEX ai_functions_request_content_type ON ai_functions(request_content_type);
 CREATE INDEX ai_functions_response_content_type ON ai_functions(response_content_type);
 

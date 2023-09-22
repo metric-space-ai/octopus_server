@@ -1,9 +1,6 @@
 use clap::Parser;
 use std::{error::Error, net::SocketAddr};
-use tokio::{
-    task,
-    time::{sleep, Duration},
-};
+use tokio::task;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
@@ -23,7 +20,7 @@ mod session;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
-pub const DOMAIN: &str = "https://api.octopus-ai.app/";
+pub const DOMAIN: &str = "api.octopus-ai.app";
 pub const PUBLIC_DIR: &str = "public";
 pub const SERVICES_DIR: &str = "services";
 
@@ -59,15 +56,10 @@ pub async fn run() -> Result<()> {
 
     let cloned_context = app.context.clone();
     task::spawn(async move {
-        loop {
-            let res = cloned_context.process_manager.list();
+        let result = process_manager::start(cloned_context);
 
-            match res {
-                Err(e) => error!("Error: {:?}", e),
-                Ok(processes) => info!("{:?}", processes),
-            }
-
-            sleep(Duration::from_millis(1000)).await;
+        if let Err(e) = result.await {
+            error!("Error: {:?}", e);
         }
     });
 

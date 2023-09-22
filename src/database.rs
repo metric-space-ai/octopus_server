@@ -1,10 +1,11 @@
 use crate::{
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
-        AiServiceSetupStatus, AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage,
-        ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        PasswordResetToken, Port, Profile, Session, User, Workspace, WorkspacesType,
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, Chat, ChatActivity,
+        ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
+        ChatMessageStatus, ChatPicture, Company, EstimatedSeconds, ExamplePrompt,
+        ExamplePromptCategory, InspectionDisabling, PasswordResetToken, Port, Profile, Session,
+        User, Workspace, WorkspacesType,
     },
     Result, PUBLIC_DIR,
 };
@@ -47,7 +48,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<AiFunction>> {
         let ai_functions = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE ai_service_id = $1
             AND deleted_at IS NULL
@@ -467,10 +468,12 @@ impl OctopusDatabase {
         Ok(workspaces)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_ai_function(
         &self,
         ai_service_id: Uuid,
         description: &str,
+        formatted_name: &str,
         name: &str,
         parameters: serde_json::Value,
         request_content_type: AiFunctionRequestContentType,
@@ -478,12 +481,13 @@ impl OctopusDatabase {
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "INSERT INTO ai_functions
-            (ai_service_id, description, name, parameters, request_content_type, response_content_type)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, ai_service_id, description, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
+            (ai_service_id, description, formatted_name, name, parameters, request_content_type, response_content_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
         )
         .bind(ai_service_id)
         .bind(description)
+        .bind(formatted_name)
         .bind(name)
         .bind(parameters)
         .bind(request_content_type)
@@ -1113,7 +1117,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -1128,7 +1132,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_name(&self, name: &str) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE name = $1
             AND deleted_at IS NULL"#,
@@ -1644,10 +1648,12 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_ai_function(
         &self,
         id: Uuid,
         description: &str,
+        formatted_name: &str,
         name: &str,
         parameters: serde_json::Value,
         request_content_type: AiFunctionRequestContentType,
@@ -1655,12 +1661,13 @@ impl OctopusDatabase {
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "UPDATE ai_functions
-            SET description = $2, name = $3, parameters = $4, request_content_type = $5, response_content_type = $6, updated_at = current_timestamp(0)
+            SET description = $2, formatted_name = $3, name = $4, parameters = $5, request_content_type = $6, response_content_type = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_service_id, description, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
+            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(description)
+        .bind(formatted_name)
         .bind(name)
         .bind(parameters)
         .bind(request_content_type)
@@ -1681,7 +1688,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_functions
             SET is_enabled = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_service_id, description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
             id,
             is_enabled,
         )
@@ -1689,6 +1696,26 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_function)
+    }
+
+    pub async fn update_ai_functions_is_enabled(
+        &self,
+        ai_service_id: Uuid,
+        is_enabled: bool,
+    ) -> Result<Vec<AiFunction>> {
+        let ai_functions = sqlx::query_as!(
+            AiFunction,
+            r#"UPDATE ai_functions
+            SET is_enabled = $2, updated_at = current_timestamp(0)
+            WHERE ai_service_id = $1
+            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
+            ai_service_id,
+            is_enabled,
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ai_functions)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1743,20 +1770,63 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn update_ai_service_health_check_status(
+        &self,
+        id: Uuid,
+        health_check_execution_time: i32,
+        health_check_status: AiServiceHealthCheckStatus,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as::<_, AiService>(
+            "UPDATE ai_services
+            SET health_check_execution_time = $2, health_check_status = $3, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+        )
+        .bind(id)
+        .bind(health_check_execution_time)
+        .bind(health_check_status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_service)
+    }
+
+    pub async fn update_ai_service_is_enabled(
+        &self,
+        id: Uuid,
+        is_enabled: bool,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as!(
+            AiService,
+            r#"UPDATE ai_services
+            SET is_enabled = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            is_enabled,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_service)
+    }
+
     pub async fn update_ai_service_processed_function_body(
         &self,
         id: Uuid,
         processed_function_body: &str,
+        progress: i32,
         status: AiServiceStatus,
     ) -> Result<AiService> {
         let ai_service = sqlx::query_as::<_, AiService>(
             "UPDATE ai_services
-            SET processed_function_body = $2, status = $3, updated_at = current_timestamp(0)
+            SET processed_function_body = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
             RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(processed_function_body)
+        .bind(progress)
         .bind(status)
         .fetch_one(&*self.pool)
         .await?;
@@ -1788,15 +1858,17 @@ impl OctopusDatabase {
     pub async fn update_ai_service_status(
         &self,
         id: Uuid,
+        progress: i32,
         status: AiServiceStatus,
     ) -> Result<AiService> {
         let ai_service = sqlx::query_as::<_, AiService>(
             "UPDATE ai_services
-            SET status = $2, updated_at = current_timestamp(0)
+            SET progress = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
             RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
+        .bind(progress)
         .bind(status)
         .fetch_one(&*self.pool)
         .await?;

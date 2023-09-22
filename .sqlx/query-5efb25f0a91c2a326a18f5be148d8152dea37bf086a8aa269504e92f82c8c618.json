@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE ai_services\n            SET device_map = $2, is_enabled = $3, original_file_name = $4, original_function_body = $5, port = $6, processed_function_body = $7, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, port, processed_function_body, setup_execution_time, setup_status AS \"setup_status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at",
+  "query": "SELECT id, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_services\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -60,11 +60,16 @@
       },
       {
         "ordinal": 9,
-        "name": "setup_execution_time",
+        "name": "progress",
         "type_info": "Int4"
       },
       {
         "ordinal": 10,
+        "name": "setup_execution_time",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
@@ -79,45 +84,62 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
+        "name": "status: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_services_statuses",
+            "kind": {
+              "Enum": [
+                "configuration",
+                "error",
+                "initial",
+                "installation_finished",
+                "installation_started",
+                "malicious_code_detected",
+                "parsing_finished",
+                "parsing_started",
+                "running",
+                "setup"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 14,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 15,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 16,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 17,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Json",
-        "Bool",
-        "Varchar",
-        "Text",
-        "Int4",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
-      false,
+      true,
       false,
       false,
       false,
@@ -125,6 +147,8 @@
       false,
       false,
       true,
+      false,
+      false,
       false,
       false,
       false,
@@ -134,5 +158,5 @@
       false
     ]
   },
-  "hash": "470cefe0f52022094feed0714f83db067b701fba57aebcba9aa2168da23be8be"
+  "hash": "5efb25f0a91c2a326a18f5be148d8152dea37bf086a8aa269504e92f82c8c618"
 }

@@ -42,7 +42,7 @@ pub async fn get() -> Result<ServerResources> {
             .replace(' ', "");
     }
     let nvidia_smi_list = Command::new("nvidia-smi").arg("--list-gpus").output()?;
-    let nvidia_smi_list = String::from_utf8(nvidia_smi_list.stdout.to_vec())?;
+    let nvidia_smi_list = String::from_utf8(nvidia_smi_list.stdout.clone())?;
     /*
         let nvidia_smi_list =
             r#"GPU 0: NVIDIA RTX A4500 (UUID: GPU-174d612c-3b65-e9ab-a103-79738578fcc4)
@@ -77,17 +77,17 @@ pub async fn get() -> Result<ServerResources> {
                 let nvidia_smi_memory_total = Command::new("nvidia-smi")
                     .arg("--query-gpu=memory.total")
                     .arg("--format=csv,nounits,noheader")
-                    .arg(format!("--id={}", id))
+                    .arg(format!("--id={id}"))
                     .output()?;
                 let nvidia_smi_memory_total =
-                    String::from_utf8(nvidia_smi_memory_total.stdout.to_vec())?;
+                    String::from_utf8(nvidia_smi_memory_total.stdout.clone())?;
                 let nvidia_smi_memory_free = Command::new("nvidia-smi")
                     .arg("--query-gpu=memory.free")
                     .arg("--format=csv,nounits,noheader")
-                    .arg(format!("--id={}", id))
+                    .arg(format!("--id={id}"))
                     .output()?;
                 let nvidia_smi_memory_free =
-                    String::from_utf8(nvidia_smi_memory_free.stdout.to_vec())?;
+                    String::from_utf8(nvidia_smi_memory_free.stdout.clone())?;
                 /*
                 let nvidia_smi_memory_total = r#"20470"#.to_string();
                 let nvidia_smi_memory_free = r#"5991"#.to_string();

@@ -16,7 +16,7 @@ use async_openai::{
 };
 use axum::http::StatusCode;
 use base64::{alphabet, engine, Engine};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use hyper::body::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -32,6 +32,7 @@ mod function_translator;
 mod function_visual_questions_answering;
 */
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
+pub const MODEL: &str = "gpt-4-0613";
 
 #[derive(Debug)]
 pub struct AiFunctionResponseFile {
@@ -90,15 +91,80 @@ pub struct SetupResponse {
     pub setup: AiServiceSetupStatus,
 }
 
-pub async fn service_prepare(context: Arc<Context>, ai_service: AiService) -> Result<AiService> {
+pub async fn service_health_check(
+    ai_service_id: Uuid,
+    context: Arc<Context>,
+    port: i32,
+) -> Result<AiService> {
+    let start = Utc::now();
+
+    let url = format!("{BASE_AI_FUNCTION_URL}:{port}/health-check");
+
+    let response = reqwest::Client::new().get(url).send().await;
+
+    let end = Utc::now();
+
+    let health_check_execution_time = (end - start).num_seconds() as i32;
+
+    if let Ok(response) = response {
+        if response.status() == StatusCode::OK {
+            let response: HealthCheckResponse = response.json().await?;
+
+            let result = context
+                .octopus_database
+                .update_ai_service_health_check_status(
+                    ai_service_id,
+                    health_check_execution_time,
+                    response.status,
+                )
+                .await?;
+
+            return Ok(result);
+        }
+    }
+
+    let result = context
+        .octopus_database
+        .update_ai_service_health_check_status(
+            ai_service_id,
+            health_check_execution_time,
+            AiServiceHealthCheckStatus::NotWorking,
+        )
+        .await?;
+
+    Ok(result)
+}
+
+pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.is_enabled {
+        let perform_health_check = match ai_service.health_check_status {
+            AiServiceHealthCheckStatus::NotWorking => true,
+            AiServiceHealthCheckStatus::Ok => {
+                let mut result = false;
+                let last_valid_health_check_date = Utc::now() - Duration::minutes(1);
+
+                if let Some(health_check_at) = ai_service.health_check_at {
+                    if health_check_at < last_valid_health_check_date {
+                        result = true;
+                    }
+                }
+
+                result
+            }
+        };
+        let ai_service = if perform_health_check {
+            service_health_check(ai_service.id, context.clone(), ai_service.port).await?
+        } else {
+            ai_service
+        };
+
         let perform_setup = match ai_service.setup_status {
             AiServiceSetupStatus::NotPerformed => true,
             AiServiceSetupStatus::Performed => false,
         };
 
         let ai_service = if perform_setup {
-            service_setup(context.clone(), &ai_service).await?
+            service_setup(ai_service.id, context.clone(), ai_service.port).await?
         } else {
             ai_service
         };
@@ -109,12 +175,16 @@ pub async fn service_prepare(context: Arc<Context>, ai_service: AiService) -> Re
     Ok(ai_service)
 }
 
-pub async fn service_setup(context: Arc<Context>, ai_service: &AiService) -> Result<AiService> {
+pub async fn service_setup(
+    ai_service_id: Uuid,
+    context: Arc<Context>,
+    port: i32,
+) -> Result<AiService> {
     let start = Utc::now();
 
     let setup_post = SetupPost { force_setup: false };
 
-    let url = format!("{BASE_AI_FUNCTION_URL}:{}/setup", ai_service.port);
+    let url = format!("{BASE_AI_FUNCTION_URL}:{port}/setup");
 
     let response: std::result::Result<reqwest::Response, reqwest::Error> = reqwest::Client::new()
         .post(url)
@@ -131,7 +201,7 @@ pub async fn service_setup(context: Arc<Context>, ai_service: &AiService) -> Res
 
             let result = context
                 .octopus_database
-                .update_ai_service_setup_status(ai_service.id, setup_execution_time, response.setup)
+                .update_ai_service_setup_status(ai_service_id, setup_execution_time, response.setup)
                 .await?;
 
             return Ok(result);
@@ -141,7 +211,7 @@ pub async fn service_setup(context: Arc<Context>, ai_service: &AiService) -> Res
     let result = context
         .octopus_database
         .update_ai_service_setup_status(
-            ai_service.id,
+            ai_service_id,
             setup_execution_time,
             AiServiceSetupStatus::NotPerformed,
         )
@@ -175,7 +245,7 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
 
     let mut messages = vec![];
 
-    let content = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {}", code);
+    let content = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {code}");
 
     let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
         .role(Role::User)
@@ -186,7 +256,7 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model("gpt-4-0613")
+        .model(MODEL)
         .messages(messages)
         .build();
 
@@ -229,7 +299,7 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
-    user: User,
+    _user: User,
 ) -> Result<ChatMessage> {
     let client = Client::new();
 
@@ -360,7 +430,7 @@ pub async fn open_ai_request(
             } else if !chat_message_tmp.chat_message_files.is_empty() {
                 let mut urls = String::new();
                 for chat_message_file in chat_message_tmp.chat_message_files {
-                    urls.push_str(&format!("{DOMAIN}{}", chat_message_file.file_name));
+                    urls.push_str(&format!("https://{DOMAIN}/{}", chat_message_file.file_name));
                 }
 
                 if !urls.is_empty() {
@@ -445,7 +515,7 @@ pub async fn open_ai_request(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model("gpt-4-0613")
+        .model(MODEL)
         .messages(messages)
         .functions(functions)
         .function_call("auto")

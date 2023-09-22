@@ -58,6 +58,7 @@ pub struct AiFunction {
     pub id: Uuid,
     pub ai_service_id: Uuid,
     pub description: String,
+    pub formatted_name: String,
     pub is_enabled: bool,
     pub name: String,
     pub parameters: serde_json::Value,

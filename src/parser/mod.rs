@@ -4,6 +4,7 @@ use crate::{
     entity::{
         AiFunctionRequestContentType, AiFunctionResponseContentType, AiService, AiServiceStatus,
     },
+    error::AppError,
     parser::configuration::Configuration,
     Result,
 };
@@ -30,7 +31,7 @@ pub async fn ai_service_malicious_code_check(
 
     let ai_service = context
         .octopus_database
-        .update_ai_service_status(ai_service.id, status)
+        .update_ai_service_status(ai_service.id, 100, status)
         .await?;
 
     Ok(ai_service)
@@ -39,7 +40,7 @@ pub async fn ai_service_malicious_code_check(
 pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     let ai_service = context
         .octopus_database
-        .update_ai_service_status(ai_service.id, AiServiceStatus::ParsingStarted)
+        .update_ai_service_status(ai_service.id, 0, AiServiceStatus::ParsingStarted)
         .await?;
 
     let original_function_body = ai_service.original_function_body.clone().replace('\r', "");
@@ -91,6 +92,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         .update_ai_service_processed_function_body(
             ai_service.id,
             &processed_function_body,
+            100,
             AiServiceStatus::ParsingFinished,
         )
         .await?;
@@ -103,6 +105,14 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
         let request_content_type = function.input_type.replace('/', "_");
         let response_content_type = function.return_type.replace('/', "_");
+        let formatted_name = function
+            .name
+            .clone()
+            .strip_prefix(&format!("{}-", ai_service.id))
+            .ok_or(AppError::Parsing)?
+            .to_string()
+            .replace('-', "_")
+            .to_lowercase();
 
         match ai_function_exists {
             None => {
@@ -111,6 +121,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                     .insert_ai_function(
                         ai_service.id,
                         &function.description,
+                        &formatted_name,
                         &function.name,
                         function.parameters,
                         AiFunctionRequestContentType::from_str(&request_content_type)?,
@@ -124,6 +135,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                     .update_ai_function(
                         ai_function_exists.id,
                         &function.description,
+                        &formatted_name,
                         &function.name,
                         function.parameters,
                         AiFunctionRequestContentType::from_str(&request_content_type)?,

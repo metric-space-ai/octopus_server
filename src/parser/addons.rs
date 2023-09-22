@@ -12,7 +12,7 @@ pub async fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
     if !argparse_present {
         let mut parsed_code_lines = code_lines;
 
-        parsed_code_lines.push("".to_string());
+        parsed_code_lines.push(String::new());
         parsed_code_lines.push("import argparse".to_string());
         parsed_code_lines
             .push("parser = argparse.ArgumentParser(description=\"AI Service\")".to_string());
@@ -42,7 +42,7 @@ pub async fn add_daemon(
     if !daemon_present {
         let mut parsed_code_lines = code_lines;
 
-        parsed_code_lines.push("".to_string());
+        parsed_code_lines.push(String::new());
         parsed_code_lines.push("import daemon".to_string());
         parsed_code_lines.push(format!(
             "with daemon.DaemonContext(working_directory=\"/services/{}/\"):",
@@ -80,7 +80,7 @@ pub async fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>
                 parsed_code_lines.push("@app.errorhandler(Exception)".to_string());
                 parsed_code_lines.push("def handle_exception(e):".to_string());
                 parsed_code_lines.push("    return jsonify(error=str(e)), 500".to_string());
-                parsed_code_lines.push("".to_string());
+                parsed_code_lines.push(String::new());
                 parsed_code_lines.push(code_line);
             } else {
                 parsed_code_lines.push(code_line);
@@ -111,7 +111,7 @@ pub async fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
                     .push("@app.route(\"/health-check\", methods=[\"GET\"])".to_string());
                 parsed_code_lines.push("def health_check():".to_string());
                 parsed_code_lines.push("    return {\"status\": \"Ok\"}, 200".to_string());
-                parsed_code_lines.push("".to_string());
+                parsed_code_lines.push(String::new());
                 parsed_code_lines.push(code_line);
             } else {
                 parsed_code_lines.push(code_line);
