@@ -126,10 +126,13 @@ pub async fn create(
             let mut file = File::create(path)?;
             file.write_all(&data)?;
 
-            let chat_message_picture = context
+            let mut chat_message_picture = context
                 .octopus_database
                 .insert_chat_message_picture(chat_message.id, &file_name)
                 .await?;
+
+            chat_message_picture.file_name =
+                format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
 
             return Ok((StatusCode::CREATED, Json(chat_message_picture)).into_response());
         }
@@ -247,11 +250,13 @@ pub async fn read(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let chat_message_picture = context
+    let mut chat_message_picture = context
         .octopus_database
         .try_get_chat_message_picture_by_id(chat_message_picture_id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    chat_message_picture.file_name = format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
 
     if chat_message_id != chat_message_picture.chat_message_id {
         return Err(AppError::Forbidden);
@@ -372,10 +377,13 @@ pub async fn update(
             let mut file = File::create(path)?;
             file.write_all(&data)?;
 
-            let chat_message_picture = context
+            let mut chat_message_picture = context
                 .octopus_database
                 .update_chat_message_picture(chat_message_picture.id, &file_name)
                 .await?;
+
+            chat_message_picture.file_name =
+                format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
 
             remove_file(old_file)?;
 

@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.2.5"
+version = "0.2.6"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -16,7 +16,6 @@ chrono = { version = "0.4", features = ["serde"] }
 fake = "2.8"
 http = "0.2"
 hyper = { version = "0.14", features = ["full"] }
-#hyper-multipart-rfc7578 = "0.8"
 infer = "0.15"
 mime = "0.3"
 rand = "0.8"

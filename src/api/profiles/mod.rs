@@ -3,6 +3,7 @@ use crate::{
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
+    PUBLIC_DIR,
 };
 use axum::{
     extract::{Path, State},
@@ -62,11 +63,15 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let profile = context
+    let mut profile = context
         .octopus_database
         .try_get_profile_by_user_id(user_id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    if let Some(photo_file_name) = profile.photo_file_name {
+        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+    }
 
     if session_user.id != user_id
         && (!session_user
@@ -133,7 +138,7 @@ pub async fn update(
         return Err(AppError::Forbidden);
     }
 
-    let profile = context
+    let mut profile = context
         .octopus_database
         .update_profile(
             profile.id,
@@ -143,6 +148,10 @@ pub async fn update(
             input.text_size,
         )
         .await?;
+
+    if let Some(photo_file_name) = profile.photo_file_name {
+        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+    }
 
     Ok((StatusCode::OK, Json(profile)).into_response())
 }

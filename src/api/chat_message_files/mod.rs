@@ -2,6 +2,7 @@ use crate::{
     context::Context,
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
+    PUBLIC_DIR,
 };
 use axum::{
     extract::{Path, State},
@@ -105,10 +106,16 @@ pub async fn list(
             return Err(AppError::Forbidden);
         }
 
-        let chat_message_files = context
+        let mut chat_message_files = vec![];
+        let chat_message_files_tmp = context
             .octopus_database
             .get_chat_message_files_by_chat_message_id(chat_message.id)
             .await?;
+
+        for mut chat_message_file in chat_message_files_tmp {
+            chat_message_file.file_name = format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
+            chat_message_files.push(chat_message_file);
+        }
 
         return Ok((StatusCode::OK, Json(chat_message_files)).into_response());
     }
@@ -143,11 +150,13 @@ pub async fn read(
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated_session(extracted_session).await?;
 
-    let chat_message_file = context
+    let mut chat_message_file = context
         .octopus_database
         .try_get_chat_message_file_by_id(chat_message_file_id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    chat_message_file.file_name = format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
 
     if chat_message_id != chat_message_file.chat_message_id {
         return Err(AppError::Forbidden);
@@ -1976,7 +1985,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: ChatMessageFile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.file_name, file_name);
+        assert!(body.file_name.contains(file_name));
 
         app.context
             .octopus_database
