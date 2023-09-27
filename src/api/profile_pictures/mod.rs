@@ -168,10 +168,14 @@ pub async fn update(
             let mut file = File::create(path)?;
             file.write_all(&data)?;
 
-            let profile = context
+            let mut profile = context
                 .octopus_database
                 .update_profile_photo_file_name(profile.id, Some(file_name))
                 .await?;
+
+            if let Some(photo_file_name) = profile.photo_file_name {
+                profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+            }
 
             if let Some(old_path) = old_path {
                 remove_file(old_path)?;
