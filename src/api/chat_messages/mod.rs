@@ -417,7 +417,7 @@ pub async fn flag(
     get,
     path = "/api/v1/chat-messages/:chat_id/latest",
     responses(
-        (status = 200, description = "Chat message latest.", body = ChatMessage),
+        (status = 200, description = "Chat message latest.", body = ChatMessageExtended),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
