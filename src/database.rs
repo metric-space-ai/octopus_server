@@ -1984,6 +1984,46 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn update_user(
+        &self,
+        id: Uuid,
+        email: &str,
+        is_enabled: bool,
+        roles: &[String],
+    ) -> Result<User> {
+        let user = sqlx::query_as!(
+            User,
+            "UPDATE users
+            SET email = $2, is_enabled = $3, roles = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            id,
+            email,
+            is_enabled,
+            roles
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
+    pub async fn update_user_email(&self, id: Uuid, email: &str) -> Result<User> {
+        let user = sqlx::query_as!(
+            User,
+            "UPDATE users
+            SET email = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            id,
+            email
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn update_user_password(&self, id: Uuid, password: &str) -> Result<User> {
         let user = sqlx::query_as!(
             User,

@@ -20,6 +20,7 @@ use crate::{
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
+        users::UserPut,
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -67,6 +68,7 @@ mod password_resets;
 mod profile_pictures;
 mod profiles;
 mod setup;
+mod users;
 mod workspaces;
 
 pub async fn router(context: Arc<Context>) -> Router {
@@ -123,6 +125,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 SetupInfoResponse,
                 SetupPost,
                 User,
+                UserPut,
                 Workspace,
                 WorkspacePost,
                 WorkspacePut,
@@ -195,6 +198,8 @@ pub async fn router(context: Arc<Context>) -> Router {
             register::register,
             setup::info,
             setup::setup,
+            users::read,
+            users::update,
             workspaces::create,
             workspaces::delete,
             workspaces::list,
@@ -221,6 +226,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "profile_pictures", description = "Profile pictures API."),
             (name = "register", description = "Register API."),
             (name = "setup", description = "Setup API."),
+            (name = "users", description = "Users API."),
             (name = "workspaces", description = "Workspaces API."),
         )
     )]
@@ -377,6 +383,10 @@ pub async fn router(context: Arc<Context>) -> Router {
             get(profiles::read).put(profiles::update),
         )
         .route("/api/v1/setup", get(setup::info).post(setup::setup))
+        .route(
+            "/api/v1/users/:user_id",
+            get(users::read).put(users::update),
+        )
         .route(
             "/api/v1/workspaces",
             get(workspaces::list).post(workspaces::create),
