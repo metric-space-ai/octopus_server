@@ -24,6 +24,7 @@ use uuid::Uuid;
     path = "/api/v1/profile-pictures/:user_id",
     responses(
         (status = 204, description = "User profile picture deleted."),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),
@@ -90,6 +91,7 @@ pub async fn delete(
     path = "/api/v1/profile-pictures/:user_id",
     responses(
         (status = 200, description = "User profile picture updated.", body = Profile),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User profile not found.", body = ResponseError),
     ),

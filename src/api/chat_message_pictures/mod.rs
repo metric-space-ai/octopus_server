@@ -32,6 +32,7 @@ pub struct Params {
     path = "/api/v1/chat-message-pictures/:chat_message_id",
     responses(
         (status = 201, description = "Chat message picture created.", body = ChatMessagePicture),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
         (status = 409, description = "Conflicting request.", body = ResponseError),
@@ -147,6 +148,7 @@ pub async fn create(
     path = "/api/v1/chat-message-pictures/:chat_message_id/:chat_message_picture_id",
     responses(
         (status = 204, description = "Chat message picture deleted."),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message picture not found.", body = ResponseError),
     ),
@@ -223,6 +225,7 @@ pub async fn delete(
     path = "/api/v1/chat-message-pictures/:chat_message_id/:chat_message_picture_id",
     responses(
         (status = 200, description = "Chat message picture read.", body = ChatMessagePicture),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message picture not found.", body = ResponseError),
     ),
@@ -287,6 +290,7 @@ pub async fn read(
     path = "/api/v1/chat-message-pictures/:chat_message_id/:chat_message_picture_id",
     responses(
         (status = 200, description = "Chat message picture updated.", body = ChatMessagePicture),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat message picture not found.", body = ResponseError),
     ),

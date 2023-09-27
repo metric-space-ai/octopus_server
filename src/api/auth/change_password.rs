@@ -37,6 +37,7 @@ pub struct ChangePasswordPut {
     responses(
         (status = 200, description = "User password updated.", body = User),
         (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User not found.", body = ResponseError)
     )
@@ -615,6 +616,169 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn update_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let user2_id = body.id;
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user2_id);
+
+        let old_password = "password123";
+        let password = "passwordABC";
+        let repeat_password = "passwordABC";
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "old_password": &old_password,
+                            "password": &password,
+                            "repeat_password": &repeat_password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database

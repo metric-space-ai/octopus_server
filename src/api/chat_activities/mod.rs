@@ -18,6 +18,7 @@ use uuid::Uuid;
     path = "/api/v1/chat-activities/:chat_id",
     responses(
         (status = 201, description = "Chat activity created.", body = ChatActivity),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
     ),
@@ -71,6 +72,7 @@ pub async fn create(
     path = "/api/v1/chat-activities/:chat_id",
     responses(
         (status = 200, description = "List of the latest chat activities.", body = [ChatActivity]),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -292,6 +294,181 @@ mod tests {
         let body: ChatActivity = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, user_id);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_by_id(chat_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn create_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+        let fifth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let session_id = body.id;
+
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Chat = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let chat_id = body.id;
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
@@ -950,6 +1127,290 @@ mod tests {
         let body: Vec<ChatActivity> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_by_id(chat_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_workspace_by_id(workspace_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn list_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+        let fifth_router = router.clone();
+        let sixth_router = router.clone();
+        let seventh_router = router.clone();
+        let eighth_router = router.clone();
+        let ninth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let admin_session_id = body.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let user2_id = body.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user2_id);
+
+        let name = format!("workspace {}", Word().fake::<String>());
+        let r#type = "Public";
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        let workspace_id = body.id;
+
+        let response = sixth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chats/{workspace_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Chat = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let chat_id = body.id;
+
+        let response = seventh_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let response = eighth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Vec<ChatActivity> = serde_json::from_slice(&body).unwrap();
+
+        assert!(body.is_empty());
+
+        let response = ninth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database

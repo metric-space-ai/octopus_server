@@ -29,6 +29,7 @@ pub struct InspectionDisablingPost {
     request_body = InspectionDisablingPost,
     responses(
         (status = 201, description = "Inspection disabling created.", body = InspectionDisabling),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User not found.", body = ResponseError),
     ),
@@ -100,6 +101,7 @@ pub async fn create(
     path = "/api/v1/inspection-disablings/:user_id",
     responses(
         (status = 204, description = "Inspection disabling deleted."),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Inspection disabling not found.", body = ResponseError),
     ),
@@ -142,6 +144,7 @@ pub async fn delete(
     path = "/api/v1/inspection-disablings/:user_id",
     responses(
         (status = 200, description = "Inspection disabling read.", body = Option<InspectionDisabling>),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 404, description = "User not found.", body = ResponseError),
     ),
     params(
@@ -301,6 +304,124 @@ mod tests {
         let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, user_id);
+
+        app.context
+            .octopus_database
+            .try_delete_inspection_disabling_by_user_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn create_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let minutes = 10;
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "minutes": &minutes,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
@@ -734,6 +855,141 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn delete_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let session_id = body.id;
+
+        let minutes = 10;
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "minutes": &minutes,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
@@ -1194,6 +1450,147 @@ mod tests {
         let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, user_id);
+
+        app.context
+            .octopus_database
+            .try_delete_inspection_disabling_by_user_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn read_401() {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/setup")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "company_name": &company_name,
+                            "email": &email,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let company_id = body.company_id;
+        let user_id = body.id;
+
+        let response = second_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let session_id = body.id;
+
+        let minutes = 10;
+
+        let response = third_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "minutes": &minutes,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database
