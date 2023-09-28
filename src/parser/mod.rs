@@ -76,9 +76,9 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = addons::add_argparse(code_lines).await?;
     code_lines = addons::add_daemon(code_lines, &ai_service, app_threaded).await?;
 
-    for code_line in &code_lines {
-        tracing::info!("{}", code_line);
-    }
+    //    for code_line in &code_lines {
+    //        tracing::info!("{}", code_line);
+    //    }
 
     let config_lines = configuration::locate_config(code_lines.clone()).await?;
     let config_lines = config_lines.join("\n");

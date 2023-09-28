@@ -7,7 +7,7 @@ use crate::{
 };
 use std::{
     collections::HashMap,
-    fs::{create_dir, File},
+    fs::{create_dir, remove_dir_all, File},
     io::Write,
     path::Path,
     process::{Command, Stdio},
@@ -106,6 +106,16 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
     Ok(true)
 }
 
+pub async fn delete_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
+    let path = format!("{SERVICES_DIR}/{}", ai_service.id);
+    let dir_exists = Path::new(&path).is_dir();
+    if dir_exists {
+        remove_dir_all(path)?;
+    }
+
+    Ok(true)
+}
+
 pub async fn install_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     let ai_service = context
         .octopus_database
@@ -152,6 +162,12 @@ pub async fn install_and_run_ai_service(
     ai_service: AiService,
     context: Arc<Context>,
 ) -> Result<AiService> {
+    let pid = try_get_pid(&ai_service.id.to_string()).await?;
+
+    if let Some(pid) = pid {
+        try_stop_ai_service(pid).await?;
+    }
+
     let ai_service = install_ai_service(ai_service, context.clone()).await?;
     let ai_service = run_ai_service(ai_service, context).await?;
 
@@ -354,6 +370,18 @@ pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
     Ok(pid)
 }
 
+pub async fn stop_and_remove_ai_service(ai_service: AiService) -> Result<AiService> {
+    let pid = try_get_pid(&ai_service.id.to_string()).await?;
+
+    if let Some(pid) = pid {
+        try_stop_ai_service(pid).await?;
+    }
+
+    delete_environment_for_ai_service(&ai_service).await?;
+
+    Ok(ai_service)
+}
+
 pub async fn try_restart_ai_service(ai_service_id: Uuid, port: i32) -> Result<Option<i32>> {
     let pid = try_get_pid(&ai_service_id.to_string()).await?;
 
@@ -382,7 +410,12 @@ pub async fn try_start_ai_service(ai_service_id: Uuid, port: i32) -> Result<Opti
 }
 
 pub async fn try_stop_ai_service(pid: i32) -> Result<()> {
-    Command::new("kill").arg(format!("{pid}")).output()?;
+    Command::new("kill")
+        .arg("-9")
+        .arg(format!("{pid}"))
+        .output()?;
+
+    sleep(Duration::from_secs(2)).await;
 
     Ok(())
 }

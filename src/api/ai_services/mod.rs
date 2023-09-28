@@ -22,6 +22,7 @@ use validator::Validate;
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
 pub enum AiServiceOperation {
+    HealthCheck,
     Setup,
 }
 
@@ -33,12 +34,6 @@ pub struct AiServiceOperationPost {
 #[derive(Debug, Serialize, ToSchema)]
 pub struct AiServiceOperationResponse {
     pub estimated_operation_end_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct AiServicePut {
-    pub device_map: serde_json::Value,
-    pub is_enabled: bool,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -165,9 +160,17 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let ai_service = process_manager::stop_and_remove_ai_service(ai_service).await?;
+
     context
         .octopus_database
-        .try_delete_ai_service_by_id(id)
+        .try_delete_ai_service_by_id(ai_service.id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -204,7 +207,8 @@ pub async fn installation(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if ai_service.status == AiServiceStatus::Initial
+    if ai_service.status == AiServiceStatus::Configuration
+        || ai_service.status == AiServiceStatus::Initial
         || ai_service.status == AiServiceStatus::MaliciousCodeDetected
         || ai_service.status == AiServiceStatus::ParsingStarted
     {
@@ -285,6 +289,14 @@ pub async fn operation(
     let cloned_input = input.clone();
     tokio::spawn(async move {
         let ai_service = match cloned_input.operation {
+            AiServiceOperation::HealthCheck => {
+                ai::service_health_check(
+                    cloned_ai_service.id,
+                    cloned_context,
+                    cloned_ai_service.port,
+                )
+                .await
+            }
             AiServiceOperation::Setup => {
                 ai::service_setup(cloned_ai_service.id, cloned_context, cloned_ai_service.port)
                     .await
@@ -297,6 +309,7 @@ pub async fn operation(
     });
 
     let execution_time = match input.operation {
+        AiServiceOperation::HealthCheck => ai_service.health_check_execution_time,
         AiServiceOperation::Setup => ai_service.setup_execution_time,
     };
 
@@ -345,9 +358,9 @@ pub async fn read(
 #[utoipa::path(
     put,
     path = "/api/v1/ai-services/:id",
-    request_body = AiServicePut,
     responses(
         (status = 200, description = "AI Service updated.", body = AiService),
+        (status = 400, description = "Bad request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Service not found.", body = ResponseError),
     ),
@@ -362,10 +375,9 @@ pub async fn update(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
-    Json(input): Json<AiServicePut>,
+    mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
-    input.validate()?;
 
     context
         .octopus_database
@@ -373,34 +385,27 @@ pub async fn update(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let port = 9000;
+    while let Some(field) = multipart.next_field().await? {
+        let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
+        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-    let ai_service = context
-        .octopus_database
-        .update_ai_service(
-            id,
-            input.device_map,
-            input.is_enabled,
-            "original_file_name.py",
-            "original_function_body",
-            port,
-            "processed_function_body",
-        )
-        .await?;
+        if content_type == "application/octet-stream" {
+            let data = field.bytes().await?.clone().to_vec();
 
-    /*
-    let cloned_context = context.clone();
-    let cloned_ai_service = ai_service.clone();
-    tokio::spawn(async move {
-        let ai_service = ai::service_prepare(cloned_ai_service, cloned_context).await;
+            let original_function_body = String::from_utf8(data)?;
 
-        if let Err(e) = ai_service {
-            debug!("Error: {:?}", e);
+            let ai_service = context
+                .octopus_database
+                .update_ai_service(id, &original_file_name, &original_function_body)
+                .await?;
+
+            let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;
+
+            return Ok((StatusCode::OK, Json(ai_service)).into_response());
         }
-    });
-    */
+    }
 
-    Ok((StatusCode::OK, Json(ai_service)).into_response())
+    Err(AppError::BadRequest)
 }
 /*
 #[cfg(test)]

@@ -1718,30 +1718,21 @@ impl OctopusDatabase {
         Ok(ai_functions)
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub async fn update_ai_service(
         &self,
         id: Uuid,
-        device_map: serde_json::Value,
-        is_enabled: bool,
         original_file_name: &str,
         original_function_body: &str,
-        port: i32,
-        processed_function_body: &str,
     ) -> Result<AiService> {
         let ai_service = sqlx::query_as!(
             AiService,
             r#"UPDATE ai_services
-            SET device_map = $2, is_enabled = $3, original_file_name = $4, original_function_body = $5, port = $6, processed_function_body = $7, updated_at = current_timestamp(0)
+            SET original_file_name = $2, original_function_body = $3, updated_at = current_timestamp(0)
             WHERE id = $1
             RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
-            device_map,
-            is_enabled,
             original_file_name,
             original_function_body,
-            port,
-            processed_function_body,
         )
         .fetch_one(&*self.pool)
         .await?;
