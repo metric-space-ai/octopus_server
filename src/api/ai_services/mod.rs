@@ -396,7 +396,7 @@ pub async fn update(
 
             let ai_service = context
                 .octopus_database
-                .update_ai_service(id, &original_file_name, &original_function_body)
+                .update_ai_service(id, false, &original_file_name, &original_function_body)
                 .await?;
 
             let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;

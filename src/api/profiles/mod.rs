@@ -71,7 +71,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     if let Some(photo_file_name) = profile.photo_file_name {
-        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{photo_file_name}"));
     }
 
     if session_user.id != user_id
@@ -152,7 +152,7 @@ pub async fn update(
         .await?;
 
     if let Some(photo_file_name) = profile.photo_file_name {
-        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+        profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{photo_file_name}"));
     }
 
     Ok((StatusCode::OK, Json(profile)).into_response())

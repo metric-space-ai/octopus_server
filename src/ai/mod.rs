@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{
-        AiFunction, AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, ChatMessage,
+        AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, ChatMessage,
         ChatMessageStatus, User,
     },
     error::AppError,
@@ -15,65 +15,21 @@ use async_openai::{
     Client,
 };
 use axum::http::StatusCode;
-use base64::{alphabet, engine, Engine};
 use chrono::{DateTime, Duration, Utc};
-use hyper::body::Bytes;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use std::{fs::File, io::Write, sync::Arc};
-use utoipa::ToSchema;
+use std::sync::Arc;
 use uuid::Uuid;
-/*
-mod function_find_part;
-mod function_foo_sync;
-mod function_orbit_camera;
-mod function_text_to_image;
-mod function_translator;
-mod function_visual_questions_answering;
-*/
+
+pub mod function_call;
+
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 pub const MODEL: &str = "gpt-4-0613";
-
-#[derive(Debug)]
-pub struct AiFunctionResponseFile {
-    pub content: Bytes,
-    pub media_type: String,
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AiFunctionCall {
     pub arguments: serde_json::Value,
     pub name: String,
-}
-
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct AiFunctionResponseFileAttachement {
-    pub content: String,
-    pub file_name: String,
-    pub media_type: String,
-}
-
-#[derive(Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
-pub enum AiFunctionResponseStatus {
-    Initial,
-    Processed,
-    Processing,
-}
-
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
-#[serde(untagged)]
-pub enum AiFunctionResponseResponse {
-    Array(Vec<String>),
-    String(String),
-}
-
-#[derive(Debug, Deserialize, Serialize, ToSchema)]
-pub struct AiFunctionResponse {
-    pub id: Uuid,
-    pub progress: i32,
-    pub status: AiFunctionResponseStatus,
-    pub response: Option<AiFunctionResponseResponse>,
-    pub file_attachements: Vec<AiFunctionResponseFileAttachement>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -230,7 +186,6 @@ pub struct ChatAuditTrail {
 
 #[derive(Debug, Serialize)]
 pub struct FunctionSensitiveInformationPost {
-    pub device_map: serde_json::Value,
     pub value1: String,
 }
 
@@ -299,7 +254,7 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
-    _user: User,
+    user: User,
 ) -> Result<ChatMessage> {
     let client = Client::new();
 
@@ -319,7 +274,6 @@ pub async fn open_ai_request(
         }
     }
 
-    /*
     let mut content_safety_enabled = true;
 
     let inspection_disabling = context
@@ -348,16 +302,24 @@ pub async fn open_ai_request(
             .await?;
 
         if let Some(ai_function) = ai_function {
-            if ai_function.is_enabled
-                && ai_function.setup_status == AiFunctionSetupStatus::Performed
-            {
-                let function_sensitive_information_post = FunctionSensitiveInformationPost {
-                    device_map: ai_function.device_map.clone(),
-                    value1: chat_message.message.clone(),
-                };
+            let ai_service = context
+                .octopus_database
+                .try_get_ai_service_by_id(ai_function.ai_service_id)
+                .await?;
 
-                if let Some(port) = ai_function.port {
-                    let url = format!("{BASE_AI_FUNCTION_URL}:{}/{}", port, ai_function.name);
+            if let Some(ai_service) = ai_service {
+                if ai_function.is_enabled
+                    && ai_service.is_enabled
+                    && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
+                    && ai_service.setup_status == AiServiceSetupStatus::Performed
+                {
+                    let function_sensitive_information_post = FunctionSensitiveInformationPost {
+                        value1: chat_message.message.clone(),
+                    };
+                    let url = format!(
+                        "{BASE_AI_FUNCTION_URL}:{}/{}",
+                        ai_service.port, ai_function.name
+                    );
                     let response = reqwest::Client::new()
                         .post(url)
                         .json(&function_sensitive_information_post)
@@ -386,7 +348,7 @@ pub async fn open_ai_request(
                 }
             }
         }
-        */
+    }
 
     let mut chat_audit_trails = vec![];
 
@@ -455,14 +417,14 @@ pub async fn open_ai_request(
     }
 
     let mut functions = vec![];
-    /*
+
     let ai_functions = context
         .octopus_database
         .get_ai_functions_for_request()
         .await?;
 
     for ai_function in ai_functions {
-        if ai_function.name != "function_sensitive_information" {
+        if ai_function.formatted_name != "function_sensitive_information" {
             let function = ChatCompletionFunctionsArgs::default()
                 .name(ai_function.name)
                 .description(ai_function.description)
@@ -472,7 +434,6 @@ pub async fn open_ai_request(
             functions.push(function);
         }
     }
-    */
 
     let trail = serde_json::to_value(&chat_audit_trails)?;
 
@@ -569,7 +530,7 @@ pub async fn open_ai_request(
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
-                            /*
+
                             if let Some(function_call) = response_message.function_call {
                                 let function_name = function_call.name;
                                 let function_args: serde_json::Value =
@@ -592,50 +553,15 @@ pub async fn open_ai_request(
                                     .await?;
 
                                 if let Some(ai_function) = ai_function {
-                                    if function_name == "function_find_part" {
-                                        function_find_part::handle_function_find_part(
-                                            &ai_function,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
+                                    let ai_service = context
+                                        .octopus_database
+                                        .try_get_ai_service_by_id(ai_function.ai_service_id)
                                         .await?;
-                                    } else if function_name == "function_foo_sync" {
-                                        function_foo_sync::handle_function_foo_sync(
+
+                                    if let Some(ai_service) = ai_service {
+                                        function_call::handle_function_call(
                                             &ai_function,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
-                                        .await?;
-                                    } else if function_name == "function_orbit_camera" {
-                                        function_orbit_camera::handle_function_orbit_camera(
-                                            &ai_function,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
-                                        .await?;
-                                    } else if function_name == "function_text_to_image" {
-                                        function_text_to_image::handle_function_text_to_image(
-                                            &ai_function,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
-                                        .await?;
-                                    } else if function_name == "function_translator" {
-                                        function_translator::handle_function_translator(
-                                            &ai_function,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
-                                        .await?;
-                                    } else if function_name == "function_visual_questions_answering"
-                                    {
-                                        function_visual_questions_answering::handle_function_visual_questions_answering(
-                                            &ai_function,
+                                            &ai_service,
                                             &chat_message,
                                             context.clone(),
                                             &function_args,
@@ -644,7 +570,7 @@ pub async fn open_ai_request(
                                     }
                                 }
                             }
-                            */
+
                             if let Some(content) = response_message.content {
                                 let chat_message = context
                                     .octopus_database
@@ -664,116 +590,6 @@ pub async fn open_ai_request(
             }
         }
     }
-
-    Ok(chat_message)
-}
-
-pub async fn update_chat_message(
-    ai_function: &AiFunction,
-    ai_function_response: &AiFunctionResponse,
-    context: Arc<Context>,
-    chat_message: &ChatMessage,
-) -> Result<ChatMessage> {
-    let status = match ai_function_response.status {
-        AiFunctionResponseStatus::Processed => ChatMessageStatus::Answered,
-        _ => ChatMessageStatus::Asked,
-    };
-
-    let response = match ai_function_response.response.clone() {
-        Some(AiFunctionResponseResponse::Array(array)) => {
-            let string = array.into_iter().collect::<String>();
-
-            Some(string)
-        }
-        Some(AiFunctionResponseResponse::String(string)) => Some(string),
-        None => None,
-    };
-
-    let chat_message = context
-        .octopus_database
-        .update_chat_message_from_function(
-            chat_message.id,
-            ai_function.id,
-            status,
-            ai_function_response.progress,
-            response,
-        )
-        .await?;
-
-    if !ai_function_response.file_attachements.is_empty() {
-        let engine = engine::GeneralPurpose::new(&alphabet::URL_SAFE, engine::general_purpose::PAD);
-
-        for file_attachement in &ai_function_response.file_attachements {
-            let content = file_attachement
-                .content
-                .strip_prefix("b'")
-                .ok_or(AppError::InternalError)?
-                .to_string();
-            let content = content.strip_suffix('\'').ok_or(AppError::InternalError)?;
-            let data = engine.decode(content)?;
-            let extension = (*(file_attachement
-                .file_name
-                .split('.')
-                .collect::<Vec<&str>>()
-                .last()
-                .ok_or(AppError::File)?))
-            .to_string();
-
-            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
-            let path = format!("{PUBLIC_DIR}/{file_name}");
-
-            let mut file = File::create(path)?;
-            file.write_all(&data)?;
-
-            context
-                .octopus_database
-                .insert_chat_message_file(chat_message.id, &file_name, &file_attachement.media_type)
-                .await?;
-        }
-    }
-
-    Ok(chat_message)
-}
-
-pub async fn update_chat_message_with_file_response(
-    ai_function: &AiFunction,
-    ai_function_response_file: &AiFunctionResponseFile,
-    context: Arc<Context>,
-    chat_message: &ChatMessage,
-) -> Result<ChatMessage> {
-    let status = ChatMessageStatus::Answered;
-    let response = None;
-    let progress = 100;
-
-    let chat_message = context
-        .octopus_database
-        .update_chat_message_from_function(
-            chat_message.id,
-            ai_function.id,
-            status,
-            progress,
-            response,
-        )
-        .await?;
-
-    let data = ai_function_response_file.content.to_vec();
-    let kind = infer::get(&data).ok_or(AppError::File)?;
-    let extension = kind.extension();
-
-    let file_name = format!("{}.{}", Uuid::new_v4(), extension);
-    let path = format!("{PUBLIC_DIR}/{file_name}");
-
-    let mut file = File::create(path)?;
-    file.write_all(&data)?;
-
-    context
-        .octopus_database
-        .insert_chat_message_file(
-            chat_message.id,
-            &file_name,
-            &ai_function_response_file.media_type,
-        )
-        .await?;
 
     Ok(chat_message)
 }

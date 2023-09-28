@@ -176,7 +176,7 @@ pub async fn update(
                 .await?;
 
             if let Some(photo_file_name) = profile.photo_file_name {
-                profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{}", photo_file_name));
+                profile.photo_file_name = Some(format!("{PUBLIC_DIR}/{photo_file_name}"));
             }
 
             if let Some(old_path) = old_path {

@@ -1,7 +1,7 @@
 use crate::{
-    ai::{AiFunctionResponse, BASE_AI_FUNCTION_URL},
+    ai::function_call::function_call,
     context::Context,
-    entity::{AiServiceSetupStatus, ROLE_COMPANY_ADMIN_USER},
+    entity::{AiServiceHealthCheckStatus, AiServiceSetupStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
@@ -115,26 +115,18 @@ pub async fn direct_call(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if !ai_service.is_enabled || ai_service.setup_status != AiServiceSetupStatus::Performed {
+    if !ai_function.is_enabled
+        || !ai_service.is_enabled
+        || ai_service.health_check_status != AiServiceHealthCheckStatus::Ok
+        || ai_service.setup_status != AiServiceSetupStatus::Performed
+    {
         return Err(AppError::Gone);
     }
 
-    let url = format!(
-        "{BASE_AI_FUNCTION_URL}:{}/{}",
-        ai_service.port, ai_function.name
-    );
-    let response = reqwest::Client::new()
-        .post(url)
-        .json(&input.parameters)
-        .send()
-        .await;
+    let ai_function_response = function_call(&ai_function, &ai_service, &input.parameters).await?;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let ai_function_response: AiFunctionResponse = response.json().await?;
-
-            return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
-        }
+    if let Some(ai_function_response) = ai_function_response {
+        return Ok((StatusCode::CREATED, Json(ai_function_response)).into_response());
     }
 
     Err(AppError::Gone)

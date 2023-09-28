@@ -1,8 +1,5 @@
 use crate::{
-    ai::{
-        AiFunctionResponse, AiFunctionResponseFileAttachement, AiFunctionResponseResponse,
-        AiFunctionResponseStatus,
-    },
+    ai::function_call::{AiFunctionFileResponse, AiFunctionResponse, AiFunctionTextResponse},
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
         ai_services::{AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse},
@@ -79,14 +76,13 @@ pub async fn router(context: Arc<Context>) -> Router {
         components(
             schemas(
                 AiFunction,
+                AiFunctionDirectCallPost,
+                AiFunctionFileResponse,
                 AiFunctionPut,
                 AiFunctionRequestContentType,
                 AiFunctionResponse,
                 AiFunctionResponseContentType,
-                AiFunctionResponseFileAttachement,
-                AiFunctionResponseResponse,
-                AiFunctionResponseStatus,
-                AiFunctionDirectCallPost,
+                AiFunctionTextResponse,
                 AiService,
                 AiServiceHealthCheckStatus,
                 AiServiceOperation,

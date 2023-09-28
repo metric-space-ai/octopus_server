@@ -17,7 +17,6 @@ use validator::ValidationErrors;
 pub enum AppError {
     BadResponse,
     BadRequest,
-    Casting,
     CompanyNotFound,
     Concurrency(tokio::task::JoinError),
     Conflict,
@@ -26,7 +25,6 @@ pub enum AppError {
     Generic(Box<dyn Error + Send + Sync>),
     Gone,
     Header(ToStrError),
-    InternalError,
     Io(std::io::Error),
     Json(serde_json::Error),
     Multipart(MultipartError),
@@ -50,7 +48,6 @@ impl IntoResponse for AppError {
         let (status, error_message) = match self {
             AppError::BadResponse => (StatusCode::INTERNAL_SERVER_ERROR, "Response problem."),
             AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad request."),
-            AppError::Casting => (StatusCode::INTERNAL_SERVER_ERROR, "Casting problem."),
             AppError::CompanyNotFound => {
                 (StatusCode::BAD_REQUEST, "Main company is not registered.")
             }
@@ -63,7 +60,6 @@ impl IntoResponse for AppError {
             AppError::Generic(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Generic error."),
             AppError::Gone => (StatusCode::GONE, "Resource gone."),
             AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header."),
-            AppError::InternalError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal error."),
             AppError::Io(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Filesystem error."),
             AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON."),
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
