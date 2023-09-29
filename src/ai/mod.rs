@@ -298,7 +298,7 @@ pub async fn open_ai_request(
     {
         let ai_function = context
             .octopus_database
-            .try_get_ai_function_by_name("function_sensitive_information")
+            .try_get_ai_function_by_formatted_name("sensitive_information")
             .await?;
 
         if let Some(ai_function) = ai_function {
@@ -424,7 +424,7 @@ pub async fn open_ai_request(
         .await?;
 
     for ai_function in ai_functions {
-        if ai_function.formatted_name != "function_sensitive_information" {
+        if ai_function.formatted_name != "sensitive_information" {
             let function = ChatCompletionFunctionsArgs::default()
                 .name(ai_function.name)
                 .description(ai_function.description)

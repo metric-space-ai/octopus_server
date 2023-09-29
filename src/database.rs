@@ -1120,6 +1120,24 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
+    pub async fn try_get_ai_function_by_formatted_name(
+        &self,
+        formatted_name: &str,
+    ) -> Result<Option<AiFunction>> {
+        let ai_function = sqlx::query_as!(
+            AiFunction,
+            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            FROM ai_functions
+            WHERE formatted_name = $1
+            AND deleted_at IS NULL"#,
+            formatted_name
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_function)
+    }
+
     pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
