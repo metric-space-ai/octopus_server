@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{
-        AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, ChatMessage,
+        AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
         ChatMessageStatus, User,
     },
     error::AppError,
@@ -66,7 +66,7 @@ pub async fn service_health_check(
         if response.status() == StatusCode::OK {
             let response: HealthCheckResponse = response.json().await?;
 
-            let result = context
+            let ai_service = context
                 .octopus_database
                 .update_ai_service_health_check_status(
                     ai_service_id,
@@ -75,11 +75,11 @@ pub async fn service_health_check(
                 )
                 .await?;
 
-            return Ok(result);
+            return Ok(ai_service);
         }
     }
 
-    let result = context
+    let ai_service = context
         .octopus_database
         .update_ai_service_health_check_status(
             ai_service_id,
@@ -88,7 +88,7 @@ pub async fn service_health_check(
         )
         .await?;
 
-    Ok(result)
+    Ok(ai_service)
 }
 
 pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
@@ -136,6 +136,11 @@ pub async fn service_setup(
     context: Arc<Context>,
     port: i32,
 ) -> Result<AiService> {
+    context
+        .octopus_database
+        .update_ai_service_status(ai_service_id, 50, AiServiceStatus::Setup)
+        .await?;
+
     let start = Utc::now();
 
     let setup_post = SetupPost { force_setup: false };
@@ -155,16 +160,16 @@ pub async fn service_setup(
         if response.status() == StatusCode::CREATED {
             let response: SetupResponse = response.json().await?;
 
-            let result = context
+            let ai_service = context
                 .octopus_database
                 .update_ai_service_setup_status(ai_service_id, setup_execution_time, response.setup)
                 .await?;
 
-            return Ok(result);
+            return Ok(ai_service);
         }
     }
 
-    let result = context
+    let ai_service = context
         .octopus_database
         .update_ai_service_setup_status(
             ai_service_id,
@@ -173,7 +178,7 @@ pub async fn service_setup(
         )
         .await?;
 
-    Ok(result)
+    Ok(ai_service)
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -312,6 +317,7 @@ pub async fn open_ai_request(
                     && ai_service.is_enabled
                     && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
                     && ai_service.setup_status == AiServiceSetupStatus::Performed
+                    && ai_service.status == AiServiceStatus::Running
                 {
                     let function_sensitive_information_post = FunctionSensitiveInformationPost {
                         value1: chat_message.message.clone(),

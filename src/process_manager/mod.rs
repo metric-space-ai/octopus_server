@@ -80,6 +80,20 @@ impl ProcessManager {
 
         Ok(processes_list)
     }
+
+    pub fn remove(&self, id: Uuid) -> Result<bool> {
+        let mut processes = self
+            .processes
+            .write()
+            .map_err(|_| AppError::ProcessManagerLock)?;
+
+        let process = processes.remove(&id);
+
+        match process {
+            None => Ok(false),
+            Some(_process) => Ok(true),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -162,12 +176,7 @@ pub async fn install_and_run_ai_service(
     ai_service: AiService,
     context: Arc<Context>,
 ) -> Result<AiService> {
-    let pid = try_get_pid(&ai_service.id.to_string()).await?;
-
-    if let Some(pid) = pid {
-        try_stop_ai_service(pid).await?;
-    }
-
+    let ai_service = stop_ai_service(ai_service, context.clone()).await?;
     let ai_service = install_ai_service(ai_service, context.clone()).await?;
     let ai_service = run_ai_service(ai_service, context).await?;
 
@@ -175,7 +184,24 @@ pub async fn install_and_run_ai_service(
 }
 
 pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    if ai_service.status == AiServiceStatus::InstallationFinished {
+    if ai_service.status == AiServiceStatus::Stopped {
+        let environment_created = create_environment_for_ai_service(&ai_service).await?;
+
+        if environment_created {
+            let process = Process {
+                id: ai_service.id,
+                failed_connection_attempts: 0,
+                pid: None,
+                port: ai_service.port,
+                state: ProcessState::EnvironmentPrepared,
+            };
+
+            context.process_manager.insert(process)?;
+        }
+    }
+    if ai_service.status == AiServiceStatus::InstallationFinished
+        || ai_service.status == AiServiceStatus::Stopped
+    {
         let process = context.process_manager.get(ai_service.id)?;
 
         if let Some(mut process) = process {
@@ -315,7 +341,8 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                             }
 
                             if process.failed_connection_attempts > 30 {
-                                let pid = try_restart_ai_service(process.id, process.port).await?;
+                                let pid =
+                                    try_restart_ai_service(ai_service, context.clone()).await?;
                                 if let Some(pid) = pid {
                                     let process = Process {
                                         id: process.id,
@@ -349,6 +376,29 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
     }
 }
 
+pub async fn stop_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
+    let pid = try_get_pid(&ai_service.id.to_string()).await?;
+
+    if let Some(pid) = pid {
+        try_stop_ai_service(pid).await?;
+    }
+
+    context.process_manager.remove(ai_service.id)?;
+
+    Ok(ai_service)
+}
+
+pub async fn stop_and_remove_ai_service(
+    ai_service: AiService,
+    context: Arc<Context>,
+) -> Result<AiService> {
+    let ai_service = stop_ai_service(ai_service, context).await?;
+
+    delete_environment_for_ai_service(&ai_service).await?;
+
+    Ok(ai_service)
+}
+
 pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
     let mut pid = None;
     let ps_output = Command::new("ps").arg("ax").output()?;
@@ -370,26 +420,13 @@ pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
     Ok(pid)
 }
 
-pub async fn stop_and_remove_ai_service(ai_service: AiService) -> Result<AiService> {
-    let pid = try_get_pid(&ai_service.id.to_string()).await?;
+pub async fn try_restart_ai_service(
+    ai_service: AiService,
+    context: Arc<Context>,
+) -> Result<Option<i32>> {
+    let ai_service = stop_ai_service(ai_service, context).await?;
 
-    if let Some(pid) = pid {
-        try_stop_ai_service(pid).await?;
-    }
-
-    delete_environment_for_ai_service(&ai_service).await?;
-
-    Ok(ai_service)
-}
-
-pub async fn try_restart_ai_service(ai_service_id: Uuid, port: i32) -> Result<Option<i32>> {
-    let pid = try_get_pid(&ai_service_id.to_string()).await?;
-
-    if let Some(pid) = pid {
-        try_stop_ai_service(pid).await?;
-    }
-
-    let pid = try_start_ai_service(ai_service_id, port).await?;
+    let pid = try_start_ai_service(ai_service.id, ai_service.port).await?;
 
     Ok(pid)
 }

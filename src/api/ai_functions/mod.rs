@@ -1,7 +1,9 @@
 use crate::{
     ai::function_call::function_call,
     context::Context,
-    entity::{AiServiceHealthCheckStatus, AiServiceSetupStatus, ROLE_COMPANY_ADMIN_USER},
+    entity::{
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ROLE_COMPANY_ADMIN_USER,
+    },
     error::AppError,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
 };
@@ -119,6 +121,7 @@ pub async fn direct_call(
         || !ai_service.is_enabled
         || ai_service.health_check_status != AiServiceHealthCheckStatus::Ok
         || ai_service.setup_status != AiServiceSetupStatus::Performed
+        || ai_service.status != AiServiceStatus::Running
     {
         return Err(AppError::Gone);
     }

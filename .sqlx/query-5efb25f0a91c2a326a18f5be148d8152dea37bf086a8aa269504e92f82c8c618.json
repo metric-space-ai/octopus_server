@@ -100,7 +100,8 @@
                 "parsing_finished",
                 "parsing_started",
                 "running",
-                "setup"
+                "setup",
+                "stopped"
               ]
             }
           }

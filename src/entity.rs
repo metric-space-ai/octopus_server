@@ -99,6 +99,7 @@ pub enum AiServiceStatus {
     ParsingStarted,
     Running,
     Setup,
+    Stopped,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

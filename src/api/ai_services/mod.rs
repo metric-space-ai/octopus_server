@@ -22,6 +22,8 @@ use validator::Validate;
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
 pub enum AiServiceOperation {
+    Disable,
+    Enable,
     HealthCheck,
     Setup,
 }
@@ -45,7 +47,6 @@ pub struct AiServiceConfigurationPut {
 #[utoipa::path(
     post,
     path = "/api/v1/ai-services",
-    request_body = AiServicePost,
     responses(
         (status = 201, description = "AI Service created.", body = AiService),
         (status = 400, description = "Bad request.", body = ResponseError),
@@ -166,7 +167,8 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let ai_service = process_manager::stop_and_remove_ai_service(ai_service).await?;
+    let ai_service =
+        process_manager::stop_and_remove_ai_service(ai_service, context.clone()).await?;
 
     context
         .octopus_database
@@ -261,6 +263,7 @@ pub async fn list(
         (status = 201, description = "AI Service operation scheduled.", body = AiServiceOperationResponse),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Service not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "AI Service id")
@@ -284,11 +287,55 @@ pub async fn operation(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    match input.operation {
+        AiServiceOperation::Disable => {
+            if ai_service.status != AiServiceStatus::Running {
+                return Err(AppError::Conflict);
+            }
+        }
+        AiServiceOperation::Enable => {
+            if ai_service.status != AiServiceStatus::Stopped {
+                return Err(AppError::Conflict);
+            }
+        }
+        AiServiceOperation::HealthCheck => {
+            if ai_service.status != AiServiceStatus::Running {
+                return Err(AppError::Conflict);
+            }
+        }
+        AiServiceOperation::Setup => {
+            if ai_service.status != AiServiceStatus::Running {
+                return Err(AppError::Conflict);
+            }
+        }
+    }
+
     let cloned_context = context.clone();
     let cloned_ai_service = ai_service.clone();
     let cloned_input = input.clone();
     tokio::spawn(async move {
         let ai_service = match cloned_input.operation {
+            AiServiceOperation::Disable => {
+                let mut ai_service =
+                    process_manager::stop_ai_service(cloned_ai_service, cloned_context).await;
+
+                if let Ok(ai_service_ok) = ai_service {
+                    ai_service = context
+                        .octopus_database
+                        .update_ai_service_is_enabled_and_status(
+                            ai_service_ok.id,
+                            false,
+                            100,
+                            AiServiceStatus::Stopped,
+                        )
+                        .await
+                }
+
+                ai_service
+            }
+            AiServiceOperation::Enable => {
+                process_manager::run_ai_service(cloned_ai_service, cloned_context).await
+            }
             AiServiceOperation::HealthCheck => {
                 ai::service_health_check(
                     cloned_ai_service.id,
@@ -309,6 +356,8 @@ pub async fn operation(
     });
 
     let execution_time = match input.operation {
+        AiServiceOperation::Disable => 1,
+        AiServiceOperation::Enable => 1,
         AiServiceOperation::HealthCheck => ai_service.health_check_execution_time,
         AiServiceOperation::Setup => ai_service.setup_execution_time,
     };

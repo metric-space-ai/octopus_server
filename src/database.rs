@@ -1828,6 +1828,29 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn update_ai_service_is_enabled_and_status(
+        &self,
+        id: Uuid,
+        is_enabled: bool,
+        progress: i32,
+        status: AiServiceStatus,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as::<_, AiService>(
+            "UPDATE ai_services
+            SET is_enabled = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+        )
+        .bind(id)
+        .bind(is_enabled)
+        .bind(progress)
+        .bind(status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_service)
+    }
+
     pub async fn update_ai_service_processed_function_body(
         &self,
         id: Uuid,
