@@ -372,6 +372,12 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
             }
         }
 
+        let zombie_pids = try_get_zombie_pids().await?;
+
+        for zombie_pid in zombie_pids {
+            try_stop_ai_service(zombie_pid).await?;
+        }
+
         sleep(Duration::from_secs(60)).await;
     }
 }
@@ -418,6 +424,27 @@ pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
     }
 
     Ok(pid)
+}
+
+pub async fn try_get_zombie_pids() -> Result<Vec<i32>> {
+    let mut pids = vec![];
+    let ps_output = Command::new("ps").arg("ax").output()?;
+
+    let ps_output = String::from_utf8(ps_output.stdout.clone())?;
+
+    for line in ps_output.lines() {
+        if line.contains("python3") && line.contains("defunct") && line.contains("Z+") {
+            for token in line.split_whitespace() {
+                let parsed_token = token.parse::<i32>();
+
+                if let Ok(parsed_token) = parsed_token {
+                    pids.push(parsed_token);
+                }
+            }
+        }
+    }
+
+    Ok(pids)
 }
 
 pub async fn try_restart_ai_service(
