@@ -96,3 +96,18 @@ pub async fn replace_function_names(
 
     Ok(parsed_code_lines)
 }
+
+pub async fn replace_print(code_lines: Vec<String>) -> Result<Vec<String>> {
+    let mut parsed_code_lines = vec![];
+
+    for code_line in code_lines {
+        if code_line.contains("print(") {
+            let new_line = code_line.replace("print(", "logging.info(");
+            parsed_code_lines.push(new_line);
+        } else {
+            parsed_code_lines.push(code_line);
+        }
+    }
+
+    Ok(parsed_code_lines)
+}

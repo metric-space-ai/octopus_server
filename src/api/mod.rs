@@ -150,6 +150,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             ai_services::delete,
             ai_services::installation,
             ai_services::list,
+            ai_services::logs,
             ai_services::operation,
             ai_services::read,
             ai_services::update,
@@ -365,6 +366,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             "/api/v1/ai-services/:id/installation",
             put(ai_services::installation),
         )
+        .route("/api/v1/ai-services/:id/logs", get(ai_services::logs))
         .route(
             "/api/v1/ai-services/:id",
             delete(ai_services::delete)

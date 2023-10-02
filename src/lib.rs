@@ -1,5 +1,6 @@
+use crate::error::AppError;
 use clap::Parser;
-use std::{error::Error, net::SocketAddr};
+use std::{error::Error, net::SocketAddr, process::Command};
 use tokio::task;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -71,4 +72,15 @@ pub async fn run() -> Result<()> {
         .await?;
 
     Ok(())
+}
+
+pub async fn get_pwd() -> Result<String> {
+    let pwd_output = Command::new("pwd").output()?;
+    let pwd_output = String::from_utf8(pwd_output.stdout.clone())?;
+    let pwd = pwd_output
+        .strip_suffix('\n')
+        .ok_or(AppError::Parsing)?
+        .to_string();
+
+    Ok(pwd)
 }

@@ -3,14 +3,14 @@ use crate::{
     context::Context,
     entity::{AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus},
     error::AppError,
-    Result, SERVICES_DIR,
+    get_pwd, Result, SERVICES_DIR,
 };
 use std::{
     collections::HashMap,
     fs::{create_dir, remove_dir_all, File},
     io::Write,
     path::Path,
-    process::{Command, Stdio},
+    process::Command,
     sync::{Arc, RwLock},
 };
 use tokio::time::{sleep, Duration};
@@ -105,17 +105,34 @@ pub enum ProcessState {
 }
 
 pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
-    let path = format!("{SERVICES_DIR}/{}", ai_service.id);
+    let pwd = get_pwd().await?;
+
+    let ai_service_id = ai_service.id;
+    let ai_service_port = ai_service.port;
+    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}");
     let dir_exists = Path::new(&path).is_dir();
     if !dir_exists {
         create_dir(path)?;
     }
 
-    let path = format!("{SERVICES_DIR}/{}/{}.py", ai_service.id, ai_service.id);
+    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py");
     let mut file = File::create(path)?;
     if let Some(processed_function_body) = &ai_service.processed_function_body {
         file.write_all(processed_function_body.as_bytes())?;
     }
+
+    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh");
+    let mut file = File::create(path)?;
+    file.write_fmt(format_args!("#!/bin/bash\n"))?;
+    file.write_fmt(format_args!("cd {pwd}/{SERVICES_DIR}/{ai_service_id}\n"))?;
+    file.write_fmt(format_args!(
+        "if [ ! -d {pwd}/{SERVICES_DIR}/{ai_service_id}/.venv ]\n"
+    ))?;
+    file.write_fmt(format_args!("then\n"))?;
+    file.write_fmt(format_args!("/usr/bin/python3 -m venv .venv\n"))?;
+    file.write_fmt(format_args!("fi\n"))?;
+    file.write_fmt(format_args!(". .venv/bin/activate\n"))?;
+    file.write_fmt(format_args!("/usr/bin/python3 {pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} 2>&1\n"))?;
 
     Ok(true)
 }
@@ -206,7 +223,7 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
 
         if let Some(mut process) = process {
             if process.state == ProcessState::EnvironmentPrepared {
-                let pid = try_start_ai_service(ai_service.id, ai_service.port).await?;
+                let pid = try_start_ai_service(ai_service.id).await?;
 
                 if let Some(_pid) = pid {
                     process.pid = pid;
@@ -261,7 +278,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
 
     for ai_service in ai_services {
         if ai_service.is_enabled && ai_service.setup_status == AiServiceSetupStatus::Performed {
-            let pid = try_get_pid(&ai_service.id.to_string()).await?;
+            let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
 
             match pid {
                 None => {
@@ -269,7 +286,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                         create_environment_for_ai_service(&ai_service).await?;
 
                     if environment_created {
-                        let pid = try_start_ai_service(ai_service.id, ai_service.port).await?;
+                        let pid = try_start_ai_service(ai_service.id).await?;
 
                         if let Some(pid) = pid {
                             let process = Process {
@@ -314,7 +331,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                                     .await?;
 
                             if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
-                                let pid = try_get_pid(&ai_service.id.to_string()).await?;
+                                let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
 
                                 if let Some(pid) = pid {
                                     let process = Process {
@@ -383,7 +400,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
 }
 
 pub async fn stop_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    let pid = try_get_pid(&ai_service.id.to_string()).await?;
+    let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
 
     if let Some(pid) = pid {
         try_stop_ai_service(pid).await?;
@@ -453,22 +470,22 @@ pub async fn try_restart_ai_service(
 ) -> Result<Option<i32>> {
     let ai_service = stop_ai_service(ai_service, context).await?;
 
-    let pid = try_start_ai_service(ai_service.id, ai_service.port).await?;
+    let pid = try_start_ai_service(ai_service.id).await?;
 
     Ok(pid)
 }
 
-pub async fn try_start_ai_service(ai_service_id: Uuid, port: i32) -> Result<Option<i32>> {
-    Command::new("/usr/bin/python3")
-        .arg(format!("{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py"))
-        .arg("--host=0.0.0.0")
-        .arg(format!("--port={port}"))
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
+pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
+    let pwd = get_pwd().await?;
+
+    Command::new("/bin/bash")
+        .arg(format!(
+            "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
+        ))
         .spawn()?;
 
-    sleep(Duration::from_secs(2)).await;
-    let pid = try_get_pid(&ai_service_id.to_string()).await?;
+    sleep(Duration::from_secs(10)).await;
+    let pid = try_get_pid(&format!("{ai_service_id}.py")).await?;
 
     Ok(pid)
 }

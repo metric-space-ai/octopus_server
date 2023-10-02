@@ -1,4 +1,4 @@
-use crate::{entity::AiService, Result};
+use crate::{entity::AiService, get_pwd, Result, SERVICES_DIR};
 
 pub async fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut argparse_present = false;
@@ -27,9 +27,9 @@ pub async fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
 }
 
 pub async fn add_daemon(
-    code_lines: Vec<String>,
     ai_service: &AiService,
     app_threaded: bool,
+    code_lines: Vec<String>,
 ) -> Result<Vec<String>> {
     let mut daemon_present = false;
 
@@ -40,12 +40,14 @@ pub async fn add_daemon(
     }
 
     if !daemon_present {
+        let pwd = get_pwd().await?;
+
         let mut parsed_code_lines = code_lines;
 
         parsed_code_lines.push(String::new());
         parsed_code_lines.push("import daemon".to_string());
         parsed_code_lines.push(format!(
-            "with daemon.DaemonContext(working_directory=\"/services/{}/\"):",
+            "with daemon.DaemonContext(working_directory=\"{pwd}/{SERVICES_DIR}/{}/\", files_preserve = [fh.stream]):",
             ai_service.id
         ));
         if app_threaded {
@@ -117,6 +119,43 @@ pub async fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
                 parsed_code_lines.push(code_line);
             }
         }
+
+        return Ok(parsed_code_lines);
+    }
+
+    Ok(code_lines)
+}
+
+pub async fn add_logging(
+    ai_service: &AiService,
+    mut code_lines: Vec<String>,
+) -> Result<Vec<String>> {
+    let mut logging_present = false;
+
+    for code_line in &code_lines {
+        if code_line.contains("logging.basicConfig") {
+            logging_present = true;
+        }
+    }
+
+    if !logging_present {
+        let pwd = get_pwd().await?;
+
+        let mut parsed_code_lines = vec![];
+
+        parsed_code_lines.push("import logging".to_string());
+
+        parsed_code_lines.push("logger = logging.getLogger()".to_string());
+        parsed_code_lines.push("logger.setLevel(logging.INFO)".to_string());
+        parsed_code_lines.push(format!(
+            "fh = logging.FileHandler(\"{pwd}/{SERVICES_DIR}/{}/{}.log\")",
+            ai_service.id, ai_service.id
+        ));
+        parsed_code_lines.push("logger.addHandler(fh)".to_string());
+
+        parsed_code_lines.push(String::new());
+
+        parsed_code_lines.append(&mut code_lines);
 
         return Ok(parsed_code_lines);
     }

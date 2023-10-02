@@ -3,8 +3,9 @@ use crate::{
     context::Context,
     entity::{AiServiceStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
-    parser, process_manager,
+    get_pwd, parser, process_manager,
     session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    SERVICES_DIR,
 };
 use axum::{
     extract::{Multipart, Path, State},
@@ -14,7 +15,7 @@ use axum::{
 };
 use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{fs::read_to_string, path, sync::Arc};
 use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -229,6 +230,53 @@ pub async fn installation(
     });
 
     Ok((StatusCode::OK, Json(ai_service)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/ai-services/:id/logs",
+    responses(
+        (status = 200, description = "AI Service logs.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn logs(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let pwd = get_pwd().await?;
+
+    let path = format!(
+        "{pwd}/{SERVICES_DIR}/{}/{}.log",
+        ai_service.id, ai_service.id
+    );
+
+    let file_exists = path::Path::new(&path).is_file();
+
+    let logs = if file_exists {
+        read_to_string(path)?
+    } else {
+        String::new()
+    };
+
+    Ok((StatusCode::OK, logs).into_response())
 }
 
 #[axum_macros::debug_handler]
