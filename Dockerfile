@@ -22,13 +22,14 @@ WORKDIR /octopus_server
 RUN cargo build --release
 
 FROM rust:1.72.1-slim-bookworm AS prod
+RUN apt-get update && apt-get install -y librust-openssl-dev
 ARG DATABASE_URL
 ARG OCTOPUS_PEPPER
 ARG OCTOPUS_PEPPER_ID
 ARG OCTOPUS_SERVER_PORT
 ARG OPENAI_API_KEY
 ARG SENDGRID_API_KEY
-RUN apt-get update && apt-get install -y librust-openssl-dev
+RUN apt-get install -y python3 python3-pip python3-venv
 WORKDIR /octopus_server
 COPY --from=builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=builder /usr/local/cargo/bin/sqlx ./
