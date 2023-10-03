@@ -41,8 +41,11 @@ pub async fn get() -> Result<ServerResources> {
             .to_string_as(true)
             .replace(' ', "");
     }
-    let nvidia_smi_list = Command::new("nvidia-smi").arg("--list-gpus").output()?;
-    let nvidia_smi_list = String::from_utf8(nvidia_smi_list.stdout.clone())?;
+    let nvidia_smi_list = Command::new("nvidia-smi").arg("--list-gpus").output();
+    let nvidia_smi_list = match nvidia_smi_list {
+        Err(_) => String::new(),
+        Ok(nvidia_smi_list) => String::from_utf8(nvidia_smi_list.stdout.clone())?,
+    };
     /*
         let nvidia_smi_list =
             r#"GPU 0: NVIDIA RTX A4500 (UUID: GPU-174d612c-3b65-e9ab-a103-79738578fcc4)
