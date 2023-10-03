@@ -132,8 +132,8 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
     file.write_fmt(format_args!("/usr/bin/python3 -m venv .venv\n"))?;
     file.write_fmt(format_args!("fi\n"))?;
     file.write_fmt(format_args!(". .venv/bin/activate\n"))?;
-    file.write_fmt(format_args!("/usr/bin/pip install -q python-daemon\n"))?;
-    file.write_fmt(format_args!("/usr/bin/python3 {pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} 2>&1\n"))?;
+    file.write_fmt(format_args!("pip install -q python-daemon\n"))?;
+    file.write_fmt(format_args!("python3 {pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} 2>&1\n"))?;
 
     Ok(true)
 }
