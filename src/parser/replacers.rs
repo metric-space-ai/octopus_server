@@ -82,7 +82,7 @@ pub async fn replace_function_names(
     let mut last_saved_line = 0;
     for (i, code_line) in code_lines.iter().enumerate() {
         for function_name in &function_names {
-            if code_line.contains(function_name) {
+            if code_line.contains(function_name) && !code_line.contains("def") {
                 let new_line =
                     code_line.replace(function_name, &format!("{ai_service_id}-{function_name}"));
                 parsed_code_lines.push(new_line);
