@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, ai_function_id, ai_function_call, chat_id, user_id, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "SELECT id, ai_function_id, chat_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -15,76 +15,81 @@
       },
       {
         "ordinal": 2,
-        "name": "ai_function_call",
-        "type_info": "Json"
-      },
-      {
-        "ordinal": 3,
         "name": "chat_id",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 4,
+        "ordinal": 3,
         "name": "user_id",
         "type_info": "Uuid"
       },
       {
+        "ordinal": 4,
+        "name": "ai_function_call",
+        "type_info": "Json"
+      },
+      {
         "ordinal": 5,
-        "name": "bad_reply_comment",
+        "name": "ai_function_error",
         "type_info": "Text"
       },
       {
         "ordinal": 6,
+        "name": "bad_reply_comment",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
         "name": "bad_reply_is_harmful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "bad_reply_is_not_helpful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "bad_reply_is_not_true",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "bypass_sensitive_information_filter",
         "type_info": "Bool"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -99,36 +104,33 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Bool",
-        "Timestamptz",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
       false,
       true,
+      false,
+      false,
       true,
-      false,
-      false,
+      true,
       true,
       false,
       false,
@@ -146,5 +148,5 @@
       false
     ]
   },
-  "hash": "5434c0a1e8134e30e1236d85c19d0928b0d589390887c881afd10fe17bcae8ee"
+  "hash": "edc9e7c22c3dfb0d8493c9c0cd5e2ebca4fab7e7b1800820c9b72b4ae2e7960b"
 }

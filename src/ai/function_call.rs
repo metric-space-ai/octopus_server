@@ -19,8 +19,14 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub enum AiFunctionResponse {
+    Error(AiFunctionErrorResponse),
     File(AiFunctionFileResponse),
     Text(AiFunctionTextResponse),
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
+pub struct AiFunctionErrorResponse {
+    pub error: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
@@ -148,6 +154,14 @@ pub async fn function_call(
             };
 
             return Ok(Some(ai_function_response));
+        } else {
+            let response = response.text().await?;
+
+            let ai_function_error_response = AiFunctionErrorResponse {
+                error: Some(response),
+            };
+
+            return Ok(Some(AiFunctionResponse::Error(ai_function_error_response)));
         }
     }
 
@@ -161,6 +175,20 @@ pub async fn update_chat_message(
     chat_message: &ChatMessage,
 ) -> Result<ChatMessage> {
     match ai_function_response {
+        AiFunctionResponse::Error(ai_function_error_response) => {
+            let chat_message = context
+                .octopus_database
+                .update_chat_message_from_function_error(
+                    chat_message.id,
+                    ai_function.id,
+                    ai_function_error_response.error.clone(),
+                    ChatMessageStatus::Answered,
+                    100,
+                )
+                .await?;
+
+            Ok(chat_message)
+        }
         AiFunctionResponse::File(ai_function_file_response) => {
             let chat_message = context
                 .octopus_database
