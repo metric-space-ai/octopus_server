@@ -29,7 +29,7 @@ ARG OCTOPUS_PEPPER_ID
 ARG OCTOPUS_SERVER_PORT
 ARG OPENAI_API_KEY
 ARG SENDGRID_API_KEY
-RUN apt-get install -y python3 python3-pip python3-venv
+RUN apt-get install -y procps python3 python3-pip python3-venv
 WORKDIR /octopus_server
 COPY --from=builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=builder /usr/local/cargo/bin/sqlx ./
