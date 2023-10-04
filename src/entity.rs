@@ -204,6 +204,7 @@ pub struct ChatMessageExtended {
     pub is_anonymized: bool,
     pub is_sensitive: bool,
     pub message: String,
+    pub profile: Option<Profile>,
     pub progress: i32,
     pub response: Option<String>,
     pub status: ChatMessageStatus,
