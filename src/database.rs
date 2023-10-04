@@ -200,6 +200,10 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageExtended>> {
         let chat_messages = self.get_chat_messages_by_chat_id(chat_id).await?;
         let chat_messages_ids = chat_messages.iter().map(|x| x.id).collect::<Vec<Uuid>>();
+        let user_ids = chat_messages
+            .iter()
+            .map(|x| x.user_id)
+            .collect::<Vec<Uuid>>();
 
         let chat_message_files = self
             .get_chat_message_files_by_chat_message_ids(&chat_messages_ids)
@@ -207,6 +211,8 @@ impl OctopusDatabase {
         let chat_message_pictures = self
             .get_chat_message_pictures_by_chat_message_ids(&chat_messages_ids)
             .await?;
+
+        let profiles = self.get_profiles_by_user_ids(&user_ids).await?;
 
         let mut chat_messages_extended = vec![];
 
@@ -216,6 +222,7 @@ impl OctopusDatabase {
                     &chat_message,
                     chat_message_files.clone(),
                     chat_message_pictures.clone(),
+                    profiles.clone(),
                 )
                 .await?;
             chat_messages_extended.push(chat_message_extended);
@@ -239,11 +246,16 @@ impl OctopusDatabase {
                 let chat_message_pictures = self
                     .get_chat_message_pictures_by_chat_message_ids(&[chat_message.id])
                     .await?;
+                let profiles = self
+                    .get_profiles_by_user_ids(&[chat_message.user_id])
+                    .await?;
+
                 let chat_message_extended = self
                     .map_to_chat_message_extended(
                         &chat_message,
                         chat_message_files,
                         chat_message_pictures,
+                        profiles,
                     )
                     .await?;
 
@@ -400,6 +412,21 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_categories)
+    }
+
+    pub async fn get_profiles_by_user_ids(&self, user_ids: &[Uuid]) -> Result<Vec<Profile>> {
+        let profiles = sqlx::query_as!(
+            Profile,
+            "SELECT id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at
+            FROM profiles
+            WHERE user_id = ANY($1)
+            AND deleted_at IS NULL",
+            user_ids
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(profiles)
     }
 
     pub async fn get_workspaces_by_company_id_and_type(
@@ -1209,11 +1236,15 @@ impl OctopusDatabase {
                 let chat_message_pictures = self
                     .get_chat_message_pictures_by_chat_message_ids(&[chat_message.id])
                     .await?;
+                let profiles = self
+                    .get_profiles_by_user_ids(&[chat_message.user_id])
+                    .await?;
                 let chat_message_extended = self
                     .map_to_chat_message_extended(
                         &chat_message,
                         chat_message_files,
                         chat_message_pictures,
+                        profiles,
                     )
                     .await?;
 
@@ -1227,9 +1258,11 @@ impl OctopusDatabase {
         chat_message: &ChatMessage,
         chat_message_files: Vec<ChatMessageFile>,
         chat_message_pictures: Vec<ChatMessagePicture>,
+        profiles: Vec<Profile>,
     ) -> Result<ChatMessageExtended> {
         let mut selected_chat_message_files = vec![];
         let mut selected_chat_message_pictures = vec![];
+        let mut profile = None;
         for mut chat_message_file in chat_message_files {
             if chat_message_file.chat_message_id == chat_message.id {
                 if !chat_message_file.file_name.contains(PUBLIC_DIR) {
@@ -1246,6 +1279,12 @@ impl OctopusDatabase {
                         format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
                 }
                 selected_chat_message_pictures.push(chat_message_picture);
+            }
+        }
+
+        for profile_tmp in profiles {
+            if profile_tmp.user_id == chat_message.user_id {
+                profile = Some(profile_tmp);
             }
         }
 
@@ -1266,6 +1305,7 @@ impl OctopusDatabase {
             is_anonymized: chat_message.is_anonymized,
             is_sensitive: chat_message.is_sensitive,
             message: chat_message.message.clone(),
+            profile,
             progress: chat_message.progress,
             response: chat_message.response.clone(),
             status: chat_message.status.clone(),
