@@ -52,6 +52,15 @@ pub async fn service_health_check(
     context: Arc<Context>,
     port: i32,
 ) -> Result<AiService> {
+    context
+        .octopus_database
+        .update_ai_service_health_check_status(
+            ai_service_id,
+            0,
+            AiServiceHealthCheckStatus::NotWorking,
+        )
+        .await?;
+
     let start = Utc::now();
 
     let url = format!("{BASE_AI_FUNCTION_URL}:{port}/health-check");
@@ -113,6 +122,11 @@ pub async fn service_setup(
     context: Arc<Context>,
     port: i32,
 ) -> Result<AiService> {
+    context
+        .octopus_database
+        .update_ai_service_setup_status(ai_service_id, 0, AiServiceSetupStatus::NotPerformed)
+        .await?;
+
     context
         .octopus_database
         .update_ai_service_status(ai_service_id, 50, AiServiceStatus::Setup)

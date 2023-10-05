@@ -384,7 +384,7 @@ pub async fn operation(
                 ai_service
             }
             AiServiceOperation::Enable => {
-                process_manager::run_ai_service(cloned_ai_service, cloned_context).await
+                process_manager::try_restart_ai_service(cloned_ai_service, cloned_context).await
             }
             AiServiceOperation::HealthCheck => {
                 ai::service_health_check(

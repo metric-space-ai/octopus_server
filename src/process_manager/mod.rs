@@ -202,7 +202,8 @@ pub async fn install_and_run_ai_service(
 }
 
 pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    if ai_service.status == AiServiceStatus::Stopped {
+    if ai_service.status == AiServiceStatus::Setup || ai_service.status == AiServiceStatus::Stopped
+    {
         let environment_created = create_environment_for_ai_service(&ai_service).await?;
 
         if environment_created {
@@ -219,6 +220,7 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
     }
     if ai_service.status == AiServiceStatus::InstallationFinished
         || ai_service.status == AiServiceStatus::Running
+        || ai_service.status == AiServiceStatus::Setup
         || ai_service.status == AiServiceStatus::Stopped
     {
         let process = context.process_manager.get(ai_service.id)?;
