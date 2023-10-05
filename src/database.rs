@@ -65,6 +65,7 @@ impl OctopusDatabase {
         let is_enabled = true;
         let health_check_status = AiServiceHealthCheckStatus::Ok;
         let setup_status = AiServiceSetupStatus::Performed;
+        let status = AiServiceStatus::Running;
 
         let ai_functions = sqlx::query_as::<_, AiFunction>(
             "SELECT aif.id, aif.ai_service_id, aif.description, aif.formatted_name, aif.is_enabled, aif.name, aif.parameters, aif.request_content_type, aif.response_content_type, aif.created_at, aif.deleted_at, aif.updated_at
@@ -74,6 +75,7 @@ impl OctopusDatabase {
             AND ais.is_enabled = $1
             AND ais.health_check_status = $2
             AND ais.setup_status = $3
+            AND ais.status = $4
             AND aif.deleted_at IS NULL
             AND ais.deleted_at IS NULL
             ORDER BY name ASC",
@@ -81,6 +83,7 @@ impl OctopusDatabase {
         .bind(is_enabled)
         .bind(health_check_status)
         .bind(setup_status)
+        .bind(status)
         .fetch_all(&*self.pool)
         .await?;
 
@@ -1147,18 +1150,34 @@ impl OctopusDatabase {
         Ok(workspace)
     }
 
-    pub async fn try_get_ai_function_by_formatted_name(
+    pub async fn try_get_ai_function_for_direct_call(
         &self,
         formatted_name: &str,
     ) -> Result<Option<AiFunction>> {
-        let ai_function = sqlx::query_as!(
-            AiFunction,
-            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
-            FROM ai_functions
-            WHERE formatted_name = $1
-            AND deleted_at IS NULL"#,
-            formatted_name
+        let is_enabled = true;
+        let health_check_status = AiServiceHealthCheckStatus::Ok;
+        let setup_status = AiServiceSetupStatus::Performed;
+        let status = AiServiceStatus::Running;
+
+        let ai_function = sqlx::query_as::<_, AiFunction>(
+            "SELECT aif.id, aif.ai_service_id, aif.description, aif.formatted_name, aif.is_enabled, aif.name, aif.parameters, aif.request_content_type, aif.response_content_type, aif.created_at, aif.deleted_at, aif.updated_at
+            FROM ai_functions AS aif
+            LEFT JOIN ai_services ais ON ai_service_id = ais.id
+            WHERE aif.formatted_name = $1
+            AND aif.is_enabled = $2
+            AND ais.is_enabled = $2
+            AND ais.health_check_status = $3
+            AND ais.setup_status = $4
+            AND ais.status = $5
+            AND aif.deleted_at IS NULL
+            AND ais.deleted_at IS NULL
+            ORDER BY aif.created_at DESC",
         )
+        .bind(formatted_name)
+        .bind(is_enabled)
+        .bind(health_check_status)
+        .bind(setup_status)
+        .bind(status)
         .fetch_optional(&*self.pool)
         .await?;
 

@@ -303,7 +303,7 @@ pub async fn open_ai_request(
     {
         let ai_function = context
             .octopus_database
-            .try_get_ai_function_by_formatted_name("sensitive_information")
+            .try_get_ai_function_for_direct_call("sensitive_information")
             .await?;
 
         if let Some(ai_function) = ai_function {

@@ -107,7 +107,7 @@ pub async fn direct_call(
 
     let ai_function = context
         .octopus_database
-        .try_get_ai_function_by_formatted_name(&input.name)
+        .try_get_ai_function_for_direct_call(&input.name)
         .await?
         .ok_or(AppError::NotFound)?;
 
