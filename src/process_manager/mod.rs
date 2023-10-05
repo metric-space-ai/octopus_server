@@ -451,7 +451,10 @@ pub async fn try_get_zombie_pids() -> Result<Vec<i32>> {
     let ps_output = String::from_utf8(ps_output.stdout.clone())?;
 
     for line in ps_output.lines() {
-        if line.contains("python3") && line.contains("defunct") && line.contains("Z+") {
+        if (line.contains("bash") || line.contains("python3"))
+            && line.contains("defunct")
+            && line.contains('Z')
+        {
             for token in line.split_whitespace() {
                 let parsed_token = token.parse::<i32>();
 
