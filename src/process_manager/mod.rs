@@ -218,6 +218,7 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
         }
     }
     if ai_service.status == AiServiceStatus::InstallationFinished
+        || ai_service.status == AiServiceStatus::Running
         || ai_service.status == AiServiceStatus::Stopped
     {
         let process = context.process_manager.get(ai_service.id)?;
@@ -278,7 +279,10 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
     let ai_services = context.octopus_database.get_ai_services().await?;
 
     for ai_service in ai_services {
-        if ai_service.is_enabled && ai_service.setup_status == AiServiceSetupStatus::Performed {
+        if ai_service.is_enabled
+            && ai_service.setup_status == AiServiceSetupStatus::Performed
+            && ai_service.status == AiServiceStatus::Running
+        {
             let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
 
             match pid {
@@ -287,18 +291,18 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                         create_environment_for_ai_service(&ai_service).await?;
 
                     if environment_created {
-                        let pid = try_start_ai_service(ai_service.id).await?;
+                        let process = Process {
+                            id: ai_service.id,
+                            failed_connection_attempts: 0,
+                            pid: None,
+                            port: ai_service.port,
+                            state: ProcessState::EnvironmentPrepared,
+                        };
 
-                        if let Some(pid) = pid {
-                            let process = Process {
-                                id: ai_service.id,
-                                failed_connection_attempts: 0,
-                                pid: Some(pid),
-                                port: ai_service.port,
-                                state: ProcessState::Running,
-                            };
+                        let process = context.process_manager.insert(process)?;
 
-                            context.process_manager.insert(process)?;
+                        if let Some(_process) = process {
+                            run_ai_service(ai_service, context.clone()).await?;
                         }
                     }
                 }
@@ -359,19 +363,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                             }
 
                             if process.failed_connection_attempts > 30 {
-                                let pid =
-                                    try_restart_ai_service(ai_service, context.clone()).await?;
-                                if let Some(pid) = pid {
-                                    let process = Process {
-                                        id: process.id,
-                                        failed_connection_attempts: 0,
-                                        pid: Some(pid),
-                                        port: process.port,
-                                        state: ProcessState::Running,
-                                    };
-
-                                    context.process_manager.insert(process)?;
-                                }
+                                try_restart_ai_service(ai_service, context.clone()).await?;
                             }
                         }
                         ProcessState::Running => {
@@ -471,12 +463,26 @@ pub async fn try_get_zombie_pids() -> Result<Vec<i32>> {
 pub async fn try_restart_ai_service(
     ai_service: AiService,
     context: Arc<Context>,
-) -> Result<Option<i32>> {
-    let ai_service = stop_ai_service(ai_service, context).await?;
+) -> Result<AiService> {
+    let ai_service = stop_ai_service(ai_service, context.clone()).await?;
 
-    let pid = try_start_ai_service(ai_service.id).await?;
+    let process = Process {
+        id: ai_service.id,
+        failed_connection_attempts: 0,
+        pid: None,
+        port: ai_service.port,
+        state: ProcessState::EnvironmentPrepared,
+    };
 
-    Ok(pid)
+    let process = context.process_manager.insert(process)?;
+
+    if let Some(_process) = process {
+        let ai_service = run_ai_service(ai_service, context.clone()).await?;
+
+        return Ok(ai_service);
+    }
+
+    Ok(ai_service)
 }
 
 pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {

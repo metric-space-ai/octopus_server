@@ -337,8 +337,8 @@ pub async fn operation(
 
     match input.operation {
         AiServiceOperation::Disable => {
-            if ai_service.status != AiServiceStatus::Running
-                || ai_service.status != AiServiceStatus::Setup
+            if !(ai_service.status == AiServiceStatus::Running
+                || ai_service.status == AiServiceStatus::Setup)
             {
                 return Err(AppError::Conflict);
             }

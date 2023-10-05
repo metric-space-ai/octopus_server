@@ -15,7 +15,7 @@ use async_openai::{
     Client,
 };
 use axum::http::StatusCode;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
@@ -93,37 +93,14 @@ pub async fn service_health_check(
 
 pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.is_enabled {
-        let perform_health_check = match ai_service.health_check_status {
-            AiServiceHealthCheckStatus::NotWorking => true,
-            AiServiceHealthCheckStatus::Ok => {
-                let mut result = false;
-                let last_valid_health_check_date = Utc::now() - Duration::minutes(1);
+        let ai_service =
+            service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
 
-                if let Some(health_check_at) = ai_service.health_check_at {
-                    if health_check_at < last_valid_health_check_date {
-                        result = true;
-                    }
-                }
+        if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
+            let ai_service = service_setup(ai_service.id, context.clone(), ai_service.port).await?;
 
-                result
-            }
-        };
-        let ai_service = if perform_health_check {
-            service_health_check(ai_service.id, context.clone(), ai_service.port).await?
-        } else {
-            ai_service
-        };
-
-        let perform_setup = match ai_service.setup_status {
-            AiServiceSetupStatus::NotPerformed => true,
-            AiServiceSetupStatus::Performed => false,
-        };
-
-        let ai_service = if perform_setup {
-            service_setup(ai_service.id, context.clone(), ai_service.port).await?
-        } else {
-            ai_service
-        };
+            return Ok(ai_service);
+        }
 
         return Ok(ai_service);
     }
