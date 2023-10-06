@@ -1,7 +1,10 @@
 use crate::{
     ai,
     context::Context,
-    entity::{AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus},
+    entity::{
+        AiService, AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion,
+        AiServiceSetupStatus, AiServiceStatus,
+    },
     error::AppError,
     get_pwd, Result, SERVICES_DIR,
 };
@@ -109,31 +112,41 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
 
     let ai_service_id = ai_service.id;
     let ai_service_port = ai_service.port;
-    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}");
-    let dir_exists = Path::new(&path).is_dir();
+    let full_service_dir_path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}");
+    let dir_exists = Path::new(&full_service_dir_path).is_dir();
     if !dir_exists {
-        create_dir(path)?;
+        create_dir(full_service_dir_path.clone())?;
     }
 
-    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py");
+    let path = format!("{full_service_dir_path}/{ai_service_id}.py");
     let mut file = File::create(path)?;
     if let Some(processed_function_body) = &ai_service.processed_function_body {
         file.write_all(processed_function_body.as_bytes())?;
     }
 
-    let path = format!("{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh");
+    let path = format!("{full_service_dir_path}/{ai_service_id}.sh");
     let mut file = File::create(path)?;
     file.write_fmt(format_args!("#!/bin/bash\n"))?;
-    file.write_fmt(format_args!("cd {pwd}/{SERVICES_DIR}/{ai_service_id}\n"))?;
+    file.write_fmt(format_args!("cd {full_service_dir_path}\n"))?;
     file.write_fmt(format_args!(
-        "if [ ! -d {pwd}/{SERVICES_DIR}/{ai_service_id}/.venv ]\n"
+        "if [ ! -d \"{full_service_dir_path}/bin\" ]\n"
     ))?;
     file.write_fmt(format_args!("then\n"))?;
-    file.write_fmt(format_args!("/usr/bin/python3 -m venv .venv\n"))?;
+
+    let python = match ai_service.required_python_version {
+        AiServiceRequiredPythonVersion::Cp310 => "3.10",
+        AiServiceRequiredPythonVersion::Cp311 => "3.11",
+        AiServiceRequiredPythonVersion::Cp312 => "3.12",
+    };
+
+    file.write_fmt(format_args!(
+        "conda create --yes --prefix {full_service_dir_path} python={python}\n"
+    ))?;
+
     file.write_fmt(format_args!("fi\n"))?;
-    file.write_fmt(format_args!(". .venv/bin/activate\n"))?;
+    file.write_fmt(format_args!("conda activate {full_service_dir_path}\n"))?;
     file.write_fmt(format_args!("pip install -q python-daemon\n"))?;
-    file.write_fmt(format_args!("python3 {pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} 2>&1\n"))?;
+    file.write_fmt(format_args!("python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port}\n"))?;
 
     Ok(true)
 }
@@ -239,6 +252,8 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
                             .octopus_database
                             .update_ai_service_is_enabled(ai_service.id, true)
                             .await?;
+
+                        sleep(Duration::from_secs(10)).await;
 
                         let ai_service =
                             ai::service_prepare(ai_service.clone(), context.clone()).await?;
@@ -494,7 +509,11 @@ pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
         .arg(format!(
             "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
         ))
-        .spawn()?;
+        .arg("&>>")
+        .arg(format!(
+            "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
+        ))
+        .output()?;
 
     sleep(Duration::from_secs(10)).await;
     let pid = try_get_pid(&format!("{ai_service_id}.py")).await?;

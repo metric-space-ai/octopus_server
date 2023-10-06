@@ -87,6 +87,18 @@ pub enum AiServiceSetupStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[serde(rename_all = "snake_case")]
+#[sqlx(
+    type_name = "ai_services_required_python_versions",
+    rename_all = "snake_case"
+)]
+pub enum AiServiceRequiredPythonVersion {
+    Cp310,
+    Cp311,
+    Cp312,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "ai_services_statuses", rename_all = "snake_case")]
 pub enum AiServiceStatus {
     Configuration,
@@ -114,6 +126,7 @@ pub struct AiService {
     pub port: i32,
     pub processed_function_body: Option<String>,
     pub progress: i32,
+    pub required_python_version: AiServiceRequiredPythonVersion,
     pub setup_execution_time: i32,
     pub setup_status: AiServiceSetupStatus,
     pub status: AiServiceStatus,

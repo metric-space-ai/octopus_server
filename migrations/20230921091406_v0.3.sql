@@ -8,6 +8,7 @@ DROP TYPE ai_functions_setup_statuses;
 DROP TYPE ai_functions_warmup_statuses;
 
 CREATE TYPE ai_services_health_check_statuses AS ENUM('not_working', 'ok');
+CREATE TYPE ai_services_required_python_versions AS ENUM('cp310', 'cp311', 'cp312');
 CREATE TYPE ai_services_setup_statuses AS ENUM('not_performed', 'performed');
 CREATE TYPE ai_services_statuses AS ENUM('configuration', 'error', 'initial', 'installation_finished', 'installation_started', 'malicious_code_detected', 'parsing_finished', 'parsing_started', 'running', 'setup', 'stopped');
 
@@ -22,6 +23,7 @@ CREATE TABLE ai_services(
     port INT NOT NULL,
     processed_function_body TEXT,
     progress INT NOT NULL DEFAULT 0,
+    required_python_version ai_services_required_python_versions NOT NULL DEFAULT 'cp312',
     setup_execution_time INT NOT NULL DEFAULT 0,
     setup_status ai_services_setup_statuses NOT NULL DEFAULT 'not_performed',
     status ai_services_statuses NOT NULL DEFAULT 'initial',
@@ -63,5 +65,6 @@ CREATE INDEX ai_functions_request_content_type ON ai_functions(request_content_t
 CREATE INDEX ai_functions_response_content_type ON ai_functions(response_content_type);
 
 ALTER TABLE chat_messages ADD COLUMN ai_function_id UUID REFERENCES ai_functions ON DELETE SET NULL;
+ALTER TABLE chat_messages ADD COLUMN ai_function_error TEXT;
 
 CREATE INDEX chat_messages_ai_function_id ON chat_messages(ai_function_id);

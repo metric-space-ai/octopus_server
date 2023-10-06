@@ -19,6 +19,7 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 pub mod function_call;
@@ -52,39 +53,55 @@ pub async fn service_health_check(
     context: Arc<Context>,
     port: i32,
 ) -> Result<AiService> {
-    context
-        .octopus_database
-        .update_ai_service_health_check_status(
-            ai_service_id,
-            0,
-            AiServiceHealthCheckStatus::NotWorking,
-        )
-        .await?;
-
-    let start = Utc::now();
-
     let url = format!("{BASE_AI_FUNCTION_URL}:{port}/health-check");
 
-    let response = reqwest::Client::new().get(url).send().await;
+    let mut failed_connection_attempts = 0;
 
-    let end = Utc::now();
+    loop {
+        let start = Utc::now();
 
-    let health_check_execution_time = (end - start).num_seconds() as i32;
+        let response = reqwest::Client::new()
+            .get(url.clone())
+            .timeout(Duration::from_secs(30))
+            .send()
+            .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::OK {
-            let response: HealthCheckResponse = response.json().await?;
+        let end = Utc::now();
 
-            let ai_service = context
+        let health_check_execution_time = (end - start).num_seconds() as i32;
+
+        if let Ok(response) = response {
+            if response.status() == StatusCode::OK {
+                let response: HealthCheckResponse = response.json().await?;
+
+                let ai_service = context
+                    .octopus_database
+                    .update_ai_service_health_check_status(
+                        ai_service_id,
+                        health_check_execution_time,
+                        response.status,
+                    )
+                    .await?;
+
+                return Ok(ai_service);
+            }
+        } else {
+            context
                 .octopus_database
                 .update_ai_service_health_check_status(
                     ai_service_id,
                     health_check_execution_time,
-                    response.status,
+                    AiServiceHealthCheckStatus::NotWorking,
                 )
                 .await?;
 
-            return Ok(ai_service);
+            failed_connection_attempts += 1;
+
+            if failed_connection_attempts > 40 {
+                break;
+            }
+
+            sleep(Duration::from_secs(30)).await;
         }
     }
 
@@ -92,7 +109,7 @@ pub async fn service_health_check(
         .octopus_database
         .update_ai_service_health_check_status(
             ai_service_id,
-            health_check_execution_time,
+            0,
             AiServiceHealthCheckStatus::NotWorking,
         )
         .await?;

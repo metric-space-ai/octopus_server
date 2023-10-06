@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_services\n            WHERE deleted_at IS NULL\n            ORDER BY original_file_name ASC",
+  "query": "SELECT id, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, port, processed_function_body, progress, required_python_version AS \"required_python_version: _\", setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at\n            FROM ai_services\n            WHERE deleted_at IS NULL\n            ORDER BY original_file_name ASC",
   "describe": {
     "columns": [
       {
@@ -65,11 +65,27 @@
       },
       {
         "ordinal": 10,
+        "name": "required_python_version: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_services_required_python_versions",
+            "kind": {
+              "Enum": [
+                "cp310",
+                "cp311",
+                "cp312"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 11,
         "name": "setup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
@@ -84,7 +100,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -108,27 +124,27 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -151,11 +167,12 @@
       false,
       false,
       false,
+      false,
       true,
       true,
       true,
       false
     ]
   },
-  "hash": "f093486c048fe5138ad9826b957cd35b3b2bca947fc64ccd323c0360d5bd941b"
+  "hash": "f614cd00196c6f4355c95b8723766449e6b4fa4cd2c988db965897687a3fda4d"
 }

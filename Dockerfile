@@ -23,13 +23,18 @@ RUN cargo build --release
 
 FROM rust:1.73.0-slim-bookworm AS prod
 RUN apt-get update && apt-get install -y librust-openssl-dev
+RUN apt-get install -y g++ git procps wget
+RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh -O anaconda.sh -q && \
+  /bin/bash anaconda.sh -b && \
+  rm anaconda.sh
 ARG DATABASE_URL
 ARG OCTOPUS_PEPPER
 ARG OCTOPUS_PEPPER_ID
 ARG OCTOPUS_SERVER_PORT
 ARG OPENAI_API_KEY
 ARG SENDGRID_API_KEY
-RUN apt-get install -y git procps python3 python3-pip python3-venv
+ENV PATH="/root/anaconda3/bin:$PATH"
+RUN conda init
 WORKDIR /octopus_server
 COPY --from=builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=builder /usr/local/cargo/bin/sqlx ./

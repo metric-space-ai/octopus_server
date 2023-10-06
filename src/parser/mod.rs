@@ -102,6 +102,15 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         )
         .await?;
 
+    let ai_service = if let Some(required_python_version) = configuration.required_python_version {
+        context
+            .octopus_database
+            .update_ai_service_required_python_version(ai_service.id, required_python_version)
+            .await?
+    } else {
+        ai_service
+    };
+
     for function in configuration.functions {
         let ai_function_exists = context
             .octopus_database

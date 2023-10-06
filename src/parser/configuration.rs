@@ -1,8 +1,9 @@
-use crate::Result;
+use crate::{entity::AiServiceRequiredPythonVersion, Result};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Configuration {
+    pub required_python_version: Option<AiServiceRequiredPythonVersion>,
     pub functions: Vec<Function>,
 }
 
