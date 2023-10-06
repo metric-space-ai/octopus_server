@@ -1,5 +1,38 @@
 use crate::Result;
 
+pub async fn fix_apt_get(code_lines: Vec<String>) -> Result<Vec<String>> {
+    let mut parsed_code_lines = vec![];
+
+    for code_line in code_lines {
+        if code_line.contains("apt")
+            && code_line.contains("install")
+            && !code_line.contains("apt-get")
+        {
+            let new_line = code_line.replace("apt", "apt-get");
+            parsed_code_lines.push(new_line);
+        } else {
+            parsed_code_lines.push(code_line);
+        }
+    }
+
+    Ok(parsed_code_lines)
+}
+
+pub async fn fix_apt_install(code_lines: Vec<String>) -> Result<Vec<String>> {
+    let mut parsed_code_lines = vec![];
+
+    for code_line in code_lines {
+        if code_line.contains("apt") && code_line.contains("install") && !code_line.contains("-y") {
+            let new_line = code_line.replace("install", "install -y");
+            parsed_code_lines.push(new_line);
+        } else {
+            parsed_code_lines.push(code_line);
+        }
+    }
+
+    Ok(parsed_code_lines)
+}
+
 pub async fn fix_input_type_json(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 

@@ -57,6 +57,8 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
     code_lines = addons::add_logging(&ai_service, code_lines).await?;
 
+    code_lines = fixes::fix_apt_get(code_lines).await?;
+    code_lines = fixes::fix_apt_install(code_lines).await?;
     code_lines = fixes::fix_input_type_json(code_lines).await?;
     code_lines = fixes::fix_methods_get(code_lines).await?;
     code_lines = fixes::fix_return_code(code_lines).await?;
