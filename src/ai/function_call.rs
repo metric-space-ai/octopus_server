@@ -105,7 +105,8 @@ pub async fn function_call(
         if response.status() == StatusCode::CREATED {
             let ai_function_response = match ai_function.response_content_type {
                 AiFunctionResponseContentType::ApplicationJson => {
-                    let response: ResponseText = response.json().await?;
+                    let response_text = response.text().await?;
+                    let response: ResponseText = serde_json::from_str(&response_text)?;
 
                     let response = match response.response {
                         Some(ResponseTextResponse::Array(array)) => {
@@ -114,7 +115,7 @@ pub async fn function_call(
                             Some(string)
                         }
                         Some(ResponseTextResponse::String(string)) => Some(string),
-                        None => None,
+                        None => Some(response_text),
                     };
 
                     let ai_function_text_response = AiFunctionTextResponse { response };
