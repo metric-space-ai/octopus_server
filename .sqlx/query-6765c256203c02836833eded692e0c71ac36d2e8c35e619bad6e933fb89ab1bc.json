@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, chat_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
+  "query": "UPDATE chat_messages\n            SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -20,76 +20,86 @@
       },
       {
         "ordinal": 3,
-        "name": "user_id",
+        "name": "simple_app_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
         "name": "ai_function_call",
         "type_info": "Json"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "ai_function_error",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "bad_reply_comment",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "bad_reply_is_harmful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "bad_reply_is_not_helpful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "bad_reply_is_not_true",
         "type_info": "Bool"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "bypass_sensitive_information_filter",
         "type_info": "Bool"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
+        "name": "simple_app_data",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 19,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -104,30 +114,35 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 20,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 21,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 22,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Text",
+        "Bool",
+        "Bool",
+        "Bool"
       ]
     },
     "nullable": [
       false,
       true,
       false,
+      true,
       false,
       true,
       true,
@@ -141,6 +156,7 @@
       false,
       false,
       false,
+      true,
       true,
       false,
       false,
@@ -148,5 +164,5 @@
       false
     ]
   },
-  "hash": "5bbdb0d3e844959becfb5e5d8c7e87536f711ed6ec8af752fd41ab3005852e15"
+  "hash": "6765c256203c02836833eded692e0c71ac36d2e8c35e619bad6e933fb89ab1bc"
 }

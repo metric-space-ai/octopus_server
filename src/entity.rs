@@ -180,6 +180,7 @@ pub struct ChatMessage {
     pub id: Uuid,
     pub ai_function_id: Option<Uuid>,
     pub chat_id: Uuid,
+    pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
     pub ai_function_call: Option<serde_json::Value>,
     pub ai_function_error: Option<String>,
@@ -194,6 +195,7 @@ pub struct ChatMessage {
     pub message: String,
     pub progress: i32,
     pub response: Option<String>,
+    pub simple_app_data: Option<serde_json::Value>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -205,6 +207,7 @@ pub struct ChatMessageExtended {
     pub id: Uuid,
     pub ai_function_id: Option<Uuid>,
     pub chat_id: Uuid,
+    pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
     pub ai_function_call: Option<serde_json::Value>,
     pub ai_function_error: Option<String>,
@@ -222,6 +225,7 @@ pub struct ChatMessageExtended {
     pub profile: Option<Profile>,
     pub progress: i32,
     pub response: Option<String>,
+    pub simple_app_data: Option<serde_json::Value>,
     pub status: ChatMessageStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -343,6 +347,19 @@ pub struct Session {
     pub user_id: Uuid,
     pub data: String,
     pub expired_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct SimpleApp {
+    pub id: Uuid,
+    pub code: String,
+    pub description: String,
+    pub formatted_name: String,
+    pub is_enabled: bool,
+    pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
 }
 
 pub const ROLE_ADMIN: &str = "ROLE_ADMIN";

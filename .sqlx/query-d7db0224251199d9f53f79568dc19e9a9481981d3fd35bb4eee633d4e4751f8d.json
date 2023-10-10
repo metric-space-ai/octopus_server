@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, chat_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "SELECT id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -20,76 +20,86 @@
       },
       {
         "ordinal": 3,
-        "name": "user_id",
+        "name": "simple_app_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
         "name": "ai_function_call",
         "type_info": "Json"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "ai_function_error",
         "type_info": "Text"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "bad_reply_comment",
         "type_info": "Text"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "bad_reply_is_harmful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "bad_reply_is_not_helpful",
         "type_info": "Bool"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "bad_reply_is_not_true",
         "type_info": "Bool"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "bypass_sensitive_information_filter",
         "type_info": "Bool"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
+        "name": "simple_app_data",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 19,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -104,17 +114,17 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 20,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 21,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 22,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -128,6 +138,7 @@
       false,
       true,
       false,
+      true,
       false,
       true,
       true,
@@ -141,6 +152,7 @@
       false,
       false,
       false,
+      true,
       true,
       false,
       false,
@@ -148,5 +160,5 @@
       false
     ]
   },
-  "hash": "be5f00994a5ebd8eb582d7ccf49bfdd4e1c319d52a8fee8a1420431b1afdd533"
+  "hash": "d7db0224251199d9f53f79568dc19e9a9481981d3fd35bb4eee633d4e4751f8d"
 }

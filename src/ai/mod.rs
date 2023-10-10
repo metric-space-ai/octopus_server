@@ -264,6 +264,69 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
     Ok(false)
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SimpleAppMeta {
+    pub description: String,
+    pub title: String,
+}
+
+pub async fn open_ai_simple_app_meta_extraction(code: &str) -> Result<SimpleAppMeta> {
+    let client = Client::new();
+
+    let mut messages = vec![];
+
+    let content = format!("Extract title and description from the following HTML code and return it as JSON with title and description keys {code}");
+
+    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+        .role(Role::User)
+        .content(content)
+        .build()?;
+
+    messages.push(chat_completion_request_message);
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model(MODEL)
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::info!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = client.chat().create(request).await;
+
+            match response_message {
+                Err(e) => {
+                    tracing::info!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.get(0);
+
+                    match response_message {
+                        None => {
+                            tracing::info!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(content) = response_message.content {
+                                let simple_app_meta: SimpleAppMeta =
+                                    serde_json::from_str(&content)?;
+
+                                return Ok(simple_app_meta);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err(Box::new(AppError::Parsing))
+}
+
 pub async fn open_ai_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
@@ -449,6 +512,30 @@ pub async fn open_ai_request(
         }
     }
 
+    let simple_apps = context
+        .octopus_database
+        .get_simple_apps_for_request()
+        .await?;
+
+    for simple_app in simple_apps {
+        let function = ChatCompletionFunctionsArgs::default()
+            .name(simple_app.formatted_name)
+            .description(simple_app.description)
+            .parameters(json!({
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "type": "string",
+                        "description": "Game title",
+                    },
+                },
+                "required": ["title"],
+            }))
+            .build()?;
+
+        functions.push(function);
+    }
+
     let trail = serde_json::to_value(&chat_audit_trails)?;
 
     context
@@ -582,6 +669,21 @@ pub async fn open_ai_request(
                                         )
                                         .await?;
                                     }
+                                }
+
+                                let simple_app = context
+                                    .octopus_database
+                                    .try_get_simple_app_by_formatted_name(&function_name)
+                                    .await?;
+
+                                if let Some(simple_app) = simple_app {
+                                    context
+                                        .octopus_database
+                                        .update_chat_message_simple_app_id(
+                                            chat_message.id,
+                                            simple_app.id,
+                                        )
+                                        .await?;
                                 }
                             }
 

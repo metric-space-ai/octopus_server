@@ -64,7 +64,24 @@ CREATE INDEX ai_functions_formatted_name ON ai_functions(formatted_name);
 CREATE INDEX ai_functions_request_content_type ON ai_functions(request_content_type);
 CREATE INDEX ai_functions_response_content_type ON ai_functions(response_content_type);
 
+CREATE TABLE simple_apps(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code TEXT NOT NULL,
+    description TEXT NOT NULL,
+    formatted_name VARCHAR(256) NOT NULL,
+    is_enabled BOOLEAN NOT NULL DEFAULT false,
+    name VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    deleted_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
+);
+
+CREATE INDEX simple_apps_is_enabled ON simple_apps(is_enabled);
+CREATE INDEX simple_apps_formatted_name ON simple_apps(formatted_name);
+
 ALTER TABLE chat_messages ADD COLUMN ai_function_id UUID REFERENCES ai_functions ON DELETE SET NULL;
 ALTER TABLE chat_messages ADD COLUMN ai_function_error TEXT;
+ALTER TABLE chat_messages ADD COLUMN simple_app_id UUID REFERENCES simple_apps ON DELETE SET NULL;
+ALTER TABLE chat_messages ADD COLUMN simple_app_data JSON;
 
 CREATE INDEX chat_messages_ai_function_id ON chat_messages(ai_function_id);

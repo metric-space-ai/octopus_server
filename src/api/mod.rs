@@ -27,7 +27,7 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, Chat, ChatActivity,
         ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
         ChatMessageStatus, ChatPicture, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        PasswordResetToken, Profile, User, Workspace, WorkspacesType,
+        PasswordResetToken, Profile, SimpleApp, User, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -70,6 +70,7 @@ mod profile_pictures;
 mod profiles;
 mod server_resources;
 mod setup;
+mod simple_apps;
 mod users;
 mod workspaces;
 
@@ -130,6 +131,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 SessionResponseData,
                 SetupInfoResponse,
                 SetupPost,
+                SimpleApp,
                 User,
                 UserPut,
                 Workspace,
@@ -212,6 +214,12 @@ pub async fn router(context: Arc<Context>) -> Router {
             server_resources::info,
             setup::info,
             setup::setup,
+            simple_apps::code,
+            simple_apps::create,
+            simple_apps::delete,
+            simple_apps::list,
+            simple_apps::read,
+            simple_apps::update,
             users::read,
             users::update,
             workspaces::create,
@@ -419,6 +427,17 @@ pub async fn router(context: Arc<Context>) -> Router {
         )
         .route("/api/v1/server-resources", get(server_resources::info))
         .route("/api/v1/setup", get(setup::info).post(setup::setup))
+        .route(
+            "/api/v1/simple-apps",
+            get(simple_apps::list).post(simple_apps::create),
+        )
+        .route("/api/v1/simple-apps/:id/code", get(simple_apps::code))
+        .route(
+            "/api/v1/simple-apps/:id",
+            delete(simple_apps::delete)
+                .get(simple_apps::read)
+                .put(simple_apps::update),
+        )
         .route(
             "/api/v1/users/:user_id",
             get(users::read).put(users::update),
