@@ -250,6 +250,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             (name = "register", description = "Register API."),
             (name = "server_resources", description = "Server resources API."),
             (name = "setup", description = "Setup API."),
+            (name = "simple_apps", description = "Simple apps API."),
             (name = "users", description = "Users API."),
             (name = "workspaces", description = "Workspaces API."),
         )

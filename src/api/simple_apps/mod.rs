@@ -19,7 +19,7 @@ use uuid::Uuid;
     get,
     path = "/api/v1/simple-apps/:id/code",
     responses(
-        (status = 200, description = "Simple app code.", body = SimpleApp),
+        (status = 200, description = "Simple app code.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Simple app not found.", body = ResponseError),
     ),
