@@ -681,7 +681,9 @@ pub async fn open_ai_request(
                                         .octopus_database
                                         .update_chat_message_simple_app_id(
                                             chat_message.id,
+                                            100,
                                             simple_app.id,
+                                            ChatMessageStatus::Answered,
                                         )
                                         .await?;
                                 }

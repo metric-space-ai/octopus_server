@@ -2326,17 +2326,20 @@ impl OctopusDatabase {
     pub async fn update_chat_message_simple_app_id(
         &self,
         id: Uuid,
+        progress: i32,
         simple_app_id: Uuid,
+        status: ChatMessageStatus,
     ) -> Result<ChatMessage> {
-        let chat_message = sqlx::query_as!(
-            ChatMessage,
-            r#"UPDATE chat_messages
-            SET simple_app_id = $2, updated_at = current_timestamp(0)
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET progress = $2, simple_app_id = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", created_at, deleted_at, updated_at"#,
-            id,
-            simple_app_id,
+            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, simple_app_data, status, created_at, deleted_at, updated_at",
         )
+        .bind(id)
+        .bind(progress)
+        .bind(simple_app_id)
+        .bind(status)
         .fetch_one(&*self.pool)
         .await?;
 
