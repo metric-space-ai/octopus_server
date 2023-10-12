@@ -8,6 +8,7 @@ use crate::{
     Result, DOMAIN, PUBLIC_DIR,
 };
 use async_openai::{
+    config::{AzureConfig, OpenAIConfig},
     types::{
         ChatCompletionFunctionsArgs, ChatCompletionRequestMessageArgs,
         CreateChatCompletionRequestArgs, Role,
@@ -24,6 +25,8 @@ use uuid::Uuid;
 
 pub mod function_call;
 
+pub const AZURE_OPENAI_API_VERSION: &str = "2023-05-15";
+pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/";
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 pub const MODEL: &str = "gpt-4-0613";
 
@@ -208,8 +211,8 @@ pub struct FunctionSensitiveInformationResponse {
     pub sensitive_part: Option<String>,
 }
 
-pub async fn open_ai_code_check(code: &str) -> Result<bool> {
-    let client = Client::new();
+pub async fn open_ai_code_check(code: &str, context: Arc<Context>) -> Result<bool> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let mut messages = vec![];
 
@@ -233,7 +236,10 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
             tracing::info!("OpenAIError: {e}");
         }
         Ok(request) => {
-            let response_message = client.chat().create(request).await;
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
 
             match response_message {
                 Err(e) => {
@@ -264,67 +270,43 @@ pub async fn open_ai_code_check(code: &str) -> Result<bool> {
     Ok(false)
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct SimpleAppMeta {
-    pub description: String,
-    pub title: String,
+#[derive(Clone, Debug)]
+pub enum AiClient {
+    Azure(Client<AzureConfig>),
+    OpenAI(Client<OpenAIConfig>),
 }
 
-pub async fn open_ai_simple_app_meta_extraction(code: &str) -> Result<SimpleAppMeta> {
-    let client = Client::new();
+pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
+    let ai_client = if context.config.azure_openai_enabled {
+        let api_key = context
+            .config
+            .azure_openai_api_key
+            .clone()
+            .ok_or(AppError::Config)?;
+        let deployment_id = context
+            .config
+            .azure_openai_deployment_id
+            .clone()
+            .ok_or(AppError::Config)?;
+        let config = AzureConfig::new()
+            .with_api_base(AZURE_OPENAI_BASE_URL)
+            .with_api_key(api_key)
+            .with_deployment_id(deployment_id)
+            .with_api_version(AZURE_OPENAI_API_VERSION);
 
-    let mut messages = vec![];
+        AiClient::Azure(Client::with_config(config))
+    } else {
+        let api_key = context
+            .config
+            .openai_api_key
+            .clone()
+            .ok_or(AppError::Config)?;
+        let config = OpenAIConfig::new().with_api_key(api_key);
 
-    let content = format!("Extract title and description from the following HTML code and return it as JSON with title and description keys {code}");
+        AiClient::OpenAI(Client::with_config(config))
+    };
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
-
-    match request {
-        Err(e) => {
-            tracing::info!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = client.chat().create(request).await;
-
-            match response_message {
-                Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
-
-                    match response_message {
-                        None => {
-                            tracing::info!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
-
-                            if let Some(content) = response_message.content {
-                                let simple_app_meta: SimpleAppMeta =
-                                    serde_json::from_str(&content)?;
-
-                                return Ok(simple_app_meta);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Err(Box::new(AppError::Parsing))
+    Ok(ai_client)
 }
 
 pub async fn open_ai_request(
@@ -332,7 +314,7 @@ pub async fn open_ai_request(
     chat_message: ChatMessage,
     user: User,
 ) -> Result<ChatMessage> {
-    let client = Client::new();
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let mut messages = vec![];
 
@@ -575,13 +557,22 @@ pub async fn open_ai_request(
         functions.push(function);
     }
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .functions(functions)
-        .function_call("auto")
-        .build();
+    let request = match &ai_client {
+        AiClient::Azure(_ai_client) => CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .functions(functions)
+            .function_call("auto")
+            .build(),
+        AiClient::OpenAI(_ai_client) => CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .functions(functions)
+            .function_call("auto")
+            .build(),
+    };
 
     match request {
         Err(e) => {
@@ -594,7 +585,10 @@ pub async fn open_ai_request(
             return Ok(chat_message);
         }
         Ok(request) => {
-            let response_message = client.chat().create(request).await;
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
 
             match response_message {
                 Err(e) => {
@@ -710,4 +704,73 @@ pub async fn open_ai_request(
     }
 
     Ok(chat_message)
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct SimpleAppMeta {
+    pub description: String,
+    pub title: String,
+}
+
+pub async fn open_ai_simple_app_meta_extraction(
+    code: &str,
+    context: Arc<Context>,
+) -> Result<SimpleAppMeta> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
+    let mut messages = vec![];
+
+    let content = format!("Extract title and description from the following HTML code and return it as JSON with title and description keys {code}");
+
+    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+        .role(Role::User)
+        .content(content)
+        .build()?;
+
+    messages.push(chat_completion_request_message);
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model(MODEL)
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::info!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
+
+            match response_message {
+                Err(e) => {
+                    tracing::info!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.get(0);
+
+                    match response_message {
+                        None => {
+                            tracing::info!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(content) = response_message.content {
+                                let simple_app_meta: SimpleAppMeta =
+                                    serde_json::from_str(&content)?;
+
+                                return Ok(simple_app_meta);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err(Box::new(AppError::Parsing))
 }

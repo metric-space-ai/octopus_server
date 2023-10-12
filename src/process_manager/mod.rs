@@ -145,7 +145,7 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
 
     file.write_fmt(format_args!("fi\n"))?;
     file.write_fmt(format_args!("conda activate {full_service_dir_path}\n"))?;
-    file.write_fmt(format_args!("pip install -q python-daemon\n"))?;
+    file.write_fmt(format_args!("pip install -q python-daemon==3.0.1\n"))?;
     file.write_fmt(format_args!("python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port}\n"))?;
 
     Ok(true)

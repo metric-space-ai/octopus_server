@@ -21,7 +21,7 @@ pub async fn ai_service_malicious_code_check(
     context: Arc<Context>,
 ) -> Result<AiService> {
     let malicious_code_detected =
-        ai::open_ai_code_check(&ai_service.original_function_body).await?;
+        ai::open_ai_code_check(&ai_service.original_function_body, context.clone()).await?;
 
     let status = if malicious_code_detected {
         AiServiceStatus::MaliciousCodeDetected

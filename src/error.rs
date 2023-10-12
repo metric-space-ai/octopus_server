@@ -19,6 +19,7 @@ pub enum AppError {
     BadRequest,
     CompanyNotFound,
     Concurrency(tokio::task::JoinError),
+    Config,
     Conflict,
     File,
     Forbidden,
@@ -54,6 +55,7 @@ impl IntoResponse for AppError {
             AppError::Concurrency(_error) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Concurrency problem.")
             }
+            AppError::Config => (StatusCode::INTERNAL_SERVER_ERROR, "Config problem."),
             AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
             AppError::File => (StatusCode::BAD_REQUEST, "File error."),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden."),

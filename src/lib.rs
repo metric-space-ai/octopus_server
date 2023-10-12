@@ -28,6 +28,18 @@ pub const SERVICES_DIR: &str = "services";
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
+    /// Azure OpenAI API key
+    #[arg(long)]
+    pub azure_openai_api_key: Option<String>,
+
+    /// Azure OpenAI deployment id
+    #[arg(long)]
+    pub azure_openai_deployment_id: Option<String>,
+
+    /// Azure OpenAI enabled
+    #[arg(long)]
+    pub azure_openai_enabled: Option<bool>,
+
     /// Database url
     #[arg(short, long)]
     pub database_url: Option<String>,

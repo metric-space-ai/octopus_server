@@ -213,6 +213,9 @@ mod tests {
     #[tokio::test]
     async fn request_201() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -311,6 +314,9 @@ mod tests {
     #[tokio::test]
     async fn request_404() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -345,6 +351,9 @@ mod tests {
     #[tokio::test]
     async fn request_409() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -463,6 +472,9 @@ mod tests {
     #[tokio::test]
     async fn request_410() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -587,6 +599,9 @@ mod tests {
     #[tokio::test]
     async fn validate_200() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -714,6 +729,9 @@ mod tests {
     #[tokio::test]
     async fn validate_404() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -743,6 +761,9 @@ mod tests {
     #[tokio::test]
     async fn validate_410() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -870,6 +891,9 @@ mod tests {
     #[tokio::test]
     async fn change_password_200() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -1052,6 +1076,9 @@ mod tests {
     #[tokio::test]
     async fn change_password_400() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -1202,6 +1229,9 @@ mod tests {
     #[tokio::test]
     async fn change_password_404() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
@@ -1238,6 +1268,9 @@ mod tests {
     #[tokio::test]
     async fn change_password_410() {
         let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),

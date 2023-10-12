@@ -77,13 +77,14 @@ pub async fn create(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected = ai::open_ai_code_check(&code).await?;
+            let malicious_code_detected = ai::open_ai_code_check(&code, context.clone()).await?;
 
             if malicious_code_detected {
                 return Err(AppError::BadRequest);
             }
 
-            let simple_app_meta = ai::open_ai_simple_app_meta_extraction(&code).await?;
+            let simple_app_meta =
+                ai::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
 
             let formatted_name = simple_app_meta
                 .title
@@ -238,13 +239,14 @@ pub async fn update(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected = ai::open_ai_code_check(&code).await?;
+            let malicious_code_detected = ai::open_ai_code_check(&code, context.clone()).await?;
 
             if malicious_code_detected {
                 return Err(AppError::BadRequest);
             }
 
-            let simple_app_meta = ai::open_ai_simple_app_meta_extraction(&code).await?;
+            let simple_app_meta =
+                ai::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
 
             let formatted_name = simple_app_meta
                 .title
