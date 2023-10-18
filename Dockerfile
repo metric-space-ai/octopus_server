@@ -8,6 +8,9 @@ COPY octopus_server /octopus_server/
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM chef AS builder
+ARG AZURE_OPENAI_API_KEY
+ARG AZURE_OPENAI_DEPLOYMENT_ID
+ARG AZURE_OPENAI_ENABLED
 ARG DATABASE_URL
 ARG OCTOPUS_PEPPER
 ARG OCTOPUS_PEPPER_ID
@@ -27,6 +30,9 @@ RUN apt-get install -y g++ git procps wget
 RUN wget https://repo.anaconda.com/archive/Anaconda3-2023.09-0-Linux-x86_64.sh -O anaconda.sh -q && \
   /bin/bash anaconda.sh -b && \
   rm anaconda.sh
+ARG AZURE_OPENAI_API_KEY
+ARG AZURE_OPENAI_DEPLOYMENT_ID
+ARG AZURE_OPENAI_ENABLED
 ARG DATABASE_URL
 ARG OCTOPUS_PEPPER
 ARG OCTOPUS_PEPPER_ID
