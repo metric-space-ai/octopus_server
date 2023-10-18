@@ -145,8 +145,25 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
 
     file.write_fmt(format_args!("fi\n"))?;
     file.write_fmt(format_args!("conda activate {full_service_dir_path}\n"))?;
-    file.write_fmt(format_args!("pip install -q python-daemon==3.0.1\n"))?;
-    file.write_fmt(format_args!("python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port}\n"))?;
+    /*
+        file.write_fmt(format_args!("pip install tensorrt\n"))?;
+        file.write_fmt(format_args!(
+            "conda install cudatoolkit=11.8 cudnn -c conda-forge -y\n"
+        ))?;
+        file.write_fmt(format_args!(
+            "mkdir -p {full_service_dir_path}/etc/conda/activate.d\n"
+        ))?;
+        file.write_fmt(format_args!(
+            "mkdir -p {full_service_dir_path}/etc/conda/deactivate.d\n"
+        ))?;
+        file.write_fmt(format_args!("printf 'export OLD_LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}\nexport LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}:{full_service_dir_path}/lib/\nexport LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}:{full_service_dir_path}/lib/python{python}/site-packages/tensorrt_libs' > {full_service_dir_path}/etc/conda/activate.d/env_vars.sh\n"))?;
+        file.write_fmt(format_args!("printf 'export LD_LIBRARY_PATH=${{OLD_LD_LIBRARY_PATH}}\nunset OLD_LD_LIBRARY_PATH\n' > {full_service_dir_path}/etc/conda/deactivate.d/env_vars.sh\n"))?;
+        file.write_fmt(format_args!(
+            "source {full_service_dir_path}/etc/conda/activate.d/env_vars.sh\n"
+        ))?;
+    */
+    //file.write_fmt(format_args!("pip install -q python-daemon==3.0.1\n"))?;
+    file.write_fmt(format_args!("nohup python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} &\n"))?;
 
     Ok(true)
 }
@@ -252,8 +269,6 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
                             .octopus_database
                             .update_ai_service_is_enabled(ai_service.id, true)
                             .await?;
-
-                        sleep(Duration::from_secs(10)).await;
 
                         let ai_service =
                             ai::service_prepare(ai_service.clone(), context.clone()).await?;
@@ -513,10 +528,26 @@ pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
         .arg(format!(
             "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
         ))
-        .output()?;
+        .spawn()?;
 
-    sleep(Duration::from_secs(10)).await;
-    let pid = try_get_pid(&format!("{ai_service_id}.py")).await?;
+    let mut failed_pid_get_attempts = 0;
+    let pid = None;
+
+    loop {
+        let pid_tmp = try_get_pid(&format!("{ai_service_id}.py")).await?;
+
+        if let Some(pid_tmp) = pid_tmp {
+            return Ok(Some(pid_tmp));
+        } else {
+            failed_pid_get_attempts += 1;
+
+            if failed_pid_get_attempts > 40 {
+                break;
+            }
+
+            sleep(Duration::from_secs(30)).await;
+        };
+    }
 
     Ok(pid)
 }

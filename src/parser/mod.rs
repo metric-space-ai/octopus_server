@@ -55,8 +55,6 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         code_lines = replacers::replace_device_map(code_lines, device_map).await?;
     }
 
-    code_lines = addons::add_logging(&ai_service, code_lines).await?;
-
     code_lines = fixes::fix_apt_get(code_lines).await?;
     code_lines = fixes::fix_apt_install(code_lines).await?;
     code_lines = fixes::fix_input_type_json(code_lines).await?;
@@ -79,11 +77,13 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = replacers::cut_code(code_lines, last_return_jsonify_line).await?;
 
     code_lines = addons::add_argparse(code_lines).await?;
-    code_lines = addons::add_daemon(&ai_service, app_threaded, code_lines).await?;
+    code_lines = addons::add_main(app_threaded, code_lines).await?;
 
-    //    for code_line in &code_lines {
-    //        tracing::info!("{}", code_line);
-    //    }
+    code_lines = addons::add_logging(&ai_service, code_lines).await?;
+
+    for code_line in &code_lines {
+        tracing::info!("{}", code_line);
+    }
 
     let config_lines = configuration::locate_config(code_lines.clone()).await?;
     let config_lines = config_lines.join("\n");

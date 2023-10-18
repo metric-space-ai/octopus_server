@@ -125,6 +125,11 @@ pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Re
         let ai_service =
             service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
 
+        context
+            .octopus_database
+            .update_ai_service_setup_status(ai_service.id, 0, AiServiceSetupStatus::NotPerformed)
+            .await?;
+
         if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
             let ai_service = service_setup(ai_service.id, context.clone(), ai_service.port).await?;
 
@@ -142,11 +147,6 @@ pub async fn service_setup(
     context: Arc<Context>,
     port: i32,
 ) -> Result<AiService> {
-    context
-        .octopus_database
-        .update_ai_service_setup_status(ai_service_id, 0, AiServiceSetupStatus::NotPerformed)
-        .await?;
-
     context
         .octopus_database
         .update_ai_service_status(ai_service_id, 50, AiServiceStatus::Setup)
