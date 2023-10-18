@@ -562,8 +562,6 @@ pub async fn open_ai_request(
             .max_tokens(512u16)
             .model(MODEL)
             .messages(messages)
-            .functions(functions)
-            .function_call("auto")
             .build(),
         AiClient::OpenAI(_ai_client) => CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
