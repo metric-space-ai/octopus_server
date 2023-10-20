@@ -68,7 +68,7 @@ pub async fn create(
         let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
         let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-        if content_type == "application/octet-stream" {
+        if content_type == "application/octet-stream" || content_type == "text/plain" {
             let data = field.bytes().await?.clone().to_vec();
 
             let port = context.octopus_database.get_ai_services_max_port().await?;
@@ -488,7 +488,7 @@ pub async fn update(
         let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
         let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-        if content_type == "application/octet-stream" {
+        if content_type == "application/octet-stream" || content_type == "text/plain" {
             let data = field.bytes().await?.clone().to_vec();
 
             let original_function_body = String::from_utf8(data)?;
