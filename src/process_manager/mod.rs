@@ -128,6 +128,7 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
     let mut file = File::create(path)?;
     file.write_fmt(format_args!("#!/bin/bash\n"))?;
     file.write_fmt(format_args!("cd {full_service_dir_path}\n"))?;
+    file.write_fmt(format_args!(". /root/.bashrc\n"))?;
     file.write_fmt(format_args!(
         "if [ ! -d \"{full_service_dir_path}/bin\" ]\n"
     ))?;

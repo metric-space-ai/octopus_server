@@ -125,7 +125,7 @@ pub async fn fix_type_int(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
-        if code_line.contains("type") && code_line.contains("int") && !code_line.contains("integer")
+        if code_line.contains("type\":") && code_line.contains("int") && !code_line.contains("integer")
         {
             let new_line = code_line.replace("int", "integer");
             parsed_code_lines.push(new_line);
@@ -141,7 +141,7 @@ pub async fn fix_type_str(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
-        if code_line.contains("type") && code_line.contains("str") && !code_line.contains("string")
+        if code_line.contains("type\":") && code_line.contains("str") && !code_line.contains("string")
         {
             let new_line = code_line.replace("str", "string");
             parsed_code_lines.push(new_line);
