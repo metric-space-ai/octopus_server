@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.14"
+async-openai = "0.15"
 axum = { version = "0.6", features = ["multipart"] }
 axum-macros = "0.3"
 base64 = "0.21"
@@ -39,7 +39,7 @@ tower = { version = "0.4", features = ["timeout", "util"] }
 tower-http = { version = "0.4", features = ["add-extension", "cors", "fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-utoipa = { version = "3.5", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "3.1", features = ["axum"] }
+utoipa = { version = "4.0", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "4.0", features = ["axum"] }
 uuid = { version = "1.5", features = ["serde", "v4"] }
 validator = { version = "0.16", features = ["derive"] }

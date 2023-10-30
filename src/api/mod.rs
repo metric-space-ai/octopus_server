@@ -1,5 +1,7 @@
 use crate::{
-    ai::function_call::{AiFunctionFileResponse, AiFunctionResponse, AiFunctionTextResponse},
+    ai::function_call::{
+        AiFunctionErrorResponse, AiFunctionFileResponse, AiFunctionResponse, AiFunctionTextResponse,
+    },
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
         ai_services::{
@@ -24,10 +26,11 @@ use crate::{
     context::Context,
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
-        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, Chat, ChatActivity,
-        ChatAudit, ChatMessage, ChatMessageExtended, ChatMessageFile, ChatMessagePicture,
-        ChatMessageStatus, ChatPicture, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        PasswordResetToken, Profile, SimpleApp, User, Workspace, WorkspacesType,
+        AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
+        AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt,
+        ExamplePromptCategory, InspectionDisabling, PasswordResetToken, Profile, SimpleApp, User,
+        Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -81,6 +84,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             schemas(
                 AiFunction,
                 AiFunctionDirectCallPost,
+                AiFunctionErrorResponse,
                 AiFunctionFileResponse,
                 AiFunctionPut,
                 AiFunctionRequestContentType,
@@ -93,6 +97,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 AiServiceOperation,
                 AiServiceOperationPost,
                 AiServiceOperationResponse,
+                AiServiceRequiredPythonVersion,
                 AiServiceSetupStatus,
                 AiServiceStatus,
                 ChangePasswordPut,

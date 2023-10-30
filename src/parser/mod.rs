@@ -49,6 +49,16 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         code_lines.push(line.to_string());
     }
 
+    let is_ai_service = detectors::detect_is_ai_service(&code_lines).await?;
+    if !is_ai_service {
+        let ai_service = context
+            .octopus_database
+            .update_ai_service_status(ai_service.id, 100, AiServiceStatus::Error)
+            .await?;
+
+        return Ok(ai_service);
+    }
+
     let app_threaded = detectors::detect_app_threaded(&code_lines).await?;
 
     if let Some(device_map) = ai_service.device_map.clone() {

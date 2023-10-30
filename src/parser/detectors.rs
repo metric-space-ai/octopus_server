@@ -26,3 +26,34 @@ pub async fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<us
 
     Ok(last_return_jsonify_line)
 }
+
+pub async fn detect_is_ai_service(code_lines: &Vec<String>) -> Result<bool> {
+    let mut dependencies = false;
+    let mut functions = false;
+    let mut setup = false;
+
+    for code_line in code_lines {
+        if code_line.contains("dependencies") && code_line.contains('=') && code_line.contains('[')
+        {
+            dependencies = true;
+        }
+    }
+
+    for code_line in code_lines {
+        if code_line.contains("functions") && code_line.contains('[') {
+            functions = true;
+        }
+    }
+
+    for code_line in code_lines {
+        if code_line.contains("app.route") && code_line.contains("setup") {
+            setup = true;
+        }
+    }
+
+    if dependencies && functions && setup {
+        return Ok(true);
+    }
+
+    Ok(false)
+}
