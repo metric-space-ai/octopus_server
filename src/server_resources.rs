@@ -127,10 +127,10 @@ pub async fn get() -> Result<ServerResources> {
     let mut device_map = HashMap::new();
 
     for (i, gpu) in gpus.iter().enumerate() {
-        device_map.insert(format!("cuda:{i}"), gpu.memory_total.clone());
+        device_map.insert(format!("cuda:{i}"), gpu.memory_free.clone());
     }
 
-    device_map.insert("cpu".to_string(), memory_total.clone());
+    device_map.insert("cpu".to_string(), memory_free.clone());
 
     let server_resources = ServerResources {
         cpus,

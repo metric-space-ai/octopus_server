@@ -6,9 +6,9 @@ use crate::{
     },
     error::AppError,
     parser::configuration::Configuration,
-    Result,
+    server_resources, Result,
 };
-use std::{str::FromStr, sync::Arc};
+use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 mod addons;
 mod configuration;
@@ -90,11 +90,11 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = addons::add_main(app_threaded, code_lines).await?;
 
     code_lines = addons::add_logging(&ai_service, code_lines).await?;
-
+/*
     for code_line in &code_lines {
         tracing::info!("{}", code_line);
     }
-
+*/
     let config_lines = configuration::locate_config(code_lines.clone()).await?;
     let config_lines = config_lines.join("\n");
 
@@ -169,6 +169,49 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
             }
         }
     }
+
+    Ok(ai_service)
+}
+
+pub async fn ai_service_replace_device_map(
+    ai_service: AiService,
+    context: Arc<Context>,
+) -> Result<AiService> {
+    let device_map = ai_service.device_map.clone().ok_or(AppError::Parsing)?;
+    let processed_function_body = ai_service
+        .processed_function_body
+        .clone()
+        .ok_or(AppError::Parsing)?;
+    let mut code_lines = vec![];
+    for line in processed_function_body.split('\n') {
+        code_lines.push(line.to_string());
+    }
+
+    let server_resources = server_resources::get().await?;
+
+    let device_map_hash_map: HashMap<String, String> = serde_json::from_value(device_map)?;
+    let mut device_map_new = HashMap::new();
+    for (device_key, _device_value) in device_map_hash_map {
+        let memory = server_resources.device_map.get(&device_key);
+
+        if let Some(memory) = memory {
+            device_map_new.insert(device_key, memory);
+        }
+    }
+
+    let device_map = serde_json::to_value(device_map_new)?;
+    code_lines = replacers::replace_device_map(code_lines, device_map.clone()).await?;
+
+    let processed_function_body = code_lines.join("\n");
+
+    let ai_service = context
+        .octopus_database
+        .update_ai_service_device_map_and_processed_function_body(
+            ai_service.id,
+            device_map,
+            &processed_function_body,
+        )
+        .await?;
 
     Ok(ai_service)
 }

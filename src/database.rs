@@ -1966,6 +1966,28 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn update_ai_service_device_map_and_processed_function_body(
+        &self,
+        id: Uuid,
+        device_map: serde_json::Value,
+        processed_function_body: &str,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as!(
+            AiService,
+            r#"UPDATE ai_services
+            SET device_map = $2, processed_function_body = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            device_map,
+            processed_function_body,
+        )
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_service)
+    }
+
     pub async fn update_ai_service_health_check_status(
         &self,
         id: Uuid,

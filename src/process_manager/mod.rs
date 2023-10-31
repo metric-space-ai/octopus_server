@@ -6,7 +6,7 @@ use crate::{
         AiServiceSetupStatus, AiServiceStatus,
     },
     error::AppError,
-    get_pwd, Result, SERVICES_DIR,
+    get_pwd, parser, Result, SERVICES_DIR,
 };
 use std::{
     collections::HashMap,
@@ -226,6 +226,7 @@ pub async fn install_and_run_ai_service(
     context: Arc<Context>,
 ) -> Result<AiService> {
     let ai_service = stop_ai_service(ai_service, context.clone()).await?;
+    let ai_service = parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
     let ai_service = install_ai_service(ai_service, context.clone()).await?;
     let ai_service = run_ai_service(ai_service, context).await?;
 
