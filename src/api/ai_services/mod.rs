@@ -44,6 +44,12 @@ pub struct AiServiceConfigurationPut {
     pub device_map: serde_json::Value,
 }
 
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct AiServicePriorityPut {
+    #[validate(range(min = 0, max = 31))]
+    pub priority: i32,
+}
+
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
@@ -131,7 +137,11 @@ pub async fn configuration(
 
     let ai_service = context
         .octopus_database
-        .update_ai_service_device_map(id, input.device_map, AiServiceStatus::ParsingStarted)
+        .update_ai_service_device_map(
+            ai_service.id,
+            input.device_map,
+            AiServiceStatus::ParsingStarted,
+        )
         .await?;
 
     let ai_service = parser::ai_service_parsing(ai_service, context).await?;
@@ -419,6 +429,46 @@ pub async fn operation(
     };
 
     Ok((StatusCode::CREATED, Json(ai_service_operation_response)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/ai-services/:id/priority",
+    request_body = AiServicePriorityPut,
+    responses(
+        (status = 200, description = "AI Service priority changed.", body = AiService),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn priority(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+    Json(input): Json<AiServicePriorityPut>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    input.validate()?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let ai_service = context
+        .octopus_database
+        .update_ai_service_priority(ai_service.id, input.priority)
+        .await?;
+
+    Ok((StatusCode::OK, Json(ai_service)).into_response())
 }
 
 #[axum_macros::debug_handler]
