@@ -2052,6 +2052,29 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn update_ai_service_parser_feedback(
+        &self,
+        id: Uuid,
+        parser_feedback: &str,
+        progress: i32,
+        status: AiServiceStatus,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as::<_, AiService>(
+            "UPDATE ai_services
+            SET parser_feedback = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+        )
+        .bind(id)
+        .bind(parser_feedback)
+        .bind(progress)
+        .bind(status)
+        .fetch_one(&*self.pool)
+        .await?;
+
+        Ok(ai_service)
+    }
+
     pub async fn update_ai_service_priority(&self, id: Uuid, priority: i32) -> Result<AiService> {
         let ai_service = sqlx::query_as!(
             AiService,

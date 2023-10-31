@@ -21,7 +21,8 @@ pub async fn ai_service_malicious_code_check(
     context: Arc<Context>,
 ) -> Result<AiService> {
     let malicious_code_detected =
-        ai::open_ai_code_check(&ai_service.original_function_body, context.clone()).await?;
+        ai::open_ai_malicious_code_check(&ai_service.original_function_body, context.clone())
+            .await?;
 
     let status = if malicious_code_detected {
         AiServiceStatus::MaliciousCodeDetected
@@ -44,6 +45,32 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         .await?;
 
     let original_function_body = ai_service.original_function_body.clone().replace('\r', "");
+
+    let parsing_code_check_response =
+        ai::open_ai_pre_parsing_code_check(&original_function_body, context.clone()).await?;
+
+    if let Some(parsing_code_check_response) = parsing_code_check_response {
+        if !parsing_code_check_response.is_passed {
+            /*
+                        if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
+                            let fixing_proposal = format!("Pre parsing code check: {}", fixing_proposal);
+
+                            let ai_service = context
+                                .octopus_database
+                                .update_ai_service_parser_feedback(
+                                    ai_service.id,
+                                    &fixing_proposal,
+                                    100,
+                                    AiServiceStatus::Error,
+                                )
+                                .await?;
+
+                            return Ok(ai_service);
+                        }
+            */
+        }
+    }
+
     let mut code_lines = vec![];
     for line in original_function_body.split('\n') {
         code_lines.push(line.to_string());
@@ -51,9 +78,15 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
     let is_ai_service = detectors::detect_is_ai_service(&code_lines).await?;
     if !is_ai_service {
+        let parser_feedback = "This Python code doesn't look like a proper AI service";
         let ai_service = context
             .octopus_database
-            .update_ai_service_status(ai_service.id, 100, AiServiceStatus::Error)
+            .update_ai_service_parser_feedback(
+                ai_service.id,
+                parser_feedback,
+                100,
+                AiServiceStatus::Error,
+            )
             .await?;
 
         return Ok(ai_service);
@@ -90,17 +123,42 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = addons::add_main(app_threaded, code_lines).await?;
 
     code_lines = addons::add_logging(&ai_service, code_lines).await?;
-/*
-    for code_line in &code_lines {
-        tracing::info!("{}", code_line);
-    }
-*/
+    /*
+        for code_line in &code_lines {
+            tracing::info!("{}", code_line);
+        }
+    */
     let config_lines = configuration::locate_config(code_lines.clone()).await?;
     let config_lines = config_lines.join("\n");
 
     let configuration: Configuration = serde_json::from_str(&config_lines)?;
 
     let processed_function_body = code_lines.join("\n");
+
+    let parsing_code_check_response =
+        ai::open_ai_post_parsing_code_check(&processed_function_body, context.clone()).await?;
+
+    if let Some(parsing_code_check_response) = parsing_code_check_response {
+        if !parsing_code_check_response.is_passed {
+            /*
+                        if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
+                            let fixing_proposal = format!("Post parsing code check: {}", fixing_proposal);
+
+                            let ai_service = context
+                                .octopus_database
+                                .update_ai_service_parser_feedback(
+                                    ai_service.id,
+                                    &fixing_proposal,
+                                    100,
+                                    AiServiceStatus::Error,
+                                )
+                                .await?;
+
+                            return Ok(ai_service);
+                        }
+            */
+        }
+    }
 
     let ai_service = context
         .octopus_database

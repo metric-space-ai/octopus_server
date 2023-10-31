@@ -77,7 +77,8 @@ pub async fn create(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected = ai::open_ai_code_check(&code, context.clone()).await?;
+            let malicious_code_detected =
+                ai::open_ai_malicious_code_check(&code, context.clone()).await?;
 
             if malicious_code_detected {
                 return Err(AppError::BadRequest);
@@ -239,7 +240,8 @@ pub async fn update(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected = ai::open_ai_code_check(&code, context.clone()).await?;
+            let malicious_code_detected =
+                ai::open_ai_malicious_code_check(&code, context.clone()).await?;
 
             if malicious_code_detected {
                 return Err(AppError::BadRequest);

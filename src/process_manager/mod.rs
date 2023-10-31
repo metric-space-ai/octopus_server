@@ -321,6 +321,9 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
 
             match pid {
                 None => {
+                    let ai_service =
+                        parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
+
                     let environment_created =
                         create_environment_for_ai_service(&ai_service).await?;
 
