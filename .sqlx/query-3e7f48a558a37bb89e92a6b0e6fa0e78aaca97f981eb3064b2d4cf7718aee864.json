@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE chat_messages\n            SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "SELECT id, ai_function_id, chat_id, simple_app_id, user_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -75,31 +75,41 @@
       },
       {
         "ordinal": 14,
-        "name": "is_sensitive",
+        "name": "is_marked_as_not_sensitive",
         "type_info": "Bool"
       },
       {
         "ordinal": 15,
+        "name": "is_not_checked_by_system",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "is_sensitive",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 17,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 16,
+        "ordinal": 18,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 17,
+        "ordinal": 19,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 18,
+        "ordinal": 20,
         "name": "simple_app_data",
         "type_info": "Json"
       },
       {
-        "ordinal": 19,
+        "ordinal": 21,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -114,28 +124,24 @@
         }
       },
       {
-        "ordinal": 20,
+        "ordinal": 22,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 21,
+        "ordinal": 23,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 22,
+        "ordinal": 24,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Bool",
-        "Bool",
-        "Bool"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -156,6 +162,8 @@
       false,
       false,
       false,
+      false,
+      false,
       true,
       true,
       false,
@@ -164,5 +172,5 @@
       false
     ]
   },
-  "hash": "6765c256203c02836833eded692e0c71ac36d2e8c35e619bad6e933fb89ab1bc"
+  "hash": "3e7f48a558a37bb89e92a6b0e6fa0e78aaca97f981eb3064b2d4cf7718aee864"
 }

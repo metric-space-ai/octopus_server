@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{
-        AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
         ChatMessageStatus, User,
     },
     error::AppError,
@@ -20,10 +20,11 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;
-use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
+pub mod code_tools;
 pub mod function_call;
+pub mod service;
 
 pub const AZURE_OPENAI_API_VERSION: &str = "2023-05-15";
 pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/";
@@ -34,166 +35,6 @@ pub const MODEL: &str = "gpt-4-0613";
 pub struct AiFunctionCall {
     pub arguments: serde_json::Value,
     pub name: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct HealthCheckResponse {
-    pub status: AiServiceHealthCheckStatus,
-}
-
-#[derive(Debug, Serialize)]
-pub struct SetupPost {
-    pub force_setup: bool,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct SetupResponse {
-    pub setup: AiServiceSetupStatus,
-}
-
-pub async fn service_health_check(
-    ai_service_id: Uuid,
-    context: Arc<Context>,
-    port: i32,
-) -> Result<AiService> {
-    let url = format!("{BASE_AI_FUNCTION_URL}:{port}/health-check");
-
-    let mut failed_connection_attempts = 0;
-
-    loop {
-        let start = Utc::now();
-
-        let response = reqwest::Client::new()
-            .get(url.clone())
-            .timeout(Duration::from_secs(30))
-            .send()
-            .await;
-
-        let end = Utc::now();
-
-        let health_check_execution_time = (end - start).num_seconds() as i32;
-
-        if let Ok(response) = response {
-            if response.status() == StatusCode::OK {
-                let response: HealthCheckResponse = response.json().await?;
-
-                let ai_service = context
-                    .octopus_database
-                    .update_ai_service_health_check_status(
-                        ai_service_id,
-                        health_check_execution_time,
-                        response.status,
-                    )
-                    .await?;
-
-                return Ok(ai_service);
-            }
-        } else {
-            context
-                .octopus_database
-                .update_ai_service_health_check_status(
-                    ai_service_id,
-                    health_check_execution_time,
-                    AiServiceHealthCheckStatus::NotWorking,
-                )
-                .await?;
-
-            failed_connection_attempts += 1;
-
-            if failed_connection_attempts > 40 {
-                break;
-            }
-
-            sleep(Duration::from_secs(30)).await;
-        }
-    }
-
-    let ai_service = context
-        .octopus_database
-        .update_ai_service_health_check_status(
-            ai_service_id,
-            0,
-            AiServiceHealthCheckStatus::NotWorking,
-        )
-        .await?;
-
-    Ok(ai_service)
-}
-
-pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    if ai_service.is_enabled {
-        let ai_service =
-            service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
-
-        if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
-            context
-                .octopus_database
-                .update_ai_service_setup_status(
-                    ai_service.id,
-                    0,
-                    AiServiceSetupStatus::NotPerformed,
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .update_ai_service_status(ai_service.id, 50, AiServiceStatus::Setup)
-                .await?;
-
-            let ai_service = service_setup(ai_service.id, context.clone(), ai_service.port).await?;
-
-            return Ok(ai_service);
-        }
-
-        return Ok(ai_service);
-    }
-
-    Ok(ai_service)
-}
-
-pub async fn service_setup(
-    ai_service_id: Uuid,
-    context: Arc<Context>,
-    port: i32,
-) -> Result<AiService> {
-    let start = Utc::now();
-
-    let setup_post = SetupPost { force_setup: false };
-
-    let url = format!("{BASE_AI_FUNCTION_URL}:{port}/setup");
-
-    let response: std::result::Result<reqwest::Response, reqwest::Error> = reqwest::Client::new()
-        .post(url)
-        .json(&setup_post)
-        .send()
-        .await;
-
-    let end = Utc::now();
-    let setup_execution_time = (end - start).num_seconds() as i32;
-
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let response: SetupResponse = response.json().await?;
-
-            let ai_service = context
-                .octopus_database
-                .update_ai_service_setup_status(ai_service_id, setup_execution_time, response.setup)
-                .await?;
-
-            return Ok(ai_service);
-        }
-    }
-
-    let ai_service = context
-        .octopus_database
-        .update_ai_service_setup_status(
-            ai_service_id,
-            setup_execution_time,
-            AiServiceSetupStatus::NotPerformed,
-        )
-        .await?;
-
-    Ok(ai_service)
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -213,220 +54,6 @@ pub struct FunctionSensitiveInformationPost {
 pub struct FunctionSensitiveInformationResponse {
     pub is_sensitive: bool,
     pub sensitive_part: Option<String>,
-}
-
-pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> Result<bool> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
-    let mut messages = vec![];
-
-    let content = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {code}");
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
-
-    match request {
-        Err(e) => {
-            tracing::info!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
-
-            match response_message {
-                Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
-
-                    match response_message {
-                        None => {
-                            tracing::info!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
-
-                            if let Some(content) = response_message.content {
-                                if content == "YES" {
-                                    return Ok(true);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(false)
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ParsingCodeCheckResponse {
-    pub fixing_proposal: Option<String>,
-    pub is_passed: bool,
-    pub reason: Option<String>,
-}
-
-pub async fn open_ai_post_parsing_code_check(
-    code: &str,
-    context: Arc<Context>,
-) -> Result<Option<ParsingCodeCheckResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
-    let mut messages = vec![];
-
-    let content = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::System)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let content = format!(
-        "Is there a config_str definition with valid json of transformers 'device_map' definition? Check, if the device_map has valid keys and as well as if the values are valid for transformers device map.\n\n {code}"
-    );
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
-
-    match request {
-        Err(e) => {
-            tracing::info!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
-
-            match response_message {
-                Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
-
-                    match response_message {
-                        None => {
-                            tracing::info!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
-
-                            if let Some(content) = response_message.content {
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&content)?;
-
-                                return Ok(Some(response));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
-pub async fn open_ai_pre_parsing_code_check(
-    code: &str,
-    context: Arc<Context>,
-) -> Result<Option<ParsingCodeCheckResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
-    let mut messages = vec![];
-
-    let content = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::System)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let content = format!(
-        "Is there a config_str definition with valid json of transformers 'device_map' definition? Check, if the device_map has valid keys and as well as if the values are valid for transformers device map.\n\n {code}"
-    );
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
-
-    match request {
-        Err(e) => {
-            tracing::info!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
-
-            match response_message {
-                Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
-
-                    match response_message {
-                        None => {
-                            tracing::info!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
-
-                            if let Some(content) = response_message.content {
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&content)?;
-
-                                return Ok(Some(response));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(None)
 }
 
 #[derive(Clone, Debug)]
@@ -492,6 +119,7 @@ pub async fn open_ai_request(
     }
 
     let mut content_safety_enabled = true;
+    let mut is_not_checked_by_system = false;
 
     let inspection_disabling = context
         .octopus_database
@@ -563,10 +191,25 @@ pub async fn open_ai_request(
                             }
                         }
                     }
+                } else {
+                    is_not_checked_by_system = true;
                 }
             }
+        } else {
+            is_not_checked_by_system = true;
         }
+    } else {
+        is_not_checked_by_system = true;
     }
+
+    let chat_message = if is_not_checked_by_system {
+        context
+            .octopus_database
+            .update_chat_message_is_not_checked_by_system(chat_message.id, true)
+            .await?
+    } else {
+        chat_message
+    };
 
     let mut chat_audit_trails = vec![];
 
@@ -576,7 +219,10 @@ pub async fn open_ai_request(
         .await?;
 
     for chat_message_tmp in chat_messages {
-        if !chat_message_tmp.is_sensitive || chat_message.is_anonymized {
+        if !chat_message_tmp.is_sensitive
+            || chat_message.is_anonymized
+            || chat_message.is_marked_as_not_sensitive
+        {
             let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
                 .role(Role::User)
                 .content(chat_message_tmp.message.clone())
@@ -861,73 +507,4 @@ pub async fn open_ai_request(
     }
 
     Ok(chat_message)
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct SimpleAppMeta {
-    pub description: String,
-    pub title: String,
-}
-
-pub async fn open_ai_simple_app_meta_extraction(
-    code: &str,
-    context: Arc<Context>,
-) -> Result<SimpleAppMeta> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
-    let mut messages = vec![];
-
-    let content = format!("Extract title and description from the following HTML code and return it as JSON with title and description keys {code}");
-
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
-        .content(content)
-        .build()?;
-
-    messages.push(chat_completion_request_message);
-
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
-
-    match request {
-        Err(e) => {
-            tracing::info!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
-
-            match response_message {
-                Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
-
-                    match response_message {
-                        None => {
-                            tracing::info!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
-
-                            if let Some(content) = response_message.content {
-                                let simple_app_meta: SimpleAppMeta =
-                                    serde_json::from_str(&content)?;
-
-                                return Ok(simple_app_meta);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Err(Box::new(AppError::Parsing))
 }

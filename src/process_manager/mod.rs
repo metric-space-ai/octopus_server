@@ -273,7 +273,8 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
                             .await?;
 
                         let ai_service =
-                            ai::service_prepare(ai_service.clone(), context.clone()).await?;
+                            ai::service::service_prepare(ai_service.clone(), context.clone())
+                                .await?;
 
                         if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
                             && ai_service.setup_status == AiServiceSetupStatus::Performed
@@ -368,9 +369,12 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                 for mut process in processes {
                     match process.state {
                         ProcessState::HealthCheckProblem => {
-                            let ai_service =
-                                ai::service_health_check(process.id, context.clone(), process.port)
-                                    .await?;
+                            let ai_service = ai::service::service_health_check(
+                                process.id,
+                                context.clone(),
+                                process.port,
+                            )
+                            .await?;
 
                             if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
                                 let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
@@ -404,9 +408,12 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                             }
                         }
                         ProcessState::Running => {
-                            let ai_service =
-                                ai::service_health_check(process.id, context.clone(), process.port)
-                                    .await?;
+                            let ai_service = ai::service::service_health_check(
+                                process.id,
+                                context.clone(),
+                                process.port,
+                            )
+                            .await?;
 
                             if ai_service.health_check_status != AiServiceHealthCheckStatus::Ok {
                                 process.state = ProcessState::HealthCheckProblem;

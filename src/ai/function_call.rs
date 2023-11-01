@@ -1,5 +1,5 @@
 use crate::{
-    ai::{service_health_check, BASE_AI_FUNCTION_URL, PUBLIC_DIR},
+    ai::{service::service_health_check, BASE_AI_FUNCTION_URL, PUBLIC_DIR},
     context::Context,
     entity::{
         AiFunction, AiFunctionResponseContentType, AiService, ChatMessage, ChatMessageStatus,

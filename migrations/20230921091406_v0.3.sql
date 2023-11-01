@@ -40,7 +40,10 @@ CREATE TABLE ai_services(
 CREATE INDEX ai_services_deleted_at ON ai_services(deleted_at);
 CREATE INDEX ai_services_health_check_status ON ai_services(health_check_status);
 CREATE INDEX ai_services_is_enabled ON ai_services(is_enabled);
+CREATE INDEX ai_services_original_file_name ON ai_services(original_file_name);
+CREATE INDEX ai_services_priority ON ai_services(priority);
 CREATE INDEX ai_services_setup_status ON ai_services(setup_status);
+CREATE INDEX ai_services_status ON ai_services(status);
 
 CREATE TYPE ai_functions_request_content_types AS ENUM('application_json');
 CREATE TYPE ai_functions_response_content_types AS ENUM('application_json', 'image_jpeg', 'image_png', 'text_plain');
@@ -61,6 +64,9 @@ CREATE TABLE ai_functions(
     UNIQUE(name)
 );
 
+CREATE INDEX ai_functions_ai_service_id ON ai_functions(ai_service_id);
+CREATE INDEX ai_functions_created_at ON ai_functions(created_at);
+CREATE INDEX ai_functions_deleted_at ON ai_functions(deleted_at);
 CREATE INDEX ai_functions_is_enabled ON ai_functions(is_enabled);
 CREATE INDEX ai_functions_formatted_name ON ai_functions(formatted_name);
 CREATE INDEX ai_functions_request_content_type ON ai_functions(request_content_type);
@@ -78,6 +84,7 @@ CREATE TABLE simple_apps(
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0)
 );
 
+CREATE INDEX simple_apps_deleted_at ON simple_apps(deleted_at);
 CREATE INDEX simple_apps_is_enabled ON simple_apps(is_enabled);
 CREATE INDEX simple_apps_formatted_name ON simple_apps(formatted_name);
 
@@ -85,5 +92,8 @@ ALTER TABLE chat_messages ADD COLUMN ai_function_id UUID REFERENCES ai_functions
 ALTER TABLE chat_messages ADD COLUMN ai_function_error TEXT;
 ALTER TABLE chat_messages ADD COLUMN simple_app_id UUID REFERENCES simple_apps ON DELETE SET NULL;
 ALTER TABLE chat_messages ADD COLUMN simple_app_data JSON;
+ALTER TABLE chat_messages ADD COLUMN is_marked_as_not_sensitive BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE chat_messages ADD COLUMN is_not_checked_by_system BOOLEAN NOT NULL DEFAULT false;
 
 CREATE INDEX chat_messages_ai_function_id ON chat_messages(ai_function_id);
+CREATE INDEX chat_messages_simple_app_id ON chat_messages(simple_app_id);

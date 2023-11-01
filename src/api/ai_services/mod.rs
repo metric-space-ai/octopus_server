@@ -397,7 +397,7 @@ pub async fn operation(
                 process_manager::try_restart_ai_service(cloned_ai_service, cloned_context).await
             }
             AiServiceOperation::HealthCheck => {
-                ai::service_health_check(
+                ai::service::service_health_check(
                     cloned_ai_service.id,
                     cloned_context,
                     cloned_ai_service.port,
@@ -405,8 +405,12 @@ pub async fn operation(
                 .await
             }
             AiServiceOperation::Setup => {
-                ai::service_setup(cloned_ai_service.id, cloned_context, cloned_ai_service.port)
-                    .await
+                ai::service::service_setup(
+                    cloned_ai_service.id,
+                    cloned_context,
+                    cloned_ai_service.port,
+                )
+                .await
             }
         };
 

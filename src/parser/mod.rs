@@ -20,9 +20,11 @@ pub async fn ai_service_malicious_code_check(
     ai_service: AiService,
     context: Arc<Context>,
 ) -> Result<AiService> {
-    let malicious_code_detected =
-        ai::open_ai_malicious_code_check(&ai_service.original_function_body, context.clone())
-            .await?;
+    let malicious_code_detected = ai::code_tools::open_ai_malicious_code_check(
+        &ai_service.original_function_body,
+        context.clone(),
+    )
+    .await?;
 
     let status = if malicious_code_detected {
         AiServiceStatus::MaliciousCodeDetected
@@ -47,7 +49,8 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     let original_function_body = ai_service.original_function_body.clone().replace('\r', "");
 
     let parsing_code_check_response =
-        ai::open_ai_pre_parsing_code_check(&original_function_body, context.clone()).await?;
+        ai::code_tools::open_ai_pre_parsing_code_check(&original_function_body, context.clone())
+            .await?;
 
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
@@ -136,7 +139,8 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     let processed_function_body = code_lines.join("\n");
 
     let parsing_code_check_response =
-        ai::open_ai_post_parsing_code_check(&processed_function_body, context.clone()).await?;
+        ai::code_tools::open_ai_post_parsing_code_check(&processed_function_body, context.clone())
+            .await?;
 
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
