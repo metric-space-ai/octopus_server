@@ -1,5 +1,5 @@
 use crate::{
-    ai::{open_ai_get_client, AiClient, MODEL},
+    ai::{open_ai_get_client, AiClient, MODEL16},
     context::Context,
     error::AppError,
     Result,
@@ -26,7 +26,7 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL)
+        .model(MODEL16)
         .messages(messages)
         .build();
 
@@ -106,7 +106,7 @@ pub async fn open_ai_post_parsing_code_check(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL)
+        .model(MODEL16)
         .messages(messages)
         .build();
 
@@ -180,7 +180,7 @@ pub async fn open_ai_pre_parsing_code_check(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL)
+        .model(MODEL16)
         .messages(messages)
         .build();
 
@@ -249,7 +249,7 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL)
+        .model(MODEL16)
         .messages(messages)
         .build();
 

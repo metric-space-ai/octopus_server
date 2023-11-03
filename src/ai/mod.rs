@@ -30,6 +30,7 @@ pub const AZURE_OPENAI_API_VERSION: &str = "2023-05-15";
 pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/";
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 pub const MODEL: &str = "gpt-4-0613";
+pub const MODEL16: &str = "gpt-3.5-turbo-16k-0613";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AiFunctionCall {

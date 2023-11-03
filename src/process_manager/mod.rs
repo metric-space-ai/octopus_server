@@ -17,7 +17,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 use tokio::time::{sleep, Duration};
-use tracing::{error, info};
+use tracing::error;
 use uuid::Uuid;
 
 #[derive(Clone, Debug)]
@@ -128,7 +128,8 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
     let mut file = File::create(path)?;
     file.write_fmt(format_args!("#!/bin/bash\n"))?;
     file.write_fmt(format_args!("cd {full_service_dir_path}\n"))?;
-    file.write_fmt(format_args!(". /root/.bashrc\n"))?;
+    file.write_fmt(format_args!(". $HOME/.bashrc\n"))?;
+    file.write_fmt(format_args!(". /opt/conda/etc/profile.d/conda.sh\n"))?;
     file.write_fmt(format_args!(
         "if [ ! -d \"{full_service_dir_path}/bin\" ]\n"
     ))?;
@@ -146,24 +147,6 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
 
     file.write_fmt(format_args!("fi\n"))?;
     file.write_fmt(format_args!("conda activate {full_service_dir_path}\n"))?;
-    /*
-        file.write_fmt(format_args!("pip install tensorrt\n"))?;
-        file.write_fmt(format_args!(
-            "conda install cudatoolkit=11.8 cudnn -c conda-forge -y\n"
-        ))?;
-        file.write_fmt(format_args!(
-            "mkdir -p {full_service_dir_path}/etc/conda/activate.d\n"
-        ))?;
-        file.write_fmt(format_args!(
-            "mkdir -p {full_service_dir_path}/etc/conda/deactivate.d\n"
-        ))?;
-        file.write_fmt(format_args!("printf 'export OLD_LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}\nexport LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}:{full_service_dir_path}/lib/\nexport LD_LIBRARY_PATH=${{LD_LIBRARY_PATH}}:{full_service_dir_path}/lib/python{python}/site-packages/tensorrt_libs' > {full_service_dir_path}/etc/conda/activate.d/env_vars.sh\n"))?;
-        file.write_fmt(format_args!("printf 'export LD_LIBRARY_PATH=${{OLD_LD_LIBRARY_PATH}}\nunset OLD_LD_LIBRARY_PATH\n' > {full_service_dir_path}/etc/conda/deactivate.d/env_vars.sh\n"))?;
-        file.write_fmt(format_args!(
-            "source {full_service_dir_path}/etc/conda/activate.d/env_vars.sh\n"
-        ))?;
-    */
-    //file.write_fmt(format_args!("pip install -q python-daemon==3.0.1\n"))?;
     file.write_fmt(format_args!("nohup python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} &\n"))?;
 
     Ok(true)
@@ -365,7 +348,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
         match res {
             Err(e) => error!("Error: {:?}", e),
             Ok(processes) => {
-                info!("{:?}", processes);
+                error!("{:?}", processes);
                 for mut process in processes {
                     match process.state {
                         ProcessState::HealthCheckProblem => {
