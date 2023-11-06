@@ -17,6 +17,7 @@ chrono = { version = "0.4", features = ["serde"] }
 fake = "2.9"
 http = "0.2"
 hyper = { version = "0.14", features = ["full"] }
+hyper-multipart-rfc7578 = "0.8"
 infer = "0.15"
 mime = "0.3"
 num_cpus = "1.16"

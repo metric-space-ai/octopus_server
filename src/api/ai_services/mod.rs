@@ -388,7 +388,7 @@ pub async fn operation(
                             100,
                             AiServiceStatus::Stopped,
                         )
-                        .await
+                        .await;
                 }
 
                 ai_service
