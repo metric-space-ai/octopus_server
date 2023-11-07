@@ -534,7 +534,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -720,7 +720,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -959,7 +959,7 @@ mod tests {
         let session_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1084,7 +1084,7 @@ mod tests {
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1252,7 +1252,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1274,7 +1274,7 @@ mod tests {
         let chat_picture_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1454,7 +1454,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1650,7 +1650,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -1853,7 +1853,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -2301,7 +2301,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -2510,7 +2510,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -2713,7 +2713,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -3165,7 +3165,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -3187,7 +3187,7 @@ mod tests {
         let chat_picture_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::PUT)
@@ -3374,7 +3374,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -3396,7 +3396,7 @@ mod tests {
         let chat_picture_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::PUT)
@@ -3577,7 +3577,7 @@ mod tests {
         let chat_id = body.id;
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::POST)
@@ -3666,7 +3666,7 @@ mod tests {
         let chat2_id = "33847746-0030-4964-a496-f75d04499160";
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::PUT)
@@ -3855,7 +3855,7 @@ mod tests {
         let chat_picture_id = "33847746-0030-4964-a496-f75d04499160";
 
         let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "test.png", mime::IMAGE_PNG)
+        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
             .unwrap();
         let req_builder = Request::builder()
             .method(http::Method::PUT)
