@@ -1,5 +1,5 @@
 use crate::{
-    ai::{open_ai_get_client, AiClient, MODEL16},
+    ai::{open_ai_get_client, AiClient, MODEL},
     context::Context,
     error::AppError,
     Result,
@@ -26,13 +26,13 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL16)
+        .model(MODEL)
         .messages(messages)
         .build();
 
     match request {
         Err(e) => {
-            tracing::info!("OpenAIError: {e}");
+            tracing::error!("OpenAIError: {e}");
         }
         Ok(request) => {
             let response_message = match ai_client {
@@ -42,14 +42,14 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
 
             match response_message {
                 Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
+                    tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
                     let response_message = response_message.choices.get(0);
 
                     match response_message {
                         None => {
-                            tracing::info!("BadResponse");
+                            tracing::error!("BadResponse");
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
@@ -106,13 +106,13 @@ pub async fn open_ai_post_parsing_code_check(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL16)
+        .model(MODEL)
         .messages(messages)
         .build();
 
     match request {
         Err(e) => {
-            tracing::info!("OpenAIError: {e}");
+            tracing::error!("OpenAIError: {e}");
         }
         Ok(request) => {
             let response_message = match ai_client {
@@ -122,14 +122,14 @@ pub async fn open_ai_post_parsing_code_check(
 
             match response_message {
                 Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
+                    tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
                     let response_message = response_message.choices.get(0);
 
                     match response_message {
                         None => {
-                            tracing::info!("BadResponse");
+                            tracing::error!("BadResponse");
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
@@ -180,13 +180,13 @@ pub async fn open_ai_pre_parsing_code_check(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL16)
+        .model(MODEL)
         .messages(messages)
         .build();
 
     match request {
         Err(e) => {
-            tracing::info!("OpenAIError: {e}");
+            tracing::error!("OpenAIError: {e}");
         }
         Ok(request) => {
             let response_message = match ai_client {
@@ -196,14 +196,14 @@ pub async fn open_ai_pre_parsing_code_check(
 
             match response_message {
                 Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
+                    tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
                     let response_message = response_message.choices.get(0);
 
                     match response_message {
                         None => {
-                            tracing::info!("BadResponse");
+                            tracing::error!("BadResponse");
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
@@ -238,7 +238,16 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     let mut messages = vec![];
 
-    let content = format!("Extract title and description from the following HTML code and return it as JSON with title and description keys {code}");
+    let content = "you extract title and description from the HTML code. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
+        .role(Role::System)
+        .content(content)
+        .build()?;
+
+    messages.push(chat_completion_request_message);
+
+    let content = code.to_string();
 
     let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
         .role(Role::User)
@@ -249,13 +258,13 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
-        .model(MODEL16)
+        .model(MODEL)
         .messages(messages)
         .build();
 
     match request {
         Err(e) => {
-            tracing::info!("OpenAIError: {e}");
+            tracing::error!("OpenAIError: {e}");
         }
         Ok(request) => {
             let response_message = match ai_client {
@@ -265,19 +274,27 @@ pub async fn open_ai_simple_app_meta_extraction(
 
             match response_message {
                 Err(e) => {
-                    tracing::info!("OpenAIError: {e}");
+                    tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
                     let response_message = response_message.choices.get(0);
 
                     match response_message {
                         None => {
-                            tracing::info!("BadResponse");
+                            tracing::error!("BadResponse");
                         }
                         Some(response_message) => {
                             let response_message = response_message.message.clone();
 
                             if let Some(content) = response_message.content {
+                                let content = content
+                                    .strip_prefix("```json")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string()
+                                    .strip_suffix("```")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string();
+
                                 let simple_app_meta: SimpleAppMeta =
                                     serde_json::from_str(&content)?;
 
