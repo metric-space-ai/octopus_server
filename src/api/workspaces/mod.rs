@@ -320,7 +320,7 @@ pub async fn update(
 #[cfg(test)]
 mod tests {
     use crate::{
-        app,
+        api, app,
         entity::{User, Workspace, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
         session::SessionResponse,
         Args,
@@ -365,35 +365,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -500,35 +474,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -688,35 +636,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -861,35 +783,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -979,35 +875,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -1136,35 +1006,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -1281,35 +1125,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -1478,35 +1296,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -1623,35 +1415,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -1856,35 +1622,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -2132,35 +1872,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -2246,35 +1960,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -2402,35 +2090,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -2610,35 +2272,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -2759,35 +2395,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -2916,35 +2526,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -3125,35 +2709,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -3276,35 +2834,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -3374,35 +2906,10 @@ mod tests {
         );
         let password = "password123";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company2_id = body.company_id;
-        let user2_id = body.id;
+        let user =
+            api::setup::tests::setup_post(fourth_router, &company_name, &email, &password).await;
+        let company2_id = user.company_id;
+        let user2_id = user.id;
 
         let response = fifth_router
             .oneshot(
@@ -3507,34 +3014,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -3574,12 +3056,12 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user_id = body.id;
+        let user2_id = body.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user_id,
+                user2_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
@@ -3637,7 +3119,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
         assert_eq!(body.name, name);
 
         let workspace_id = body.id;
@@ -3680,7 +3162,7 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user2_id = body.id;
+        let user3_id = body.id;
 
         app.context
             .octopus_database
@@ -3745,6 +3227,12 @@ mod tests {
 
         app.context
             .octopus_database
+            .try_delete_user_by_id(user3_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
@@ -3782,35 +3270,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -3896,35 +3358,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -4061,34 +3497,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -4128,12 +3539,12 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user_id = body.id;
+        let user2_id = body.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user_id,
+                user2_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
@@ -4191,7 +3602,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
         assert_eq!(body.name, name);
 
         let workspace_id = body.id;
@@ -4222,12 +3633,18 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
         assert_eq!(body.name, name);
 
         app.context
             .octopus_database
             .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
             .await
             .unwrap();
 
@@ -4271,35 +3688,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -4430,35 +3821,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(
@@ -4530,35 +3895,10 @@ mod tests {
         );
         let password = "password123";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company2_id = body.company_id;
-        let user2_id = body.id;
+        let user =
+            api::setup::tests::setup_post(fourth_router, &company_name, &email, &password).await;
+        let company2_id = user.company_id;
+        let user2_id = user.id;
 
         let response = fifth_router
             .oneshot(
@@ -4669,34 +4009,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -4736,12 +4051,12 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user_id = body.id;
+        let user2_id = body.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user_id,
+                user2_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
@@ -4799,7 +4114,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.user_id, user2_id);
         assert_eq!(body.name, name);
 
         let workspace_id = body.id;
@@ -4842,7 +4157,7 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let user2_id = body.id;
+        let user3_id = body.id;
 
         app.context
             .octopus_database
@@ -4915,6 +4230,12 @@ mod tests {
 
         app.context
             .octopus_database
+            .try_delete_user_by_id(user3_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
             .try_delete_company_by_id(company_id)
             .await
             .unwrap();
@@ -4952,35 +4273,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let response = second_router
             .oneshot(

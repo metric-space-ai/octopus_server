@@ -147,7 +147,7 @@ pub struct RegisterPost {
 
 #[cfg(test)]
 mod tests {
-    use crate::{app, entity::User, Args};
+    use crate::{api, app, entity::User, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -187,35 +187,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -293,35 +267,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
@@ -396,35 +344,9 @@ mod tests {
         );
         let password = "password123";
 
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/setup")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "company_name": &company_name,
-                            "email": &email,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let company_id = body.company_id;
-        let user_id = body.id;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
 
         let email = format!(
             "{}{}{}",
