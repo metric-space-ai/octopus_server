@@ -144,7 +144,15 @@ pub async fn configuration(
         )
         .await?;
 
-    let ai_service = parser::ai_service_parsing(ai_service, context).await?;
+    let cloned_context = context.clone();
+    let cloned_ai_service = ai_service.clone();
+    tokio::spawn(async move {
+        let ai_service = parser::ai_service_parsing(cloned_ai_service, cloned_context).await;
+
+        if let Err(e) = ai_service {
+            debug!("Error: {:?}", e);
+        }
+    });
 
     Ok((StatusCode::OK, Json(ai_service)).into_response())
 }

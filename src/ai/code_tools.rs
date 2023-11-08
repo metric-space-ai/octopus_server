@@ -135,6 +135,14 @@ pub async fn open_ai_post_parsing_code_check(
                             let response_message = response_message.message.clone();
 
                             if let Some(content) = response_message.content {
+                                let content = content
+                                    .strip_prefix("```json")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string()
+                                    .strip_suffix("```")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string();
+
                                 let response: ParsingCodeCheckResponse =
                                     serde_json::from_str(&content)?;
 
@@ -209,6 +217,14 @@ pub async fn open_ai_pre_parsing_code_check(
                             let response_message = response_message.message.clone();
 
                             if let Some(content) = response_message.content {
+                                let content = content
+                                    .strip_prefix("```json")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string()
+                                    .strip_suffix("```")
+                                    .ok_or(AppError::Parsing)?
+                                    .to_string();
+
                                 let response: ParsingCodeCheckResponse =
                                     serde_json::from_str(&content)?;
 
