@@ -222,7 +222,7 @@ pub async fn create(
             }
         }
         WorkspacesType::Public => {
-            if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+            if session_user.id != chat.user_id || session_user.company_id != user.company_id {
                 return Err(AppError::Forbidden);
             }
         }
