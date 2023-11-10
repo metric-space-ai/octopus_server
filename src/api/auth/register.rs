@@ -146,11 +146,12 @@ pub struct RegisterPost {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{api, app, entity::User, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -161,6 +162,46 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn register_with_company_id_post(
+        router: Router,
+        company_id: Uuid,
+        email: &str,
+        job_title: &str,
+        name: &str,
+        password: &str,
+    ) -> User {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/auth/register/{company_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "job_title": &job_title,
+                            "name": &name,
+                            "password": &password,
+                            "repeat_password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: User = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        body
+    }
 
     #[tokio::test]
     async fn register_201() {
@@ -201,37 +242,26 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
+        let user = register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         app.context
             .octopus_database
             .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
             .await
             .unwrap();
 
@@ -358,33 +388,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
+        let user = register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -412,6 +425,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user2_id)
             .await
             .unwrap();
 

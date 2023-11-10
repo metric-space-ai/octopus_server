@@ -160,12 +160,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api, app,
-        entity::{Profile, User},
-        session::SessionResponse,
-        Args,
-    };
+    use crate::{api, app, entity::Profile, session::SessionResponse, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -221,35 +216,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -383,35 +359,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = fourth_router
             .oneshot(
@@ -495,35 +452,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -624,35 +562,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -755,35 +674,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -936,35 +836,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let user3_id = "33847746-0030-4964-a496-f75d04499160";
 
@@ -1043,35 +924,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -1220,35 +1082,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let job_title = "updated job title";
         let language = "en_US";
@@ -1347,35 +1190,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -1489,35 +1313,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let response = third_router
             .oneshot(
@@ -1633,35 +1438,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1827,35 +1613,16 @@ mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let user2_id = body.id;
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            &password,
+        )
+        .await;
+        let user2_id = user.id;
 
         let user3_id = "33847746-0030-4964-a496-f75d04499160";
 
