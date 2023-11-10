@@ -11,6 +11,7 @@ pub struct Config {
     pub pepper_id: i32,
     pub port: u16,
     pub sendgrid_api_key: String,
+    pub test_mode: bool,
 }
 
 impl Config {
@@ -25,6 +26,7 @@ impl Config {
         pepper_id: i32,
         port: u16,
         sendgrid_api_key: String,
+        test_mode: bool,
     ) -> Self {
         Self {
             azure_openai_api_key,
@@ -36,6 +38,7 @@ impl Config {
             pepper_id,
             port,
             sendgrid_api_key,
+            test_mode,
         }
     }
 }
@@ -48,6 +51,7 @@ pub fn load(args: Args) -> Result<Config> {
     let mut openai_api_key: Option<String> = None;
     let mut port = 8080;
     let mut sendgrid_api_key: Option<String> = None;
+    let mut test_mode = false;
 
     if let Ok(val) = std::env::var("AZURE_OPENAI_API_KEY") {
         azure_openai_api_key = Some(val);
@@ -119,6 +123,10 @@ pub fn load(args: Args) -> Result<Config> {
         openai_api_key.clone().expect("OpenAI API key not provided");
     }
 
+    if let Some(val) = args.test_mode {
+        test_mode = val;
+    }
+
     let config = Config::new(
         azure_openai_api_key,
         azure_openai_deployment_id,
@@ -129,6 +137,7 @@ pub fn load(args: Args) -> Result<Config> {
         pepper_id,
         port,
         sendgrid_api_key.expect("SendGrid API key not provided"),
+        test_mode,
     );
 
     Ok(config)

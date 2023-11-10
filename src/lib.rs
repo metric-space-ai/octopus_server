@@ -51,6 +51,10 @@ pub struct Args {
     /// Port
     #[arg(short, long)]
     pub port: Option<u16>,
+
+    /// Test mode
+    #[arg(short, long)]
+    pub test_mode: Option<bool>,
 }
 
 pub async fn run() -> Result<()> {

@@ -24,39 +24,41 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
 
     messages.push(chat_completion_request_message);
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
+    if !context.config.test_mode {
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .build();
 
-    match request {
-        Err(e) => {
-            tracing::error!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
+        match request {
+            Err(e) => {
+                tracing::error!("OpenAIError: {e}");
+            }
+            Ok(request) => {
+                let response_message = match ai_client {
+                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+                };
 
-            match response_message {
-                Err(e) => {
-                    tracing::error!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                match response_message {
+                    Err(e) => {
+                        tracing::error!("OpenAIError: {e}");
+                    }
+                    Ok(response_message) => {
+                        let response_message = response_message.choices.get(0);
 
-                    match response_message {
-                        None => {
-                            tracing::error!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
+                        match response_message {
+                            None => {
+                                tracing::error!("BadResponse");
+                            }
+                            Some(response_message) => {
+                                let response_message = response_message.message.clone();
 
-                            if let Some(content) = response_message.content {
-                                if content == "YES" {
-                                    return Ok(true);
+                                if let Some(content) = response_message.content {
+                                    if content == "YES" {
+                                        return Ok(true);
+                                    }
                                 }
                             }
                         }
@@ -282,39 +284,41 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     messages.push(chat_completion_request_message);
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
+    if !context.config.test_mode {
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .build();
 
-    match request {
-        Err(e) => {
-            tracing::error!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
+        match request {
+            Err(e) => {
+                tracing::error!("OpenAIError: {e}");
+            }
+            Ok(request) => {
+                let response_message = match ai_client {
+                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+                };
 
-            match response_message {
-                Err(e) => {
-                    tracing::error!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                match response_message {
+                    Err(e) => {
+                        tracing::error!("OpenAIError: {e}");
+                    }
+                    Ok(response_message) => {
+                        let response_message = response_message.choices.get(0);
 
-                    match response_message {
-                        None => {
-                            tracing::error!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
+                        match response_message {
+                            None => {
+                                tracing::error!("BadResponse");
+                            }
+                            Some(response_message) => {
+                                let response_message = response_message.message.clone();
 
-                            if let Some(content) = response_message.content {
-                                let content =
-                                    if content.starts_with("```json") && content.ends_with("```") {
+                                if let Some(content) = response_message.content {
+                                    let content = if content.starts_with("```json")
+                                        && content.ends_with("```")
+                                    {
                                         content
                                             .strip_prefix("```json")
                                             .ok_or(AppError::Parsing)?
@@ -326,16 +330,24 @@ pub async fn open_ai_simple_app_meta_extraction(
                                         content
                                     };
 
-                                let simple_app_meta: SimpleAppMeta =
-                                    serde_json::from_str(&content)?;
+                                    let simple_app_meta: SimpleAppMeta =
+                                        serde_json::from_str(&content)?;
 
-                                return Ok(simple_app_meta);
+                                    return Ok(simple_app_meta);
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    } else {
+        let simple_app_meta = SimpleAppMeta {
+            title: "test title".to_string(),
+            description: "test description".to_string(),
+        };
+
+        return Ok(simple_app_meta);
     }
 
     Err(Box::new(AppError::Parsing))

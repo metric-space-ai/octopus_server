@@ -59,6 +59,7 @@ mod tests {
             )),
             openai_api_key: None,
             port: None,
+            test_mode: Some(true),
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
@@ -149,6 +150,7 @@ mod tests {
             )),
             openai_api_key: None,
             port: None,
+            test_mode: Some(true),
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
