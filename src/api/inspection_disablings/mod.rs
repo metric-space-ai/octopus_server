@@ -183,7 +183,7 @@ pub async fn read(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::InspectionDisabling, session::SessionResponse, Args};
+    use crate::{api, app, entity::InspectionDisabling, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -229,32 +229,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -333,30 +310,7 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
 
         let minutes = 10;
 
@@ -451,32 +405,9 @@ mod tests {
         .await;
         let user2_id = user.id;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(third_router, &email, &password, user2_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -556,32 +487,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -658,32 +566,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -772,32 +657,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -887,32 +749,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -962,32 +801,9 @@ mod tests {
         .await;
         let user2_id = user.id;
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+        let session_id = session_response.id;
 
         let response = sixth_router
             .oneshot(
@@ -1054,32 +870,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let response = third_router
             .oneshot(
@@ -1141,32 +934,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -1266,32 +1036,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let minutes = 10;
 
@@ -1384,32 +1131,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-
-        let session_id = body.id;
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+        let session_id = session_response.id;
 
         let wrong_user_id = "33847746-0030-4964-a496-f75d04499160";
 

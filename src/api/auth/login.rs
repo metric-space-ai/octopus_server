@@ -79,11 +79,12 @@ pub async fn login(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{api, app, session::SessionResponse, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -93,6 +94,41 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn login_post(
+        router: Router,
+        email: &str,
+        password: &str,
+        user_id: Uuid,
+    ) -> SessionResponse {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/auth")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "password": &password,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        body
+    }
 
     #[tokio::test]
     async fn login_201() {
@@ -124,30 +160,7 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        login_post(second_router, &email, &password, user_id).await;
 
         app.context
             .octopus_database

@@ -194,7 +194,6 @@ mod tests {
     use crate::{
         api, app,
         entity::{PasswordResetToken, User},
-        session::SessionResponse,
         Args,
     };
     use axum::{
@@ -881,30 +880,7 @@ mod tests {
         assert_eq!(body.id, user_id);
         assert_eq!(body.email, email);
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/auth")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "password": &new_password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: SessionResponse = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        api::auth::login::tests::login_post(fifth_router, &email, &new_password, user_id).await;
 
         app.context
             .octopus_database
