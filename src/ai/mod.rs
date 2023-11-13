@@ -137,9 +137,11 @@ pub async fn open_ai_request(
         }
     }
 
-    if content_safety_enabled
-        && !chat_message.bypass_sensitive_information_filter
+    if !chat_message.bypass_sensitive_information_filter
         && !chat_message.is_anonymized
+        && !chat_message.is_marked_as_not_sensitive
+        && !chat_message.is_sensitive
+        && content_safety_enabled
     {
         let ai_function = context
             .octopus_database
@@ -288,7 +290,9 @@ pub async fn open_ai_request(
         .await?;
 
     for ai_function in ai_functions {
-        if ai_function.formatted_name != "sensitive_information" {
+        if ai_function.formatted_name != "anonymization"
+            && ai_function.formatted_name != "sensitive_information"
+        {
             let function = ChatCompletionFunctionsArgs::default()
                 .name(ai_function.name)
                 .description(ai_function.description)

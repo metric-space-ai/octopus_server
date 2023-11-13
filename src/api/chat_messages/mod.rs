@@ -1,7 +1,10 @@
 use crate::{
-    ai,
+    ai::{self, BASE_AI_FUNCTION_URL},
     context::Context,
-    entity::{ChatMessageStatus, WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
+    entity::{
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessageStatus,
+        WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
+    },
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -12,7 +15,7 @@ use axum::{
     Json,
 };
 use chrono::{Duration, Utc};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
@@ -37,6 +40,16 @@ pub struct ChatMessageFlagPut {
     pub bad_reply_is_harmful: bool,
     pub bad_reply_is_not_helpful: bool,
     pub bad_reply_is_not_true: bool,
+}
+
+#[derive(Debug, Serialize)]
+pub struct FunctionAnonymizationPost {
+    pub value1: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FunctionAnonymizationResponse {
+    pub response: String,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -127,30 +140,87 @@ pub async fn anonymize(
         .try_delete_chat_messages_by_ids(&delete_chat_message_ids)
         .await?;
 
-    let message = format!(
-        "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
-        chat_message.message
-    );
-
     let chat_message = context
         .octopus_database
-        .update_chat_message_is_anonymized(
-            chat_message.id,
-            true,
-            &message,
-            ChatMessageStatus::Asked,
-            0,
-        )
+        .update_chat_message(chat_message.id, 0, "", ChatMessageStatus::Asked)
         .await?;
 
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message =
-            ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
+        let mut message = format!(
+            "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
+            cloned_chat_message.message
+        );
 
-        if let Err(e) = chat_message {
-            debug!("Error: {:?}", e);
+        let ai_function = cloned_context
+            .octopus_database
+            .try_get_ai_function_for_direct_call("anonymization")
+            .await;
+
+        if let Ok(Some(ai_function)) = ai_function {
+            let ai_service = cloned_context
+                .octopus_database
+                .try_get_ai_service_by_id(ai_function.ai_service_id)
+                .await;
+
+            if let Ok(Some(ai_service)) = ai_service {
+                if ai_function.is_enabled
+                    && ai_service.is_enabled
+                    && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
+                    && ai_service.setup_status == AiServiceSetupStatus::Performed
+                    && ai_service.status == AiServiceStatus::Running
+                {
+                    let function_sensitive_information_post = FunctionAnonymizationPost {
+                        value1: cloned_chat_message.message.clone(),
+                    };
+                    let url = format!(
+                        "{BASE_AI_FUNCTION_URL}:{}/{}",
+                        ai_service.port, ai_function.name
+                    );
+
+                    let response = reqwest::Client::new()
+                        .post(url)
+                        .json(&function_sensitive_information_post)
+                        .send()
+                        .await;
+
+                    if let Ok(response) = response {
+                        if response.status() == StatusCode::CREATED {
+                            let function_anonymization_response: Result<
+                                FunctionAnonymizationResponse,
+                                reqwest::Error,
+                            > = response.json().await;
+
+                            if let Ok(function_anonymization_response) =
+                                function_anonymization_response
+                            {
+                                message = function_anonymization_response.response
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let cloned_chat_message = cloned_context
+            .octopus_database
+            .update_chat_message_is_anonymized(
+                cloned_chat_message.id,
+                true,
+                &message,
+                ChatMessageStatus::Asked,
+                0,
+            )
+            .await;
+
+        if let Ok(cloned_chat_message) = cloned_chat_message {
+            let chat_message =
+                ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
+
+            if let Err(e) = chat_message {
+                debug!("Error: {:?}", e);
+            }
         }
     });
 
@@ -924,7 +994,7 @@ pub async fn update(
 mod tests {
     use crate::{
         api, app,
-        entity::{Chat, ChatMessage, Workspace},
+        entity::{Chat, ChatMessage, ChatMessageStatus, Workspace},
         Args,
     };
     use axum::{
@@ -6482,7 +6552,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.is_anonymized);
+        assert!(!body.is_anonymized);
 
         app.context
             .octopus_database
@@ -7363,7 +7433,19 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.is_anonymized);
+        assert!(!body.is_anonymized);
+
+        app.context
+            .octopus_database
+            .update_chat_message_is_anonymized(
+                chat_message_id,
+                true,
+                &message,
+                ChatMessageStatus::Asked,
+                0,
+            )
+            .await
+            .unwrap();
 
         let response = seventh_router
             .oneshot(
