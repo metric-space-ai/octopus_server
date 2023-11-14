@@ -10,6 +10,7 @@ use serde::Serialize;
 use serde_json::json;
 use std::{error::Error, string::FromUtf8Error};
 use strum_macros::Display;
+use tracing::error;
 use utoipa::ToSchema;
 use validator::ValidationErrors;
 
@@ -52,14 +53,20 @@ impl IntoResponse for AppError {
             AppError::CompanyNotFound => {
                 (StatusCode::BAD_REQUEST, "Main company is not registered.")
             }
-            AppError::Concurrency(_error) => {
+            AppError::Concurrency(error) => {
+                error!("Error: {:?}", error);
+
                 (StatusCode::INTERNAL_SERVER_ERROR, "Concurrency problem.")
             }
             AppError::Config => (StatusCode::INTERNAL_SERVER_ERROR, "Config problem."),
             AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
             AppError::File => (StatusCode::BAD_REQUEST, "File error."),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden."),
-            AppError::Generic(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Generic error."),
+            AppError::Generic(error) => {
+                error!("Error: {:?}", error);
+
+                (StatusCode::INTERNAL_SERVER_ERROR, "Generic error.")
+            }
             AppError::Gone => (StatusCode::GONE, "Resource gone."),
             AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header."),
             AppError::Io(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Filesystem error."),
@@ -67,7 +74,11 @@ impl IntoResponse for AppError {
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
-            AppError::OpenAI(_error) => (StatusCode::BAD_REQUEST, "OpenAI problem."),
+            AppError::OpenAI(error) => {
+                error!("Error: {:?}", error);
+
+                (StatusCode::BAD_REQUEST, "OpenAI problem.")
+            }
             AppError::Parsing => (StatusCode::INTERNAL_SERVER_ERROR, "Parsing error."),
             AppError::PasswordDoesNotMatch => (StatusCode::BAD_REQUEST, "Password does not match."),
             AppError::PasswordHash(_error) => {

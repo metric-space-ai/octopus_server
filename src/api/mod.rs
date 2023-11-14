@@ -174,6 +174,7 @@ pub async fn router(context: Arc<Context>) -> Router {
             chat_messages::flag,
             chat_messages::latest,
             chat_messages::list,
+            chat_messages::not_sensitive,
             chat_messages::read,
             chat_messages::regenerate,
             chat_messages::update,

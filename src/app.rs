@@ -4,7 +4,7 @@ use crate::{
 };
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
-use std::{sync::Arc, time::Duration};
+use std::sync::Arc;
 
 pub struct App {
     pub context: Arc<Context>,
@@ -24,11 +24,7 @@ pub async fn get_app(args: Args) -> Result<App> {
 
 pub async fn get_context(args: Args) -> Result<Arc<Context>> {
     let config = config::load(args)?;
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .acquire_timeout(Duration::from_secs(3))
-        .connect(&config.database_url)
-        .await?;
+    let pool = PgPoolOptions::new().connect(&config.database_url).await?;
     let octopus_database = OctopusDatabase::new(pool);
     let process_manager = ProcessManager::new();
     let context = Arc::new(Context::new(config, octopus_database, process_manager));

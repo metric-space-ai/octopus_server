@@ -298,8 +298,8 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
 
     for ai_service in ai_services {
         if ai_service.is_enabled
-            && ai_service.setup_status == AiServiceSetupStatus::Performed
-            && ai_service.status == AiServiceStatus::Running
+            && (ai_service.status == AiServiceStatus::Running
+                || ai_service.status == AiServiceStatus::Setup)
         {
             let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
 
