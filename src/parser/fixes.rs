@@ -72,12 +72,19 @@ pub async fn fix_return_code(code_lines: Vec<String>) -> Result<Vec<String>> {
     for code_line in code_lines {
         if code_line.contains("return")
             && (code_line.contains("jsonify") || code_line.contains("app.response_class"))
+            && !code_line.contains("200")
             && !code_line.contains("201")
             && !code_line.contains("400")
             && !code_line.contains("404")
             && !code_line.contains("500")
         {
             let new_line = format!("{code_line}, 201");
+            parsed_code_lines.push(new_line);
+        } else if code_line.contains("return")
+            && (code_line.contains("jsonify") || code_line.contains("app.response_class"))
+            && code_line.contains("200")
+        {
+            let new_line = code_line.replace("200", "201");
             parsed_code_lines.push(new_line);
         } else {
             parsed_code_lines.push(code_line);

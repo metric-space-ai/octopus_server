@@ -56,6 +56,16 @@ pub struct FunctionSensitiveInformationResponse {
     pub sensitive_part: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct InformationRetrievalPost {
+    pub prompt: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct InformationRetrievalResponse {
+    pub result: Option<String>,
+}
+
 #[derive(Clone, Debug)]
 pub enum AiClient {
     Azure(Client<AzureConfig>),
@@ -115,6 +125,62 @@ pub async fn open_ai_request(
                 .octopus_database
                 .update_chat(chat.id, &chat_message.message)
                 .await?;
+        }
+    }
+
+    let ai_function = context
+        .octopus_database
+        .try_get_ai_function_for_direct_call("querycontent")
+        .await?;
+
+    if let Some(ai_function) = ai_function {
+        let ai_service = context
+            .octopus_database
+            .try_get_ai_service_by_id(ai_function.ai_service_id)
+            .await?;
+
+        if let Some(ai_service) = ai_service {
+            if ai_function.is_enabled
+                && ai_service.is_enabled
+                && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
+                && ai_service.setup_status == AiServiceSetupStatus::Performed
+                && ai_service.status == AiServiceStatus::Running
+            {
+                let information_retrieval_post = InformationRetrievalPost {
+                    prompt: chat_message.message.clone(),
+                };
+                let url = format!(
+                    "{BASE_AI_FUNCTION_URL}:{}/{}",
+                    ai_service.port, ai_function.name
+                );
+                let response = reqwest::Client::new()
+                    .post(url)
+                    .json(&information_retrieval_post)
+                    .send()
+                    .await;
+
+                if let Ok(response) = response {
+                    if response.status() == StatusCode::CREATED {
+                        let information_retrieval_response: InformationRetrievalResponse =
+                            response.json().await?;
+
+                        if let Some(result) = information_retrieval_response.result {
+                            let chat_message = context
+                                .octopus_database
+                                .update_chat_message_from_function(
+                                    chat_message.id,
+                                    ai_function.id,
+                                    ChatMessageStatus::Answered,
+                                    100,
+                                    Some(result),
+                                )
+                                .await?;
+
+                            return Ok(chat_message);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -291,6 +357,7 @@ pub async fn open_ai_request(
 
     for ai_function in ai_functions {
         if ai_function.formatted_name != "anonymization"
+            && ai_function.formatted_name != "querycontent"
             && ai_function.formatted_name != "sensitive_information"
         {
             let function = ChatCompletionFunctionsArgs::default()
