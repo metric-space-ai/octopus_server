@@ -5,11 +5,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.73.0/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.74.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.73.0
+    RUST_VERSION=1.74.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -28,7 +28,7 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     rustup --version; \
     cargo --version; \
-    rustc --version;
+    rustc --version
 RUN cargo install cargo-chef
 WORKDIR /octopus_server
 
@@ -65,11 +65,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.73.0/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.74.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.73.0
+    RUST_VERSION=1.74.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -88,7 +88,7 @@ RUN set -eux; \
     chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
     rustup --version; \
     cargo --version; \
-    rustc --version;
+    rustc --version
 # https://github.com/ContinuumIO/docker-images/blob/main/miniconda3/debian/Dockerfile
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update -q && \
