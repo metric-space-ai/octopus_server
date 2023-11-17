@@ -10,8 +10,9 @@ use crate::{
 use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
-        ChatCompletionFunctionsArgs, ChatCompletionRequestMessageArgs,
-        CreateChatCompletionRequestArgs, Role,
+        ChatCompletionFunctionsArgs, ChatCompletionRequestAssistantMessageArgs,
+        ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs,
+        CreateChatCompletionRequestArgs,
     },
     Client,
 };
@@ -291,12 +292,13 @@ pub async fn open_ai_request(
             || chat_message.is_anonymized
             || chat_message.is_marked_as_not_sensitive
         {
-            let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-                .role(Role::User)
+            let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
                 .content(chat_message_tmp.message.clone())
                 .build()?;
 
-            messages.push(chat_completion_request_message);
+            messages.push(ChatCompletionRequestMessage::User(
+                chat_completion_request_message,
+            ));
 
             let chat_audit_trail = ChatAuditTrail {
                 id: chat_message_tmp.id,
@@ -307,12 +309,14 @@ pub async fn open_ai_request(
             chat_audit_trails.push(chat_audit_trail);
 
             if let Some(response) = chat_message_tmp.response {
-                let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-                    .role(Role::Assistant)
-                    .content(response.clone())
-                    .build()?;
+                let chat_completion_request_message =
+                    ChatCompletionRequestAssistantMessageArgs::default()
+                        .content(response.clone())
+                        .build()?;
 
-                messages.push(chat_completion_request_message);
+                messages.push(ChatCompletionRequestMessage::Assistant(
+                    chat_completion_request_message,
+                ));
 
                 let chat_audit_trail = ChatAuditTrail {
                     id: chat_message_tmp.id,
@@ -329,12 +333,13 @@ pub async fn open_ai_request(
 
                 if !urls.is_empty() {
                     let chat_completion_request_message =
-                        ChatCompletionRequestMessageArgs::default()
-                            .role(Role::Assistant)
+                        ChatCompletionRequestAssistantMessageArgs::default()
                             .content(urls.clone())
                             .build()?;
 
-                    messages.push(chat_completion_request_message);
+                    messages.push(ChatCompletionRequestMessage::Assistant(
+                        chat_completion_request_message,
+                    ));
 
                     let chat_audit_trail = ChatAuditTrail {
                         id: chat_message_tmp.id,

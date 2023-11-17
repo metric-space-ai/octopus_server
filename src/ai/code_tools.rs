@@ -5,7 +5,8 @@ use crate::{
     Result,
 };
 use async_openai::types::{
-    ChatCompletionRequestMessageArgs, CreateChatCompletionRequestArgs, Role,
+    ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
+    ChatCompletionRequestUserMessageArgs, CreateChatCompletionRequestArgs,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -17,12 +18,13 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
 
     let content = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {code}");
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
 
     if !context.config.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
@@ -88,23 +90,25 @@ pub async fn open_ai_post_parsing_code_check(
 
     let content = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::System)
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
 
     let content = format!(
         "Is there a config_str definition with valid json of transformers 'device_map' definition? Check, if the device_map has valid keys and as well as if the values are valid for transformers device map.\n\n {code}"
     );
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
@@ -175,23 +179,25 @@ pub async fn open_ai_pre_parsing_code_check(
 
     let content = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::System)
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
 
     let content = format!(
         "Is there a config_str definition with valid json of transformers 'device_map' definition? Check, if the device_map has valid keys and as well as if the values are valid for transformers device map.\n\n {code}"
     );
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
 
     let request = CreateChatCompletionRequestArgs::default()
         .max_tokens(512u16)
@@ -268,21 +274,23 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     let content = "you extract title and description from the HTML code. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::System)
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
 
     let content = code.to_string();
 
-    let chat_completion_request_message = ChatCompletionRequestMessageArgs::default()
-        .role(Role::User)
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
         .content(content)
         .build()?;
 
-    messages.push(chat_completion_request_message);
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
 
     if !context.config.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
