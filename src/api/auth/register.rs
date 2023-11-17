@@ -198,6 +198,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: User = serde_json::from_slice(&body).unwrap();
 
+        assert_eq!(body.company_id, company_id);
         assert_eq!(body.email, email);
 
         body

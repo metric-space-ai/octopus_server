@@ -357,7 +357,7 @@ pub mod tests {
                     .body(Body::from(
                         serde_json::json!({
                             "name": &name,
-                            "type": r#type,
+                            "type": &r#type,
                         })
                         .to_string(),
                     ))
