@@ -318,7 +318,7 @@ pub async fn update(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         api, app,
         entity::{Workspace, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
@@ -327,6 +327,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -337,6 +338,44 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn workspace_create(
+        router: Router,
+        session_id: Uuid,
+        user_id: Uuid,
+        name: &str,
+        r#type: &str,
+    ) -> Workspace {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/workspaces")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                            "type": r#type,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Workspace = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.name, name);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201_public() {
@@ -376,34 +415,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         app.context
             .octopus_database
@@ -493,34 +506,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         app.context
             .octopus_database
@@ -864,34 +851,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -991,34 +952,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fifth_router
             .oneshot(
@@ -1093,34 +1028,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -1190,34 +1099,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let email = format!(
             "{}{}{}",
@@ -1365,34 +1248,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let email = format!(
             "{}{}{}",
@@ -1572,34 +1429,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -1710,34 +1541,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fifth_router
             .oneshot(
@@ -1823,34 +1628,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -1924,34 +1703,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -2063,34 +1816,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fifth_router
             .oneshot(
@@ -2177,34 +1904,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let response = fourth_router
             .oneshot(
@@ -2280,34 +1981,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2445,34 +2120,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let email = format!(
             "{}{}{}",
@@ -2658,34 +2307,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
 
@@ -2805,34 +2428,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
 
@@ -2927,34 +2524,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
 
@@ -3038,34 +2609,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(third_router, session_id, user_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
 
@@ -3211,34 +2756,8 @@ mod tests {
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/workspaces")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "name": &name,
-                            "type": r#type,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Workspace = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user2_id);
-        assert_eq!(body.name, name);
-
-        let workspace_id = body.id;
+        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, &r#type).await;
+        let workspace_id = workspace.id;
 
         let email = format!(
             "{}{}{}",
