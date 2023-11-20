@@ -542,12 +542,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -558,7 +558,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -619,12 +619,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -635,7 +635,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -703,12 +703,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -727,7 +727,7 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
@@ -742,7 +742,7 @@ pub mod tests {
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -753,7 +753,7 @@ pub mod tests {
             session_id,
             user2_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -827,12 +827,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -843,7 +843,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -916,12 +916,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -940,13 +940,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -957,7 +957,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1034,12 +1034,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1050,7 +1050,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1122,12 +1122,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1146,13 +1146,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1163,7 +1163,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1250,12 +1250,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1274,13 +1274,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1291,7 +1291,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1309,12 +1309,12 @@ pub mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(seventh_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(seventh_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user3_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, &password, user3_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, user3_id).await;
         let session_id = session_response.id;
 
         let response = ninth_router
@@ -1403,12 +1403,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1419,7 +1419,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1489,12 +1489,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1505,7 +1505,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1587,12 +1587,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1603,7 +1603,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1681,12 +1681,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1697,7 +1697,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1715,12 +1715,12 @@ pub mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(fifth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(fifth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -1802,12 +1802,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let workspace_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1869,12 +1869,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1885,7 +1885,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1967,12 +1967,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1983,7 +1983,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2061,12 +2061,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2077,7 +2077,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2095,12 +2095,12 @@ pub mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(fifth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(fifth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -2182,12 +2182,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let workspace_id = "33847746-0030-4964-a496-f75d04499160";
@@ -2249,12 +2249,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2265,7 +2265,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2349,12 +2349,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -2373,13 +2373,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2390,7 +2390,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2474,12 +2474,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2490,7 +2490,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2514,7 +2514,7 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
@@ -2529,7 +2529,7 @@ pub mod tests {
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -2612,12 +2612,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2628,7 +2628,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2708,12 +2708,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -2732,13 +2732,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2749,7 +2749,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2767,12 +2767,12 @@ pub mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(seventh_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(seventh_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user3_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, &password, user3_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, user3_id).await;
         let session_id = session_response.id;
 
         let response = ninth_router
@@ -2861,12 +2861,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2877,7 +2877,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2947,12 +2947,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2963,7 +2963,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3048,12 +3048,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3072,13 +3072,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3089,7 +3089,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3178,12 +3178,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3194,7 +3194,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3273,12 +3273,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3297,13 +3297,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3314,7 +3314,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3408,12 +3408,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3432,13 +3432,13 @@ pub mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3449,7 +3449,7 @@ pub mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3467,12 +3467,12 @@ pub mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(seventh_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(seventh_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user3_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, &password, user3_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, user3_id).await;
         let session_id = session_response.id;
 
         let name = "updated name";
@@ -3568,12 +3568,12 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3584,7 +3584,7 @@ pub mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;

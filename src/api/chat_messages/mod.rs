@@ -195,7 +195,7 @@ pub async fn anonymize(
                             if let Ok(function_anonymization_response) =
                                 function_anonymization_response
                             {
-                                message = function_anonymization_response.response
+                                message = function_anonymization_response.response;
                             }
                         }
                     }
@@ -991,7 +991,7 @@ pub async fn update(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         api, app,
         entity::{ChatMessage, ChatMessageStatus},
@@ -1000,6 +1000,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -1010,6 +1011,44 @@ mod tests {
         Fake,
     };
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn chat_message_create(
+        router: Router,
+        session_id: Uuid,
+        chat_id: Uuid,
+        user_id: Uuid,
+        message: &str,
+    ) -> ChatMessage {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "message": &message,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.message, message);
+        assert_eq!(body.chat_id, chat_id);
+        assert_eq!(body.user_id, user_id);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201() {
@@ -1040,12 +1079,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1056,7 +1095,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1067,32 +1106,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         app.context
             .octopus_database
@@ -1154,12 +1175,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1170,7 +1191,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1256,12 +1277,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1272,7 +1293,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1291,12 +1312,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(fifth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(fifth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let message = "test message";
@@ -1385,12 +1406,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1460,12 +1481,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1476,7 +1497,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1487,32 +1508,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -1595,12 +1598,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1611,7 +1614,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1622,32 +1625,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -1721,12 +1706,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1745,13 +1730,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1762,7 +1747,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1773,32 +1758,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            session_id,
+            chat_id,
+            user2_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = eighth_router
             .oneshot(
@@ -1876,12 +1843,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1892,7 +1859,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -1903,32 +1870,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -2001,12 +1950,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -2025,13 +1974,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2042,7 +1991,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2054,32 +2003,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = eighth_router
             .oneshot(
@@ -2165,12 +2096,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2181,7 +2112,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2192,32 +2123,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2229,12 +2142,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -2324,12 +2237,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2340,7 +2253,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2421,12 +2334,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2437,7 +2350,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2448,32 +2361,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -2556,12 +2451,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2572,7 +2467,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2583,32 +2478,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -2687,12 +2564,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2703,7 +2580,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2714,32 +2591,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2751,12 +2610,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -2844,12 +2703,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
@@ -2912,12 +2771,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2928,7 +2787,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -2939,32 +2798,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -3047,12 +2888,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3063,7 +2904,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3074,32 +2915,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -3178,12 +3001,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3194,7 +3017,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3205,32 +3028,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3242,12 +3047,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -3335,12 +3140,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
@@ -3403,12 +3208,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3419,7 +3224,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3430,32 +3235,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -3538,12 +3325,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3554,7 +3341,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3565,32 +3352,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -3669,12 +3438,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3685,7 +3454,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3696,32 +3465,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3733,12 +3484,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -3828,12 +3579,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3844,7 +3595,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3925,12 +3676,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3941,7 +3692,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -3952,32 +3703,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -4061,12 +3794,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4077,7 +3810,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4088,32 +3821,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -4192,12 +3907,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -4216,13 +3931,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4233,7 +3948,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4245,32 +3960,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = eighth_router
             .oneshot(
@@ -4356,12 +4053,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4372,7 +4069,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4383,32 +4080,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -4420,12 +4099,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -4515,12 +4194,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4531,7 +4210,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4612,12 +4291,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4628,7 +4307,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4639,32 +4318,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let message = "test message updated";
 
@@ -4755,12 +4416,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4771,7 +4432,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4782,32 +4443,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let message = "test message updated";
 
@@ -4893,12 +4536,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -4917,13 +4560,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4934,7 +4577,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -4946,32 +4589,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let message = "test message updated";
 
@@ -5064,12 +4689,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5080,7 +4705,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5091,32 +4716,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -5128,12 +4735,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let message = "test message updated";
@@ -5230,12 +4837,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5246,7 +4853,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5334,12 +4941,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5350,7 +4957,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5361,32 +4968,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -5471,12 +5060,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5487,7 +5076,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5498,32 +5087,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -5604,12 +5175,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -5628,13 +5199,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5645,7 +5216,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5657,32 +5228,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = eighth_router
             .oneshot(
@@ -5770,12 +5323,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5786,7 +5339,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -5797,32 +5350,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -5834,12 +5369,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -5931,12 +5466,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5947,7 +5482,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6031,12 +5566,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6047,7 +5582,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6058,32 +5593,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -6112,7 +5629,7 @@ mod tests {
             .update_chat_message_is_anonymized(
                 chat_message_id,
                 true,
-                &message,
+                message,
                 ChatMessageStatus::Asked,
                 0,
             )
@@ -6197,12 +5714,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6213,7 +5730,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6224,32 +5741,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -6351,12 +5850,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6367,7 +5866,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6378,32 +5877,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -6497,12 +5978,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -6521,13 +6002,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6538,7 +6019,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6550,32 +6031,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -6676,12 +6139,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6692,7 +6155,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6703,32 +6166,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -6740,12 +6185,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let bad_reply_comment = "bad reply comment";
@@ -6850,12 +6295,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6866,7 +6311,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6962,12 +6407,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6978,7 +6423,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -6989,32 +6434,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -7099,12 +6526,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -7115,7 +6542,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -7126,32 +6553,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(
@@ -7232,12 +6641,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -7256,13 +6665,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -7273,7 +6682,7 @@ mod tests {
             admin_session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -7285,32 +6694,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            seventh_router,
+            admin_session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = eighth_router
             .oneshot(
@@ -7398,12 +6789,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -7414,7 +6805,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -7425,32 +6816,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -7462,12 +6835,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(sixth_router, &company_name, &email, &password).await;
+            api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
         let company2_id = user.company_id;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -7559,12 +6932,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -7575,7 +6948,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -7659,12 +7032,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -7675,7 +7048,7 @@ mod tests {
             session_id,
             user_id,
             &name,
-            &r#type,
+            r#type,
         )
         .await;
         let workspace_id = workspace.id;
@@ -7686,32 +7059,14 @@ mod tests {
 
         let message = "test message";
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-messages/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "message": &message,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: ChatMessage = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.message, message);
-
-        let chat_message_id = body.id;
+        let chat_message = chat_message_create(
+            fifth_router,
+            session_id,
+            chat_id,
+            user_id,
+            message,
+        ).await;
+        let chat_message_id = chat_message.id;
 
         let response = sixth_router
             .oneshot(

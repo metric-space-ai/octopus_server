@@ -315,7 +315,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, true);
+        assert!(body.is_enabled);
 
         body
     }
@@ -347,12 +347,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -404,12 +404,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let form = multipart::Form::default();
@@ -467,7 +467,7 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -487,13 +487,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let mut form = multipart::Form::default();
@@ -558,12 +558,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -635,12 +635,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -706,12 +706,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";
@@ -772,12 +772,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -841,12 +841,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -868,13 +868,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = sixth_router
@@ -944,12 +944,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1010,12 +1010,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1025,7 +1025,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/simple-apps"))
+                    .uri("/api/v1/simple-apps".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1088,12 +1088,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1103,7 +1103,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/simple-apps"))
+                    .uri("/api/v1/simple-apps".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -1160,12 +1160,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1189,7 +1189,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, true);
+        assert!(body.is_enabled);
 
         app.context
             .octopus_database
@@ -1238,12 +1238,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1309,12 +1309,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1375,12 +1375,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1404,7 +1404,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, true);
+        assert!(body.is_enabled);
 
         app.context
             .octopus_database
@@ -1453,12 +1453,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1526,12 +1526,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app = simple_apps_create(third_router, session_id).await;
@@ -1553,13 +1553,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let mut form = multipart::Form::default();
@@ -1629,12 +1629,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";

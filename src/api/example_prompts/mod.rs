@@ -428,12 +428,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -487,13 +487,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let is_visible = true;
@@ -579,12 +579,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -725,12 +725,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -822,13 +822,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -904,12 +904,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
@@ -971,12 +971,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1126,12 +1126,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1275,12 +1275,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1432,12 +1432,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1581,12 +1581,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1650,12 +1650,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1807,12 +1807,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -1954,12 +1954,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";
@@ -2021,12 +2021,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -2194,12 +2194,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let description = "sample description";
@@ -2291,13 +2291,13 @@ mod tests {
             &email,
             &job_title,
             &name,
-            &password,
+            password,
         )
         .await;
         let user2_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, &password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
         let session_id = session_response.id;
 
         let is_visible = false;
@@ -2388,12 +2388,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, &password).await;
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
         let example_prompt_id = "33847746-0030-4964-a496-f75d04499160";

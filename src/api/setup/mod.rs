@@ -356,7 +356,7 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = setup_post(second_router, &company_name, &email, &password).await;
+        let user = setup_post(second_router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -417,7 +417,7 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = setup_post(router, &company_name, &email, &password).await;
+        let user = setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -509,7 +509,7 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = setup_post(router, &company_name, &email, &password).await;
+        let user = setup_post(router, &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
