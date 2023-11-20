@@ -1106,13 +1106,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         app.context
@@ -1313,11 +1308,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(fifth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let message = "test message";
@@ -1350,7 +1346,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1362,7 +1358,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -1508,13 +1504,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -1625,13 +1616,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -1733,10 +1719,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -1753,18 +1740,14 @@ pub mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(sixth_router, session_id, user2_id, workspace_id).await;
+            api::chats::tests::chat_create(sixth_router, session_id, second_user_id, workspace_id)
+                .await;
         let chat_id = chat.id;
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            session_id,
-            chat_id,
-            user2_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, session_id, chat_id, second_user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = eighth_router
@@ -1790,7 +1773,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1870,13 +1853,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -1977,10 +1955,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2003,13 +1982,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = eighth_router
@@ -2035,7 +2009,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2123,13 +2097,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -2143,11 +2112,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -2173,7 +2143,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2185,7 +2155,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -2361,13 +2331,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -2478,13 +2443,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -2591,13 +2551,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -2611,11 +2566,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -2641,7 +2597,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2653,7 +2609,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -2798,13 +2754,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -2915,13 +2866,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -3028,13 +2974,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -3048,11 +2989,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -3078,7 +3020,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -3090,7 +3032,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -3235,13 +3177,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -3352,13 +3289,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -3465,13 +3397,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -3485,11 +3412,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -3515,7 +3443,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -3527,7 +3455,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -3703,13 +3631,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -3821,13 +3744,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -3934,10 +3852,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -3960,13 +3879,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = eighth_router
@@ -3992,7 +3906,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -4080,13 +3994,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -4100,11 +4009,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -4130,7 +4040,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -4142,7 +4052,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -4318,13 +4228,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let message = "test message updated";
@@ -4443,13 +4348,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let message = "test message updated";
@@ -4563,10 +4463,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -4589,13 +4490,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let message = "test message updated";
@@ -4628,7 +4524,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -4716,13 +4612,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -4736,11 +4627,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let message = "test message updated";
@@ -4773,7 +4665,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -4785,7 +4677,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -4968,13 +4860,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -5087,13 +4974,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -5202,10 +5084,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -5228,13 +5111,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = eighth_router
@@ -5262,7 +5140,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -5350,13 +5228,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -5370,11 +5243,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -5402,7 +5276,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -5414,7 +5288,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -5593,13 +5467,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -5741,13 +5610,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
@@ -5877,13 +5741,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
@@ -6005,10 +5864,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6031,13 +5891,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
@@ -6078,7 +5933,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -6166,13 +6021,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -6186,11 +6036,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let bad_reply_comment = "bad reply comment";
@@ -6231,7 +6082,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -6243,7 +6094,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -6434,13 +6285,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -6553,13 +6399,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router
@@ -6668,10 +6509,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -6694,13 +6536,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            seventh_router,
-            admin_session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(seventh_router, admin_session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = eighth_router
@@ -6728,7 +6565,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -6816,13 +6653,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -6836,11 +6668,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -6868,7 +6701,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -6880,7 +6713,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -7059,13 +6892,8 @@ pub mod tests {
 
         let message = "test message";
 
-        let chat_message = chat_message_create(
-            fifth_router,
-            session_id,
-            chat_id,
-            user_id,
-            message,
-        ).await;
+        let chat_message =
+            chat_message_create(fifth_router, session_id, chat_id, user_id, message).await;
         let chat_message_id = chat_message.id;
 
         let response = sixth_router

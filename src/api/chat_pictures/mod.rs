@@ -372,11 +372,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api, app,
-        entity::ChatPicture,
-        Args,
-    };
+    use crate::{api, app, entity::ChatPicture, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -656,10 +652,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let mut form = multipart::Form::default();
@@ -685,7 +682,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1209,10 +1206,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -1244,7 +1242,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1689,10 +1687,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let chat2_id = "33847746-0030-4964-a496-f75d04499160";
@@ -1728,7 +1727,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2173,10 +2172,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let chat2_id = "33847746-0030-4964-a496-f75d04499160";
@@ -2212,7 +2212,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 

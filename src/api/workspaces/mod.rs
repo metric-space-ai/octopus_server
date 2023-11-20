@@ -488,25 +488,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         app.context
@@ -517,7 +519,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -585,19 +587,20 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -632,7 +635,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -763,10 +766,11 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -801,7 +805,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -934,25 +938,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let response = fifth_router
@@ -978,7 +984,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1121,19 +1127,20 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = sixth_router
@@ -1159,7 +1166,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1230,25 +1237,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let email = format!(
@@ -1270,19 +1279,20 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -1308,7 +1318,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1523,25 +1533,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let response = fifth_router
@@ -1572,7 +1584,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1798,25 +1810,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let response = fifth_router
@@ -1837,7 +1851,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.name, name);
 
         app.context
@@ -1848,7 +1862,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1995,11 +2009,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(fourth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = sixth_router
@@ -2025,7 +2040,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2037,7 +2052,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -2102,25 +2117,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let email = format!(
@@ -2142,19 +2159,20 @@ pub mod tests {
             password,
         )
         .await;
-        let user3_id = user.id;
+        let third_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user3_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, third_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -2180,13 +2198,13 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user3_id)
+            .try_delete_user_by_id(third_user_id)
             .await
             .unwrap();
 
@@ -2410,25 +2428,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2457,7 +2477,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Workspace = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.name, name);
 
         app.context
@@ -2468,7 +2488,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2625,11 +2645,12 @@ pub mod tests {
 
         let user =
             api::setup::tests::setup_post(fourth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = sixth_router
@@ -2661,7 +2682,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2673,7 +2694,7 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -2738,25 +2759,27 @@ pub mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Private";
 
-        let workspace = workspace_create(fourth_router, session_id, user2_id, &name, r#type).await;
+        let workspace =
+            workspace_create(fourth_router, session_id, second_user_id, &name, r#type).await;
         let workspace_id = workspace.id;
 
         let email = format!(
@@ -2778,19 +2801,20 @@ pub mod tests {
             password,
         )
         .await;
-        let user3_id = user.id;
+        let third_user_id = user.id;
 
         app.context
             .octopus_database
             .update_user_roles(
-                user2_id,
+                second_user_id,
                 &[ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()],
             )
             .await
             .unwrap();
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user3_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, third_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2824,13 +2848,13 @@ pub mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user3_id)
+            .try_delete_user_by_id(third_user_id)
             .await
             .unwrap();
 

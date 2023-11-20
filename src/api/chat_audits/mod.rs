@@ -73,8 +73,7 @@ mod tests {
     use crate::{
         api, app,
         entity::{
-            ChatAudit, ROLE_ADMIN, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
-            ROLE_PUBLIC_USER,
+            ChatAudit, ROLE_ADMIN, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER,
         },
         Args,
     };
@@ -169,7 +168,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         sleep(Duration::from_secs(2)).await;
@@ -290,7 +290,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -304,11 +305,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         sleep(Duration::from_secs(2)).await;
@@ -336,7 +338,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -348,7 +350,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -448,7 +450,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         sleep(Duration::from_secs(2)).await;
@@ -579,7 +582,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -593,11 +597,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         sleep(Duration::from_secs(2)).await;
@@ -635,7 +640,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -647,7 +652,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 

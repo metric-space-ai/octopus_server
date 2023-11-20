@@ -399,11 +399,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api, app,
-        entity::ChatMessagePicture,
-        Args,
-    };
+    use crate::{api, app, entity::ChatMessagePicture, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -483,7 +479,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -602,7 +599,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -709,7 +707,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let email = format!(
@@ -731,10 +730,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let mut form = multipart::Form::default();
@@ -766,7 +766,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -912,7 +912,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1043,7 +1044,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1181,7 +1183,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1225,10 +1228,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = ninth_router
@@ -1268,7 +1272,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1442,7 +1446,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1584,7 +1589,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1722,7 +1728,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -1766,10 +1773,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = ninth_router
@@ -1809,7 +1817,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1983,7 +1991,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -2125,7 +2134,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -2261,7 +2271,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let mut form = multipart::Form::default();
@@ -2305,10 +2316,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let mut form = multipart::Form::default();
@@ -2348,7 +2360,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 

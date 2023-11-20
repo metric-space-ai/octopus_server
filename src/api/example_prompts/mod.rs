@@ -490,10 +490,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fifth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fifth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let is_visible = true;
@@ -533,7 +534,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -825,10 +826,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = seventh_router
@@ -854,7 +856,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2294,10 +2296,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(sixth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(sixth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let is_visible = false;
@@ -2337,7 +2340,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 

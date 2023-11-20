@@ -187,10 +187,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let old_password = "password123";
@@ -201,7 +202,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .uri(format!("/api/v1/auth/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -222,7 +223,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: User = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, user2_id);
+        assert_eq!(body.id, second_user_id);
 
         app.context
             .octopus_database
@@ -232,7 +233,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -298,7 +299,7 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let password = "passwordABC";
         let repeat_password = "passwordABC";
@@ -307,7 +308,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .uri(format!("/api/v1/auth/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -327,7 +328,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: User = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, user2_id);
+        assert_eq!(body.id, second_user_id);
 
         app.context
             .octopus_database
@@ -337,7 +338,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -399,10 +400,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let old_password = "password123";
@@ -413,7 +415,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .uri(format!("/api/v1/auth/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -439,7 +441,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -501,9 +503,9 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
 
         let old_password = "password123";
         let password = "passwordABC";
@@ -513,7 +515,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .uri(format!("/api/v1/auth/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -538,7 +540,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -600,10 +602,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let old_password = "password123";
@@ -640,7 +643,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -694,11 +697,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(second_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let password = "passwordABC";
@@ -733,7 +737,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -745,7 +749,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
     }
@@ -785,7 +789,7 @@ mod tests {
             api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
-        let user2_id = "33847746-0030-4964-a496-f75d04499160";
+        let second_user_id = "33847746-0030-4964-a496-f75d04499160";
 
         let password = "passwordABC";
         let repeat_password = "passwordABC";
@@ -794,7 +798,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/auth/{user2_id}"))
+                    .uri(format!("/api/v1/auth/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(

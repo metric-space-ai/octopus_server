@@ -180,11 +180,7 @@ pub async fn read(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api, app,
-        entity::ChatMessageFile,
-        Args,
-    };
+    use crate::{api, app, entity::ChatMessageFile, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -262,7 +258,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -385,7 +382,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -503,10 +501,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -523,7 +522,8 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(sixth_router, admin_session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(sixth_router, admin_session_id, user_id, workspace_id)
+                .await;
         let chat_id = chat.id;
 
         let message = "test message";
@@ -534,7 +534,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -571,7 +572,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -671,7 +672,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -693,11 +695,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -726,7 +729,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -738,7 +741,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -830,7 +833,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";
@@ -946,7 +950,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1077,7 +1082,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1204,7 +1210,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1226,11 +1233,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -1259,7 +1267,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1271,7 +1279,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -1363,7 +1371,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1497,7 +1506,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1627,7 +1637,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let file_name = "33847746-0030-4964-a496-f75d04499160.png";
@@ -1649,11 +1660,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(sixth_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user2_id = user.id;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = eighth_router
@@ -1682,7 +1694,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1694,7 +1706,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -1780,7 +1792,8 @@ mod tests {
             chat_id,
             user_id,
             message,
-        ).await;
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let chat_message_file_id = "33847746-0030-4964-a496-f75d04499160";

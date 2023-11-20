@@ -455,9 +455,10 @@ pub async fn router(context: Arc<Context>) -> Router {
                 .get(simple_apps::read)
                 .put(simple_apps::update),
         )
+        .route("/api/v1/users", get(users::list).post(users::create))
         .route(
             "/api/v1/users/:user_id",
-            get(users::read).put(users::update),
+            delete(users::delete).get(users::read).put(users::update),
         )
         .route(
             "/api/v1/workspaces",

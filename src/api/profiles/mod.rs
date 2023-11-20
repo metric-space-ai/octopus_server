@@ -226,17 +226,18 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -250,7 +251,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.job_title.unwrap(), job_title);
         assert_eq!(body.name.unwrap(), name);
 
@@ -262,7 +263,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -328,13 +329,13 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::empty())
@@ -348,7 +349,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.job_title.unwrap(), job_title);
         assert_eq!(body.name.unwrap(), name);
 
@@ -360,7 +361,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -422,15 +423,15 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -448,7 +449,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -510,10 +511,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = fourth_router
@@ -539,7 +541,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -602,7 +604,7 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -615,18 +617,19 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(third_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user3_id = user.id;
+        let second_company_id = user.company_id;
+        let third_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user3_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, third_user_id)
+                .await;
         let session_id = session_response.id;
 
         let response = fifth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -645,13 +648,13 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user3_id)
+            .try_delete_user_by_id(third_user_id)
             .await
             .unwrap();
 
@@ -663,7 +666,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
     }
@@ -723,15 +726,15 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        let user3_id = "33847746-0030-4964-a496-f75d04499160";
+        let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = fourth_router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/profiles/{user3_id}"))
+                    .uri(format!("/api/v1/profiles/{third_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::empty())
@@ -750,7 +753,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -812,10 +815,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let job_title = "updated job title";
@@ -827,7 +831,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -849,7 +853,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.job_title.unwrap(), job_title);
         assert_eq!(body.language, language);
         assert_eq!(body.name.unwrap(), name);
@@ -863,7 +867,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -929,7 +933,7 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let job_title = "updated job title";
         let language = "en_US";
@@ -940,7 +944,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -962,7 +966,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.user_id, user2_id);
+        assert_eq!(body.user_id, second_user_id);
         assert_eq!(body.job_title.unwrap(), job_title);
         assert_eq!(body.language, language);
         assert_eq!(body.name.unwrap(), name);
@@ -976,7 +980,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1038,9 +1042,9 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
 
         let job_title = "updated job title";
         let language = "en_US";
@@ -1051,7 +1055,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/profiles/{user2_id}"))
+                    .uri(format!("/api/v1/profiles/{second_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -1077,7 +1081,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1139,10 +1143,11 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, user2_id).await;
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
         let session_id = session_response.id;
 
         let job_title = "updated job title";
@@ -1181,7 +1186,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1244,7 +1249,7 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1257,11 +1262,12 @@ mod tests {
 
         let user =
             api::setup::tests::setup_post(third_router, &company_name, &email, password).await;
-        let company2_id = user.company_id;
-        let user3_id = user.id;
+        let second_company_id = user.company_id;
+        let third_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, user3_id).await;
+            api::auth::login::tests::login_post(fourth_router, &email, password, third_user_id)
+                .await;
         let session_id = session_response.id;
 
         let job_title = "updated job title";
@@ -1300,13 +1306,13 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user3_id)
+            .try_delete_user_by_id(third_user_id)
             .await
             .unwrap();
 
@@ -1318,7 +1324,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
     }
@@ -1378,9 +1384,9 @@ mod tests {
             password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        let user3_id = "33847746-0030-4964-a496-f75d04499160";
+        let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
         let job_title = "updated job title";
         let language = "en_US";
@@ -1391,7 +1397,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/profiles/{user3_id}"))
+                    .uri(format!("/api/v1/profiles/{third_user_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -1418,7 +1424,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 

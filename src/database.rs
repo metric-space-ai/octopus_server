@@ -493,6 +493,21 @@ impl OctopusDatabase {
         Ok(simple_apps)
     }
 
+    pub async fn get_users_by_company_id(&self, company_id: Uuid) -> Result<Vec<User>> {
+        let users = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
+            FROM users
+            WHERE company_id = $1
+            AND deleted_at IS NULL",
+            company_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(users)
+    }
+
     pub async fn get_workspaces_by_company_id_and_type(
         &self,
         company_id: Uuid,

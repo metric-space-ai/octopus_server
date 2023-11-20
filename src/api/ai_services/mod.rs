@@ -748,9 +748,9 @@ mod tests {
             &password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        let session_response = api::auth::login::tests::login_post(third_router, &email, &password, user2_id).await;
+        let session_response = api::auth::login::tests::login_post(third_router, &email, &password, second_user_id).await;
         let session_id = session_response.id;
 
         let has_file_response = false;
@@ -811,7 +811,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1057,9 +1057,9 @@ mod tests {
             &password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        let session_response = api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+        let session_response = api::auth::login::tests::login_post(fifth_router, &email, &password, second_user_id).await;
         let session_id = session_response.id;
 
         let response = sixth_router
@@ -1085,7 +1085,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -1097,7 +1097,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
@@ -2030,9 +2030,9 @@ mod tests {
             &password,
         )
         .await;
-        let user2_id = user.id;
+        let second_user_id = user.id;
 
-        let session_response = api::auth::login::tests::login_post(fifth_router, &email, &password, user2_id).await;
+        let session_response = api::auth::login::tests::login_post(fifth_router, &email, &password, second_user_id).await;
         let session_id = session_response.id;
 
         let has_file_response = false;
@@ -2088,7 +2088,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user2_id)
+            .try_delete_user_by_id(second_user_id)
             .await
             .unwrap();
 
@@ -2100,7 +2100,7 @@ mod tests {
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company2_id)
+            .try_delete_company_by_id(second_company_id)
             .await
             .unwrap();
 
