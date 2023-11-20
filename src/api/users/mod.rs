@@ -1,7 +1,7 @@
 use crate::{
     api::auth,
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
+    entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
 };
@@ -255,6 +255,36 @@ pub async fn read(
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
+    get,
+    path = "/api/v1/users/roles",
+    responses(
+        (status = 200, description = "Roles read.", body = [String]),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn roles(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated_session(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    let roles = vec![ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER];
+
+    Ok((StatusCode::OK, Json(roles)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
     put,
     path = "/api/v1/users/:user_id",
     request_body = UserPut,
@@ -414,7 +444,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -534,7 +564,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -646,7 +676,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -875,7 +905,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -907,7 +937,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
@@ -1572,7 +1602,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1666,7 +1696,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -2262,6 +2292,191 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn roles_200() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/users/roles".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: Vec<String> = serde_json::from_slice(&body).unwrap();
+
+        assert!(!body.is_empty());
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(company_id)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn roles_401() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/users/roles".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         app.context
             .octopus_database

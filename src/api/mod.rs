@@ -20,7 +20,7 @@ use crate::{
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
-        users::UserPut,
+        users::{UserPost, UserPut},
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -139,6 +139,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 SetupPost,
                 SimpleApp,
                 User,
+                UserPost,
                 UserPut,
                 Workspace,
                 WorkspacePost,
@@ -228,7 +229,11 @@ pub async fn router(context: Arc<Context>) -> Router {
             simple_apps::list,
             simple_apps::read,
             simple_apps::update,
+            users::create,
+            users::delete,
+            users::list,
             users::read,
+            users::roles,
             users::update,
             workspaces::create,
             workspaces::delete,
@@ -456,6 +461,7 @@ pub async fn router(context: Arc<Context>) -> Router {
                 .put(simple_apps::update),
         )
         .route("/api/v1/users", get(users::list).post(users::create))
+        .route("/api/v1/users/roles", get(users::roles))
         .route(
             "/api/v1/users/:user_id",
             delete(users::delete).get(users::read).put(users::update),
