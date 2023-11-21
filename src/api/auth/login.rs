@@ -63,9 +63,16 @@ pub async fn login(
     let data = serde_json::to_string(&session_response_data)?;
     let expired_at = Utc::now() + Duration::days(365);
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let session = context
         .octopus_database
-        .insert_session(user.id, &data, expired_at)
+        .insert_session(&mut transaction, user.id, &data, expired_at)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     let session_response = SessionResponse {
@@ -162,15 +169,28 @@ pub mod tests {
 
         login_post(second_router, &email, password, user_id).await;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -225,15 +245,28 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

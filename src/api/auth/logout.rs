@@ -27,9 +27,16 @@ pub async fn logout(
     if let Some(token) = token {
         let session_id = Uuid::from_str(token.to_str()?)?;
 
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
         context
             .octopus_database
-            .try_delete_session_by_id(session_id)
+            .try_delete_session_by_id(&mut transaction, session_id)
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
             .await?;
     }
 
@@ -118,15 +125,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

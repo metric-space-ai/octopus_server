@@ -48,6 +48,8 @@ pub async fn service_health_check(
 
         let health_check_execution_time = (end - start).num_seconds() as i32;
 
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
         if let Ok(response) = response {
             if response.status() == StatusCode::OK {
                 let response: HealthCheckResponse = response.json().await?;
@@ -55,10 +57,16 @@ pub async fn service_health_check(
                 let ai_service = context
                     .octopus_database
                     .update_ai_service_health_check_status(
+                        &mut transaction,
                         ai_service_id,
                         health_check_execution_time,
                         response.status,
                     )
+                    .await?;
+
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
                     .await?;
 
                 return Ok(ai_service);
@@ -67,10 +75,16 @@ pub async fn service_health_check(
             context
                 .octopus_database
                 .update_ai_service_health_check_status(
+                    &mut transaction,
                     ai_service_id,
                     health_check_execution_time,
                     AiServiceHealthCheckStatus::NotWorking,
                 )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             failed_connection_attempts += 1;
@@ -83,13 +97,21 @@ pub async fn service_health_check(
         }
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
         .update_ai_service_health_check_status(
+            &mut transaction,
             ai_service_id,
             0,
             AiServiceHealthCheckStatus::NotWorking,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok(ai_service)
@@ -101,9 +123,12 @@ pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Re
             service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
 
         if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             context
                 .octopus_database
                 .update_ai_service_setup_status(
+                    &mut transaction,
                     ai_service.id,
                     0,
                     AiServiceSetupStatus::NotPerformed,
@@ -112,7 +137,17 @@ pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Re
 
             context
                 .octopus_database
-                .update_ai_service_status(ai_service.id, 50, AiServiceStatus::Setup)
+                .update_ai_service_status(
+                    &mut transaction,
+                    ai_service.id,
+                    50,
+                    AiServiceStatus::Setup,
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             let ai_service = service_setup(ai_service.id, context.clone(), ai_service.port).await?;
@@ -146,13 +181,20 @@ pub async fn service_setup(
     let end = Utc::now();
     let setup_execution_time = (end - start).num_seconds() as i32;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     if let Ok(response) = response {
         if response.status() == StatusCode::CREATED {
             let response: SetupResponse = response.json().await?;
 
             let ai_service = context
                 .octopus_database
-                .update_ai_service_setup_status(ai_service_id, setup_execution_time, response.setup)
+                .update_ai_service_setup_status(
+                    &mut transaction,
+                    ai_service_id,
+                    setup_execution_time,
+                    response.setup,
+                )
                 .await?;
 
             return Ok(ai_service);
@@ -162,10 +204,16 @@ pub async fn service_setup(
     let ai_service = context
         .octopus_database
         .update_ai_service_setup_status(
+            &mut transaction,
             ai_service_id,
             setup_execution_time,
             AiServiceSetupStatus::NotPerformed,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok(ai_service)

@@ -60,9 +60,12 @@ pub async fn register(
                 .await?
                 .ok_or(AppError::CompanyNotFound)?;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let user = context
                 .octopus_database
                 .insert_user(
+                    &mut transaction,
                     company.id,
                     &input.email,
                     true,
@@ -74,7 +77,17 @@ pub async fn register(
 
             context
                 .octopus_database
-                .insert_profile(user.id, Some(input.job_title), Some(input.name))
+                .insert_profile(
+                    &mut transaction,
+                    user.id,
+                    Some(input.job_title),
+                    Some(input.name),
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
@@ -108,9 +121,12 @@ pub async fn register_with_company_id(
             })
             .await??;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let user = context
                 .octopus_database
                 .insert_user(
+                    &mut transaction,
                     company_id,
                     &input.email,
                     true,
@@ -122,7 +138,17 @@ pub async fn register_with_company_id(
 
             context
                 .octopus_database
-                .insert_profile(user.id, Some(input.job_title), Some(input.name))
+                .insert_profile(
+                    &mut transaction,
+                    user.id,
+                    Some(input.job_title),
+                    Some(input.name),
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
@@ -255,21 +281,34 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -338,15 +377,28 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -426,21 +478,34 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::CONFLICT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

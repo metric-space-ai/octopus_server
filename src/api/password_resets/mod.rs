@@ -60,11 +60,18 @@ pub async fn change_password(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let now = Utc::now();
     if password_reset_token.expires_at < now {
         context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token.id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
             .await?;
 
         return Err(AppError::Gone);
@@ -78,12 +85,17 @@ pub async fn change_password(
 
     let user = context
         .octopus_database
-        .update_user_password(password_reset_token.user_id, &pw_hash)
+        .update_user_password(&mut transaction, password_reset_token.user_id, &pw_hash)
         .await?;
 
     context
         .octopus_database
-        .try_delete_password_reset_token_by_id(password_reset_token.id)
+        .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok((StatusCode::OK, Json(user)).into_response())
@@ -121,6 +133,8 @@ pub async fn request(
         .try_get_password_reset_token_by_user_id(user.id)
         .await?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     if let Some(password_reset_token) = password_reset_token {
         let now = Utc::now();
         if password_reset_token.expires_at > now {
@@ -128,7 +142,12 @@ pub async fn request(
         } else {
             context
                 .octopus_database
-                .try_delete_password_reset_token_by_id(password_reset_token.id)
+                .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             return Err(AppError::Gone);
@@ -145,7 +164,12 @@ pub async fn request(
 
     let password_reset_token = context
         .octopus_database
-        .insert_password_reset_token(user.id, &input.email, &token)
+        .insert_password_reset_token(&mut transaction, user.id, &input.email, &token)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     send_password_reset_request_email(context, &input.email, &token).await?;
@@ -178,9 +202,16 @@ pub async fn validate(
 
     let now = Utc::now();
     if password_reset_token.expires_at < now {
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
         context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token.id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
             .await?;
 
         return Err(AppError::Gone);
@@ -266,21 +297,34 @@ mod tests {
 
         let password_reset_token_id = body.id;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -400,21 +444,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::CONFLICT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -502,21 +559,34 @@ mod tests {
 
         assert!(response.status() == StatusCode::GONE || response.status() == StatusCode::CONFLICT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -607,21 +677,34 @@ mod tests {
         assert_eq!(body.user_id, user_id);
         assert_eq!(body.email, email);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -745,21 +828,34 @@ mod tests {
 
         assert!(response.status() == StatusCode::GONE || response.status() == StatusCode::OK);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -882,21 +978,34 @@ mod tests {
 
         api::auth::login::tests::login_post(fifth_router, &email, new_password, user_id).await;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1010,21 +1119,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1184,21 +1306,34 @@ mod tests {
 
         assert!(response.status() == StatusCode::GONE || response.status() == StatusCode::OK);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_password_reset_token_by_id(password_reset_token_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

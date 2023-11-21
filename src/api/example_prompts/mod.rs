@@ -57,9 +57,12 @@ pub async fn create(
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let example_prompt = context
         .octopus_database
         .insert_example_prompt(
+            &mut transaction,
             input.example_prompt_category_id,
             input.background_file_name,
             input.is_visible,
@@ -67,6 +70,11 @@ pub async fn create(
             &input.prompt,
             &input.title,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok((StatusCode::CREATED, Json(example_prompt)).into_response())
@@ -95,11 +103,18 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     context
         .octopus_database
-        .try_delete_example_prompt_by_id(id)
+        .try_delete_example_prompt_by_id(&mut transaction, id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
@@ -227,9 +242,12 @@ pub async fn update(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let example_prompt = context
         .octopus_database
         .update_example_prompt(
+            &mut transaction,
             id,
             input.example_prompt_category_id,
             input.background_file_name,
@@ -238,6 +256,11 @@ pub async fn update(
             &input.prompt,
             &input.title,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok((StatusCode::OK, Json(example_prompt)).into_response())
@@ -373,27 +396,40 @@ mod tests {
 
         let example_prompt_id = body.id;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -526,27 +562,40 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -676,21 +725,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -848,33 +910,46 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -931,15 +1006,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1074,27 +1162,40 @@ mod tests {
 
         assert!(!body.is_empty());
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1223,27 +1324,40 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1380,27 +1494,40 @@ mod tests {
 
         assert!(!body.is_empty());
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1531,27 +1658,40 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1610,15 +1750,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1755,27 +1908,40 @@ mod tests {
         assert_eq!(body.priority, priority);
         assert_eq!(body.prompt, prompt);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1904,27 +2070,40 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1981,15 +2160,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2140,27 +2332,40 @@ mod tests {
         assert_eq!(body.priority, priority);
         assert_eq!(body.prompt, prompt);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2332,33 +2537,46 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_by_id(example_prompt_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2465,21 +2683,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_example_prompt_category_by_id(example_prompt_category_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

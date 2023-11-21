@@ -82,9 +82,21 @@ pub async fn create(
             let port = port.max.unwrap_or(9999) + 1;
             let original_function_body = String::from_utf8(data)?;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let ai_service = context
                 .octopus_database
-                .insert_ai_service(&original_file_name, &original_function_body, port)
+                .insert_ai_service(
+                    &mut transaction,
+                    &original_file_name,
+                    &original_function_body,
+                    port,
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;
@@ -135,13 +147,21 @@ pub async fn configuration(
         return Err(AppError::Conflict);
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
         .update_ai_service_device_map(
+            &mut transaction,
             ai_service.id,
             input.device_map,
             AiServiceStatus::ParsingStarted,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     let cloned_context = context.clone();
@@ -189,11 +209,18 @@ pub async fn delete(
     let ai_service =
         process_manager::stop_and_remove_ai_service(ai_service, context.clone()).await?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     context
         .octopus_database
-        .try_delete_ai_service_by_id(ai_service.id)
+        .try_delete_ai_service_by_id(&mut transaction, ai_service.id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
@@ -387,16 +414,26 @@ pub async fn operation(
                 let mut ai_service =
                     process_manager::stop_ai_service(cloned_ai_service, cloned_context).await;
 
-                if let Ok(ai_service_ok) = ai_service {
-                    ai_service = context
-                        .octopus_database
-                        .update_ai_service_is_enabled_and_status(
-                            ai_service_ok.id,
-                            false,
-                            100,
-                            AiServiceStatus::Stopped,
-                        )
-                        .await;
+                if let Ok(ref ai_service_ok) = ai_service {
+                    let transaction = context.octopus_database.transaction_begin().await;
+
+                    if let Ok(mut transaction) = transaction {
+                        ai_service = context
+                            .octopus_database
+                            .update_ai_service_is_enabled_and_status(
+                                &mut transaction,
+                                ai_service_ok.id,
+                                false,
+                                100,
+                                AiServiceStatus::Stopped,
+                            )
+                            .await;
+
+                        let _ = context
+                            .octopus_database
+                            .transaction_commit(transaction)
+                            .await;
+                    }
                 }
 
                 ai_service
@@ -475,9 +512,16 @@ pub async fn priority(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
-        .update_ai_service_priority(ai_service.id, input.priority)
+        .update_ai_service_priority(&mut transaction, ai_service.id, input.priority)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok((StatusCode::OK, Json(ai_service)).into_response())
@@ -555,9 +599,22 @@ pub async fn update(
 
             let original_function_body = String::from_utf8(data)?;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let ai_service = context
                 .octopus_database
-                .update_ai_service(id, false, &original_file_name, &original_function_body)
+                .update_ai_service(
+                    &mut transaction,
+                    id,
+                    false,
+                    &original_file_name,
+                    &original_function_body,
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;

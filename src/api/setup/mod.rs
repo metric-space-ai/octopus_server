@@ -87,14 +87,17 @@ pub async fn setup(
             })
             .await??;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let company = context
                 .octopus_database
-                .insert_company(None, &input.company_name)
+                .insert_company(&mut transaction, None, &input.company_name)
                 .await?;
 
             let user = context
                 .octopus_database
                 .insert_user(
+                    &mut transaction,
                     company.id,
                     &input.email,
                     true,
@@ -110,12 +113,13 @@ pub async fn setup(
 
             context
                 .octopus_database
-                .insert_profile(user.id, None, None)
+                .insert_profile(&mut transaction, user.id, None, None)
                 .await?;
 
             context
                 .octopus_database
                 .insert_workspace(
+                    &mut transaction,
                     user.company_id,
                     user.id,
                     "Public Group",
@@ -217,6 +221,7 @@ pub async fn setup(
                     let example_prompt_category = context
                         .octopus_database
                         .insert_example_prompt_category(
+                            &mut transaction,
                             &example_prompt_category_tmp.description,
                             true,
                             &example_prompt_category_tmp.title,
@@ -227,6 +232,7 @@ pub async fn setup(
                         context
                             .octopus_database
                             .insert_example_prompt(
+                                &mut transaction,
                                 example_prompt_category.id,
                                 None,
                                 true,
@@ -238,6 +244,11 @@ pub async fn setup(
                     }
                 }
             }
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
         }
@@ -379,15 +390,28 @@ pub mod tests {
 
         assert!(!body.setup_required);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -421,15 +445,28 @@ pub mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -535,15 +572,28 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::CONFLICT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

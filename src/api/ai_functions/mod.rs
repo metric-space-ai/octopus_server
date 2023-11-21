@@ -73,11 +73,18 @@ pub async fn delete(
         return Err(AppError::Forbidden);
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     context
         .octopus_database
-        .try_delete_ai_function_by_id(ai_function_id)
+        .try_delete_ai_function_by_id(&mut transaction, ai_function_id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
@@ -246,9 +253,16 @@ pub async fn update(
         return Err(AppError::Forbidden);
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_function = context
         .octopus_database
-        .update_ai_function_is_enabled(ai_function.id, input.is_enabled)
+        .update_ai_function_is_enabled(&mut transaction, ai_function.id, input.is_enabled)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok((StatusCode::OK, Json(ai_function)).into_response())

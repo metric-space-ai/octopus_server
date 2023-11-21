@@ -96,9 +96,12 @@ pub async fn create(
             })
             .await??;
 
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
             let user = context
                 .octopus_database
                 .insert_user(
+                    &mut transaction,
                     session_user.company_id,
                     &input.email,
                     input.is_enabled,
@@ -110,7 +113,17 @@ pub async fn create(
 
             context
                 .octopus_database
-                .insert_profile(user.id, Some(input.job_title), Some(input.name))
+                .insert_profile(
+                    &mut transaction,
+                    user.id,
+                    Some(input.job_title),
+                    Some(input.name),
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
@@ -163,11 +176,18 @@ pub async fn delete(
         return Err(AppError::Forbidden);
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     context
         .octopus_database
-        .try_delete_user_by_id(user_id)
+        .try_delete_user_by_id(&mut transaction, user_id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
@@ -332,10 +352,12 @@ pub async fn update(
         return Err(AppError::Forbidden);
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let user = if session_user.id == user_id {
         context
             .octopus_database
-            .update_user_email(user.id, &input.email)
+            .update_user_email(&mut transaction, user.id, &input.email)
             .await?
     } else {
         let is_enabled = input.is_enabled.ok_or(AppError::BadRequest)?;
@@ -343,9 +365,14 @@ pub async fn update(
 
         context
             .octopus_database
-            .update_user(user.id, &input.email, is_enabled, &roles)
+            .update_user(&mut transaction, user.id, &input.email, is_enabled, &roles)
             .await?
     };
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok((StatusCode::OK, Json(user)).into_response())
 }
@@ -472,21 +499,34 @@ mod tests {
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -586,21 +626,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -697,21 +750,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -812,21 +878,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -959,21 +1038,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::CONFLICT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1050,15 +1142,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1135,15 +1240,28 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1217,21 +1335,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1309,21 +1440,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1416,33 +1560,46 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(third_user_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, third_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(second_company_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, second_company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1521,21 +1678,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1618,21 +1788,34 @@ mod tests {
 
         assert!(!body.is_empty());
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1706,21 +1889,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1804,21 +2000,34 @@ mod tests {
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1901,21 +2110,34 @@ mod tests {
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -1989,21 +2211,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2081,21 +2316,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2188,33 +2436,46 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(third_user_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, third_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(second_company_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, second_company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2293,21 +2554,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2390,21 +2664,34 @@ mod tests {
 
         assert!(!body.is_empty());
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2478,21 +2765,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2588,21 +2888,34 @@ mod tests {
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2702,21 +3015,34 @@ mod tests {
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2807,21 +3133,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -2907,21 +3246,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -3011,21 +3363,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -3134,33 +3499,46 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(third_user_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, third_user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(second_company_id)
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, second_company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }
@@ -3251,21 +3629,34 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
-        app.context
+        let mut transaction = app
+            .context
             .octopus_database
-            .try_delete_user_by_id(user_id)
+            .transaction_begin()
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_user_by_id(second_user_id)
+            .try_delete_user_by_id(&mut transaction, user_id)
             .await
             .unwrap();
 
         app.context
             .octopus_database
-            .try_delete_company_by_id(company_id)
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
             .await
             .unwrap();
     }

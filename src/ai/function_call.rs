@@ -175,11 +175,14 @@ pub async fn update_chat_message(
     context: Arc<Context>,
     chat_message: &ChatMessage,
 ) -> Result<ChatMessage> {
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     match ai_function_response {
         AiFunctionResponse::Error(ai_function_error_response) => {
             let chat_message = context
                 .octopus_database
                 .update_chat_message_from_function_error(
+                    &mut transaction,
                     chat_message.id,
                     ai_function.id,
                     ai_function_error_response.error.clone(),
@@ -188,12 +191,18 @@ pub async fn update_chat_message(
                 )
                 .await?;
 
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
             Ok(chat_message)
         }
         AiFunctionResponse::File(ai_function_file_response) => {
             let chat_message = context
                 .octopus_database
                 .update_chat_message_from_function(
+                    &mut transaction,
                     chat_message.id,
                     ai_function.id,
                     ChatMessageStatus::Answered,
@@ -218,10 +227,16 @@ pub async fn update_chat_message(
             context
                 .octopus_database
                 .insert_chat_message_file(
+                    &mut transaction,
                     chat_message.id,
                     &file_name,
                     &ai_function_file_response.media_type,
                 )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             Ok(chat_message)
@@ -230,12 +245,18 @@ pub async fn update_chat_message(
             let chat_message = context
                 .octopus_database
                 .update_chat_message_from_function(
+                    &mut transaction,
                     chat_message.id,
                     ai_function.id,
                     ChatMessageStatus::Answered,
                     100,
                     ai_function_text_response.response.clone(),
                 )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
                 .await?;
 
             Ok(chat_message)

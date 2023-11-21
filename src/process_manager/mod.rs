@@ -163,9 +163,21 @@ pub fn delete_environment_for_ai_service(ai_service: &AiService) -> Result<bool>
 }
 
 pub async fn install_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
-        .update_ai_service_status(ai_service.id, 0, AiServiceStatus::InstallationStarted)
+        .update_ai_service_status(
+            &mut transaction,
+            ai_service.id,
+            0,
+            AiServiceStatus::InstallationStarted,
+        )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     let process = Process {
@@ -187,13 +199,21 @@ pub async fn install_ai_service(ai_service: AiService, context: Arc<Context>) ->
             let process = context.process_manager.insert(process)?;
 
             if let Some(_process) = process {
+                let mut transaction = context.octopus_database.transaction_begin().await?;
+
                 let ai_service = context
                     .octopus_database
                     .update_ai_service_status(
+                        &mut transaction,
                         ai_service.id,
                         100,
                         AiServiceStatus::InstallationFinished,
                     )
+                    .await?;
+
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
                     .await?;
 
                 return Ok(ai_service);
@@ -250,9 +270,16 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
                     let process = context.process_manager.insert(process)?;
 
                     if let Some(mut process) = process {
+                        let mut transaction = context.octopus_database.transaction_begin().await?;
+
                         let ai_service = context
                             .octopus_database
-                            .update_ai_service_is_enabled(ai_service.id, true)
+                            .update_ai_service_is_enabled(&mut transaction, ai_service.id, true)
+                            .await?;
+
+                        context
+                            .octopus_database
+                            .transaction_commit(transaction)
                             .await?;
 
                         let ai_service =
@@ -267,9 +294,13 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
                             let process = context.process_manager.insert(process)?;
 
                             if let Some(_process) = process {
+                                let mut transaction =
+                                    context.octopus_database.transaction_begin().await?;
+
                                 let ai_service = context
                                     .octopus_database
                                     .update_ai_service_status(
+                                        &mut transaction,
                                         ai_service.id,
                                         100,
                                         AiServiceStatus::Running,
@@ -278,7 +309,16 @@ pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Res
 
                                 context
                                     .octopus_database
-                                    .update_ai_functions_is_enabled(ai_service.id, true)
+                                    .update_ai_functions_is_enabled(
+                                        &mut transaction,
+                                        ai_service.id,
+                                        true,
+                                    )
+                                    .await?;
+
+                                context
+                                    .octopus_database
+                                    .transaction_commit(transaction)
                                     .await?;
 
                                 return Ok(ai_service);

@@ -38,6 +38,7 @@ pub enum AppError {
     PasswordHash(argon2::password_hash::Error),
     ProcessManagerLock,
     Request(reqwest::Error),
+    SqlTransaction,
     Unauthorized,
     UserAlreadyExists,
     Utf8(FromUtf8Error),
@@ -89,6 +90,9 @@ impl IntoResponse for AppError {
                 "ProcessManager lock error.",
             ),
             AppError::Request(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Request error."),
+            AppError::SqlTransaction => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "SqlTransaction error.")
+            }
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
                 (StatusCode::CONFLICT, "User with such email already exists.")

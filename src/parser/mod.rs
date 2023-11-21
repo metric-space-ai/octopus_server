@@ -32,18 +32,37 @@ pub async fn ai_service_malicious_code_check(
         AiServiceStatus::Configuration
     };
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
-        .update_ai_service_status(ai_service.id, 100, status)
+        .update_ai_service_status(&mut transaction, ai_service.id, 100, status)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok(ai_service)
 }
 
 pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
-        .update_ai_service_status(ai_service.id, 0, AiServiceStatus::ParsingStarted)
+        .update_ai_service_status(
+            &mut transaction,
+            ai_service.id,
+            0,
+            AiServiceStatus::ParsingStarted,
+        )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     let original_function_body = ai_service.original_function_body.clone().replace('\r', "");
@@ -82,14 +101,23 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     let is_ai_service = detectors::detect_is_ai_service(&code_lines)?;
     if !is_ai_service {
         let parser_feedback = "This Python code doesn't look like a proper AI service";
+
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
         let ai_service = context
             .octopus_database
             .update_ai_service_parser_feedback(
+                &mut transaction,
                 ai_service.id,
                 parser_feedback,
                 100,
                 AiServiceStatus::Error,
             )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
             .await?;
 
         return Ok(ai_service);
@@ -164,9 +192,12 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         }
     }
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
         .update_ai_service_processed_function_body(
+            &mut transaction,
             ai_service.id,
             &processed_function_body,
             100,
@@ -177,7 +208,11 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     let ai_service = if let Some(required_python_version) = configuration.required_python_version {
         context
             .octopus_database
-            .update_ai_service_required_python_version(ai_service.id, required_python_version)
+            .update_ai_service_required_python_version(
+                &mut transaction,
+                ai_service.id,
+                required_python_version,
+            )
             .await?
     } else {
         ai_service
@@ -205,6 +240,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                 context
                     .octopus_database
                     .insert_ai_function(
+                        &mut transaction,
                         ai_service.id,
                         &function.description,
                         &formatted_name,
@@ -219,6 +255,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                 context
                     .octopus_database
                     .update_ai_function(
+                        &mut transaction,
                         ai_function_exists.id,
                         &function.description,
                         &formatted_name,
@@ -231,6 +268,11 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
             }
         }
     }
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok(ai_service)
 }
@@ -266,13 +308,21 @@ pub async fn ai_service_replace_device_map(
 
     let processed_function_body = code_lines.join("\n");
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let ai_service = context
         .octopus_database
         .update_ai_service_device_map_and_processed_function_body(
+            &mut transaction,
             ai_service.id,
             device_map,
             &processed_function_body,
         )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
         .await?;
 
     Ok(ai_service)

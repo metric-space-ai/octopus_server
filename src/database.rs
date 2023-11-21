@@ -7,10 +7,11 @@ use crate::{
         EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
         PasswordResetToken, Port, Profile, Session, SimpleApp, User, Workspace, WorkspacesType,
     },
+    error::AppError,
     Result, PUBLIC_DIR,
 };
 use chrono::{DateTime, Utc};
-use sqlx::PgPool;
+use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -24,6 +25,22 @@ impl OctopusDatabase {
         Self {
             pool: Arc::new(pool),
         }
+    }
+
+    pub async fn transaction_begin(&self) -> Result<Transaction<Postgres>> {
+        let transaction = self
+            .pool
+            .begin()
+            .await
+            .map_err(|_| AppError::SqlTransaction)?;
+
+        Ok(transaction)
+    }
+
+    pub async fn transaction_commit(&self, transaction: Transaction<'_, Postgres>) -> Result<()> {
+        transaction.commit().await?;
+
+        Ok(())
     }
 
     #[allow(dead_code)]
@@ -547,6 +564,7 @@ impl OctopusDatabase {
     #[allow(clippy::too_many_arguments)]
     pub async fn insert_ai_function(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         ai_service_id: Uuid,
         description: &str,
         formatted_name: &str,
@@ -568,7 +586,7 @@ impl OctopusDatabase {
         .bind(parameters)
         .bind(request_content_type)
         .bind(response_content_type)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_function)
@@ -576,6 +594,7 @@ impl OctopusDatabase {
 
     pub async fn insert_ai_service(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         original_file_name: &str,
         original_function_body: &str,
         port: i32,
@@ -590,13 +609,18 @@ impl OctopusDatabase {
             original_function_body,
             port,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
     }
 
-    pub async fn insert_chat(&self, user_id: Uuid, workspace_id: Uuid) -> Result<Chat> {
+    pub async fn insert_chat(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        user_id: Uuid,
+        workspace_id: Uuid,
+    ) -> Result<Chat> {
         let chat = sqlx::query_as!(
             Chat,
             "INSERT INTO chats
@@ -606,7 +630,7 @@ impl OctopusDatabase {
             user_id,
             workspace_id
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat)
@@ -614,6 +638,7 @@ impl OctopusDatabase {
 
     pub async fn insert_chat_activity(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         chat_id: Uuid,
         session_id: Uuid,
         user_id: Uuid,
@@ -630,7 +655,7 @@ impl OctopusDatabase {
             session_id,
             user_id,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_activity)
@@ -638,6 +663,7 @@ impl OctopusDatabase {
 
     pub async fn insert_chat_audit(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         chat_id: Uuid,
         chat_message_id: Uuid,
         user_id: Uuid,
@@ -654,7 +680,7 @@ impl OctopusDatabase {
             user_id,
             trail
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_audit)
@@ -662,6 +688,7 @@ impl OctopusDatabase {
 
     pub async fn insert_chat_message(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         chat_id: Uuid,
         user_id: Uuid,
         bypass_sensitive_information_filter: bool,
@@ -680,7 +707,7 @@ impl OctopusDatabase {
             estimated_response_at,
             message,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -689,6 +716,7 @@ impl OctopusDatabase {
     #[allow(dead_code)]
     pub async fn insert_chat_message_file(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         chat_message_id: Uuid,
         file_name: &str,
         media_type: &str,
@@ -703,7 +731,7 @@ impl OctopusDatabase {
             file_name,
             media_type,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message_file)
@@ -711,6 +739,7 @@ impl OctopusDatabase {
 
     pub async fn insert_chat_message_picture(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         chat_message_id: Uuid,
         file_name: &str,
     ) -> Result<ChatMessagePicture> {
@@ -723,13 +752,18 @@ impl OctopusDatabase {
             chat_message_id,
             file_name,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message_picture)
     }
 
-    pub async fn insert_chat_picture(&self, chat_id: Uuid, file_name: &str) -> Result<ChatPicture> {
+    pub async fn insert_chat_picture(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_id: Uuid,
+        file_name: &str,
+    ) -> Result<ChatPicture> {
         let chat_picture = sqlx::query_as!(
             ChatPicture,
             "INSERT INTO chat_pictures
@@ -739,13 +773,18 @@ impl OctopusDatabase {
             chat_id,
             file_name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_picture)
     }
 
-    pub async fn insert_company(&self, address: Option<String>, name: &str) -> Result<Company> {
+    pub async fn insert_company(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        address: Option<String>,
+        name: &str,
+    ) -> Result<Company> {
         let company = sqlx::query_as!(
             Company,
             "INSERT INTO companies
@@ -755,14 +794,16 @@ impl OctopusDatabase {
             address,
             name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(company)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_example_prompt(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         example_prompt_category_id: Uuid,
         background_file_name: Option<String>,
         is_visible: bool,
@@ -783,7 +824,7 @@ impl OctopusDatabase {
             prompt,
             title
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(example_prompt)
@@ -791,6 +832,7 @@ impl OctopusDatabase {
 
     pub async fn insert_example_prompt_category(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         description: &str,
         is_visible: bool,
         title: &str,
@@ -805,7 +847,7 @@ impl OctopusDatabase {
             is_visible,
             title
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(example_prompt_category)
@@ -813,6 +855,7 @@ impl OctopusDatabase {
 
     pub async fn insert_inspection_disabling(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         user_id: Uuid,
         content_safety_disabled_until: DateTime<Utc>,
     ) -> Result<InspectionDisabling> {
@@ -825,7 +868,7 @@ impl OctopusDatabase {
             user_id,
             content_safety_disabled_until
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(inspection_disabling)
@@ -833,6 +876,7 @@ impl OctopusDatabase {
 
     pub async fn insert_password_reset_token(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         user_id: Uuid,
         email: &str,
         token: &str,
@@ -847,7 +891,7 @@ impl OctopusDatabase {
             email,
             token
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(password_reset_token)
@@ -855,6 +899,7 @@ impl OctopusDatabase {
 
     pub async fn insert_profile(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         user_id: Uuid,
         job_title: Option<String>,
         name: Option<String>,
@@ -869,7 +914,7 @@ impl OctopusDatabase {
             job_title,
             name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(profile)
@@ -877,6 +922,7 @@ impl OctopusDatabase {
 
     pub async fn insert_session(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         user_id: Uuid,
         data: &str,
         expired_at: DateTime<Utc>,
@@ -891,7 +937,7 @@ impl OctopusDatabase {
             data,
             expired_at
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(session)
@@ -899,6 +945,7 @@ impl OctopusDatabase {
 
     pub async fn insert_simple_app(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         code: &str,
         description: &str,
         formatted_name: &str,
@@ -917,14 +964,16 @@ impl OctopusDatabase {
             is_enabled,
             name,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(simple_app)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_user(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         company_id: Uuid,
         email: &str,
         is_enabled: bool,
@@ -946,7 +995,7 @@ impl OctopusDatabase {
             password,
             roles
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(user)
@@ -954,6 +1003,7 @@ impl OctopusDatabase {
 
     pub async fn insert_workspace(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         company_id: Uuid,
         user_id: Uuid,
         name: &str,
@@ -969,13 +1019,17 @@ impl OctopusDatabase {
         .bind(user_id)
         .bind(name)
         .bind(r#type)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(workspace)
     }
 
-    pub async fn try_delete_ai_function_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_ai_function_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let ai_function = sqlx::query_scalar::<_, Uuid>(
             "UPDATE ai_functions
                 SET deleted_at = current_timestamp(0)
@@ -984,13 +1038,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(ai_function)
     }
 
-    pub async fn try_delete_ai_service_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_ai_service_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let ai_service = sqlx::query_scalar::<_, Uuid>(
             "UPDATE ai_services
                 SET deleted_at = current_timestamp(0)
@@ -999,13 +1057,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(ai_service)
     }
 
-    pub async fn try_delete_chat_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_chat_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let chat = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chats
             SET deleted_at = current_timestamp(0)
@@ -1014,13 +1076,17 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(chat)
     }
 
-    pub async fn try_delete_chat_message_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_chat_message_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let chat_message = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chat_messages
                 SET deleted_at = current_timestamp(0)
@@ -1029,13 +1095,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(chat_message)
     }
 
-    pub async fn try_delete_chat_messages_by_ids(&self, ids: &[Uuid]) -> Result<Vec<Uuid>> {
+    pub async fn try_delete_chat_messages_by_ids(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        ids: &[Uuid],
+    ) -> Result<Vec<Uuid>> {
         let chat_message_ids = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chat_messages
             SET deleted_at = current_timestamp(0)
@@ -1044,13 +1114,17 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(ids)
-        .fetch_all(&*self.pool)
+        .fetch_all(&mut **transaction)
         .await?;
 
         Ok(chat_message_ids)
     }
 
-    pub async fn try_delete_chat_message_file_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_chat_message_file_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let chat_message_file = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chat_message_files
             SET deleted_at = current_timestamp(0)
@@ -1059,13 +1133,17 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(chat_message_file)
     }
 
-    pub async fn try_delete_chat_message_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_chat_message_picture_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let chat_message_picture = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chat_message_pictures
             SET deleted_at = current_timestamp(0)
@@ -1074,13 +1152,17 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(chat_message_picture)
     }
 
-    pub async fn try_delete_chat_picture_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_chat_picture_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let chat_picture = sqlx::query_scalar::<_, Uuid>(
             "UPDATE chat_pictures
                 SET deleted_at = current_timestamp(0)
@@ -1089,14 +1171,18 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(chat_picture)
     }
 
     #[allow(dead_code)]
-    pub async fn try_delete_company_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_company_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let company = sqlx::query_scalar::<_, Uuid>(
             "UPDATE companies
                 SET deleted_at = current_timestamp(0)
@@ -1105,13 +1191,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(company)
     }
 
-    pub async fn try_delete_example_prompt_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_example_prompt_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let example_prompt = sqlx::query_scalar::<_, Uuid>(
             "UPDATE example_prompts
                 SET deleted_at = current_timestamp(0)
@@ -1120,13 +1210,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(example_prompt)
     }
 
-    pub async fn try_delete_example_prompt_category_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_example_prompt_category_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let example_prompt_category = sqlx::query_scalar::<_, Uuid>(
             "UPDATE example_prompt_categories
                 SET deleted_at = current_timestamp(0)
@@ -1135,7 +1229,7 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(example_prompt_category)
@@ -1143,6 +1237,7 @@ impl OctopusDatabase {
 
     pub async fn try_delete_inspection_disabling_by_user_id(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         user_id: Uuid,
     ) -> Result<Option<Uuid>> {
         let inspection_disabling = sqlx::query_scalar::<_, Uuid>(
@@ -1151,13 +1246,17 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(user_id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(inspection_disabling)
     }
 
-    pub async fn try_delete_password_reset_token_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_password_reset_token_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let password_reset_token = sqlx::query_scalar::<_, Uuid>(
             "UPDATE password_reset_tokens
                 SET deleted_at = current_timestamp(0)
@@ -1166,26 +1265,34 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(password_reset_token)
     }
 
-    pub async fn try_delete_session_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_session_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let session = sqlx::query_scalar::<_, Uuid>(
             "DELETE FROM sessions
                 WHERE id = $1
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(session)
     }
 
-    pub async fn try_delete_simple_app_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_simple_app_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let simple_app = sqlx::query_scalar::<_, Uuid>(
             "UPDATE simple_apps
             SET deleted_at = current_timestamp(0)
@@ -1194,14 +1301,18 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(simple_app)
     }
 
     #[allow(dead_code)]
-    pub async fn try_delete_user_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_user_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let user = sqlx::query_scalar::<_, Uuid>(
             "UPDATE users
             SET deleted_at = current_timestamp(0)
@@ -1210,13 +1321,17 @@ impl OctopusDatabase {
             RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn try_delete_workspace_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+    pub async fn try_delete_workspace_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
         let workspace = sqlx::query_scalar::<_, Uuid>(
             "UPDATE workspaces
                 SET deleted_at = current_timestamp(0)
@@ -1225,7 +1340,7 @@ impl OctopusDatabase {
                 RETURNING id",
         )
         .bind(id)
-        .fetch_optional(&*self.pool)
+        .fetch_optional(&mut **transaction)
         .await?;
 
         Ok(workspace)
@@ -1865,6 +1980,7 @@ impl OctopusDatabase {
     #[allow(clippy::too_many_arguments)]
     pub async fn update_ai_function(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         description: &str,
         formatted_name: &str,
@@ -1886,7 +2002,7 @@ impl OctopusDatabase {
         .bind(parameters)
         .bind(request_content_type)
         .bind(response_content_type)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_function)
@@ -1894,6 +2010,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_function_is_enabled(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_enabled: bool,
     ) -> Result<AiFunction> {
@@ -1906,7 +2023,7 @@ impl OctopusDatabase {
             id,
             is_enabled,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_function)
@@ -1914,6 +2031,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_functions_is_enabled(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         ai_service_id: Uuid,
         is_enabled: bool,
     ) -> Result<Vec<AiFunction>> {
@@ -1926,7 +2044,7 @@ impl OctopusDatabase {
             ai_service_id,
             is_enabled,
         )
-        .fetch_all(&*self.pool)
+        .fetch_all(&mut **transaction)
         .await?;
 
         Ok(ai_functions)
@@ -1934,6 +2052,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_enabled: bool,
         original_file_name: &str,
@@ -1950,7 +2069,7 @@ impl OctopusDatabase {
             original_file_name,
             original_function_body,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -1958,6 +2077,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_device_map(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         device_map: serde_json::Value,
         status: AiServiceStatus,
@@ -1971,7 +2091,7 @@ impl OctopusDatabase {
         .bind(id)
         .bind(device_map)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -1979,6 +2099,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_device_map_and_processed_function_body(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         device_map: serde_json::Value,
         processed_function_body: &str,
@@ -1993,7 +2114,7 @@ impl OctopusDatabase {
             device_map,
             processed_function_body,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2001,6 +2122,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_health_check_status(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         health_check_execution_time: i32,
         health_check_status: AiServiceHealthCheckStatus,
@@ -2014,7 +2136,7 @@ impl OctopusDatabase {
         .bind(id)
         .bind(health_check_execution_time)
         .bind(health_check_status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2022,6 +2144,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_is_enabled(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_enabled: bool,
     ) -> Result<AiService> {
@@ -2034,7 +2157,7 @@ impl OctopusDatabase {
             id,
             is_enabled,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2042,6 +2165,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_is_enabled_and_status(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_enabled: bool,
         progress: i32,
@@ -2057,7 +2181,7 @@ impl OctopusDatabase {
         .bind(is_enabled)
         .bind(progress)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2065,6 +2189,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_parser_feedback(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         parser_feedback: &str,
         progress: i32,
@@ -2080,13 +2205,18 @@ impl OctopusDatabase {
         .bind(parser_feedback)
         .bind(progress)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
     }
 
-    pub async fn update_ai_service_priority(&self, id: Uuid, priority: i32) -> Result<AiService> {
+    pub async fn update_ai_service_priority(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        priority: i32,
+    ) -> Result<AiService> {
         let ai_service = sqlx::query_as!(
             AiService,
             r#"UPDATE ai_services
@@ -2096,7 +2226,7 @@ impl OctopusDatabase {
             id,
             priority,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2104,6 +2234,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_processed_function_body(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         processed_function_body: &str,
         progress: i32,
@@ -2119,7 +2250,7 @@ impl OctopusDatabase {
         .bind(processed_function_body)
         .bind(progress)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2127,6 +2258,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_required_python_version(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         required_python_version: AiServiceRequiredPythonVersion,
     ) -> Result<AiService> {
@@ -2138,7 +2270,7 @@ impl OctopusDatabase {
         )
         .bind(id)
         .bind(required_python_version)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2146,6 +2278,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_setup_status(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         setup_execution_time: i32,
         setup_status: AiServiceSetupStatus,
@@ -2159,7 +2292,7 @@ impl OctopusDatabase {
         .bind(id)
         .bind(setup_execution_time)
         .bind(setup_status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
@@ -2167,6 +2300,7 @@ impl OctopusDatabase {
 
     pub async fn update_ai_service_status(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         progress: i32,
         status: AiServiceStatus,
@@ -2180,13 +2314,18 @@ impl OctopusDatabase {
         .bind(id)
         .bind(progress)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(ai_service)
     }
 
-    pub async fn update_chat(&self, id: Uuid, name: &str) -> Result<Chat> {
+    pub async fn update_chat(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        name: &str,
+    ) -> Result<Chat> {
         let chat = sqlx::query_as!(
             Chat,
             "UPDATE chats
@@ -2196,7 +2335,7 @@ impl OctopusDatabase {
             id,
             name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat)
@@ -2204,6 +2343,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         progress: i32,
         response: &str,
@@ -2219,7 +2359,7 @@ impl OctopusDatabase {
         .bind(progress)
         .bind(response)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2227,6 +2367,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_ai_function_call(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         ai_function_call: serde_json::Value,
     ) -> Result<ChatMessage> {
@@ -2238,7 +2379,7 @@ impl OctopusDatabase {
         )
         .bind(id)
         .bind(ai_function_call)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2246,6 +2387,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_flag(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         bad_reply_comment: Option<String>,
         bad_reply_is_harmful: bool,
@@ -2264,7 +2406,7 @@ impl OctopusDatabase {
             bad_reply_is_not_helpful,
             bad_reply_is_not_true,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2272,6 +2414,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_from_function(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         ai_function_id: Uuid,
         status: ChatMessageStatus,
@@ -2289,7 +2432,7 @@ impl OctopusDatabase {
         .bind(status)
         .bind(progress)
         .bind(response)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2297,6 +2440,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_from_function_error(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         ai_function_id: Uuid,
         ai_function_error: Option<String>,
@@ -2314,14 +2458,16 @@ impl OctopusDatabase {
         .bind(ai_function_error)
         .bind(status)
         .bind(progress)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_chat_message_full(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         estimated_response_at: DateTime<Utc>,
         message: &str,
@@ -2341,7 +2487,7 @@ impl OctopusDatabase {
         .bind(status)
         .bind(progress)
         .bind(response)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2349,6 +2495,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_is_anonymized(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_anonymized: bool,
         message: &str,
@@ -2366,7 +2513,7 @@ impl OctopusDatabase {
         .bind(message)
         .bind(status)
         .bind(progress)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2374,6 +2521,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_is_marked_as_not_sensitive(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_marked_as_not_sensitive: bool,
         status: ChatMessageStatus,
@@ -2389,7 +2537,7 @@ impl OctopusDatabase {
         .bind(is_marked_as_not_sensitive)
         .bind(status)
         .bind(progress)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2397,6 +2545,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_is_not_checked_by_system(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_not_checked_by_system: bool,
     ) -> Result<ChatMessage> {
@@ -2409,7 +2558,7 @@ impl OctopusDatabase {
             id,
             is_not_checked_by_system,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2417,6 +2566,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_is_sensitive(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         is_sensitive: bool,
         status: ChatMessageStatus,
@@ -2432,7 +2582,7 @@ impl OctopusDatabase {
         .bind(is_sensitive)
         .bind(status)
         .bind(progress)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2440,6 +2590,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_simple_app_id(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         progress: i32,
         simple_app_id: Uuid,
@@ -2455,7 +2606,7 @@ impl OctopusDatabase {
         .bind(progress)
         .bind(simple_app_id)
         .bind(status)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message)
@@ -2463,6 +2614,7 @@ impl OctopusDatabase {
 
     pub async fn update_chat_message_picture(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         file_name: &str,
     ) -> Result<ChatMessagePicture> {
@@ -2475,13 +2627,18 @@ impl OctopusDatabase {
             id,
             file_name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat_message_picture)
     }
 
-    pub async fn update_chat_picture(&self, id: Uuid, file_name: &str) -> Result<ChatPicture> {
+    pub async fn update_chat_picture(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        file_name: &str,
+    ) -> Result<ChatPicture> {
         let chat = sqlx::query_as!(
             ChatPicture,
             "UPDATE chat_pictures
@@ -2491,7 +2648,7 @@ impl OctopusDatabase {
             id,
             file_name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(chat)
@@ -2500,6 +2657,7 @@ impl OctopusDatabase {
     #[allow(clippy::too_many_arguments)]
     pub async fn update_example_prompt(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         example_prompt_category_id: Uuid,
         background_file_name: Option<String>,
@@ -2522,7 +2680,7 @@ impl OctopusDatabase {
             prompt,
             title
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(example_prompt)
@@ -2530,6 +2688,7 @@ impl OctopusDatabase {
 
     pub async fn update_example_prompt_category(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         description: &str,
         is_visible: bool,
@@ -2546,7 +2705,7 @@ impl OctopusDatabase {
             is_visible,
             title
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(example_prompt_category)
@@ -2554,6 +2713,7 @@ impl OctopusDatabase {
 
     pub async fn update_inspection_disabling(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         user_id: Uuid,
         content_safety_disabled_until: DateTime<Utc>,
@@ -2568,7 +2728,7 @@ impl OctopusDatabase {
             user_id,
             content_safety_disabled_until
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(inspection_disabling)
@@ -2576,6 +2736,7 @@ impl OctopusDatabase {
 
     pub async fn update_profile(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         job_title: Option<String>,
         language: &str,
@@ -2594,7 +2755,7 @@ impl OctopusDatabase {
             name,
             text_size
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(profile)
@@ -2602,6 +2763,7 @@ impl OctopusDatabase {
 
     pub async fn update_profile_photo_file_name(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         photo_file_name: Option<String>,
     ) -> Result<Profile> {
@@ -2614,14 +2776,16 @@ impl OctopusDatabase {
             id,
             photo_file_name
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(profile)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_simple_app(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         code: &str,
         description: &str,
@@ -2642,7 +2806,7 @@ impl OctopusDatabase {
             is_enabled,
             name,
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(simple_app)
@@ -2650,6 +2814,7 @@ impl OctopusDatabase {
 
     pub async fn update_user(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         email: &str,
         is_enabled: bool,
@@ -2666,13 +2831,18 @@ impl OctopusDatabase {
             is_enabled,
             roles
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn update_user_email(&self, id: Uuid, email: &str) -> Result<User> {
+    pub async fn update_user_email(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        email: &str,
+    ) -> Result<User> {
         let user = sqlx::query_as!(
             User,
             "UPDATE users
@@ -2682,13 +2852,18 @@ impl OctopusDatabase {
             id,
             email
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(user)
     }
 
-    pub async fn update_user_password(&self, id: Uuid, password: &str) -> Result<User> {
+    pub async fn update_user_password(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        password: &str,
+    ) -> Result<User> {
         let user = sqlx::query_as!(
             User,
             "UPDATE users
@@ -2698,7 +2873,7 @@ impl OctopusDatabase {
             id,
             password
         )
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(user)
@@ -2723,6 +2898,7 @@ impl OctopusDatabase {
 
     pub async fn update_workspace(
         &self,
+        transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         name: &str,
         r#type: WorkspacesType,
@@ -2736,7 +2912,7 @@ impl OctopusDatabase {
         .bind(id)
         .bind(name)
         .bind(r#type)
-        .fetch_one(&*self.pool)
+        .fetch_one(&mut **transaction)
         .await?;
 
         Ok(workspace)

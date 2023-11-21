@@ -115,6 +115,8 @@ pub async fn open_ai_request(
 
     let mut messages = vec![];
 
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
     let chat = context
         .octopus_database
         .try_get_chat_by_id(chat_message.chat_id)
@@ -124,7 +126,7 @@ pub async fn open_ai_request(
         if chat.name.is_none() {
             context
                 .octopus_database
-                .update_chat(chat.id, &chat_message.message)
+                .update_chat(&mut transaction, chat.id, &chat_message.message)
                 .await?;
         }
     }
@@ -169,12 +171,18 @@ pub async fn open_ai_request(
                             let chat_message = context
                                 .octopus_database
                                 .update_chat_message_from_function(
+                                    &mut transaction,
                                     chat_message.id,
                                     ai_function.id,
                                     ChatMessageStatus::Answered,
                                     100,
                                     Some(result),
                                 )
+                                .await?;
+
+                            context
+                                .octopus_database
+                                .transaction_commit(transaction)
                                 .await?;
 
                             return Ok(chat_message);
@@ -199,7 +207,7 @@ pub async fn open_ai_request(
         } else {
             context
                 .octopus_database
-                .try_delete_inspection_disabling_by_user_id(user.id)
+                .try_delete_inspection_disabling_by_user_id(&mut transaction, user.id)
                 .await?;
         }
     }
@@ -249,11 +257,17 @@ pub async fn open_ai_request(
                                 let chat_message = context
                                     .octopus_database
                                     .update_chat_message_is_sensitive(
+                                        &mut transaction,
                                         chat_message.id,
                                         true,
                                         ChatMessageStatus::Answered,
                                         100,
                                     )
+                                    .await?;
+
+                                context
+                                    .octopus_database
+                                    .transaction_commit(transaction)
                                     .await?;
 
                                 return Ok(chat_message);
@@ -274,7 +288,7 @@ pub async fn open_ai_request(
     let chat_message = if is_not_checked_by_system {
         context
             .octopus_database
-            .update_chat_message_is_not_checked_by_system(chat_message.id, true)
+            .update_chat_message_is_not_checked_by_system(&mut transaction, chat_message.id, true)
             .await?
     } else {
         chat_message
@@ -404,6 +418,7 @@ pub async fn open_ai_request(
     context
         .octopus_database
         .insert_chat_audit(
+            &mut transaction,
             chat_message.chat_id,
             chat_message.id,
             chat_message.user_id,
@@ -438,142 +453,194 @@ pub async fn open_ai_request(
         functions.push(function);
     }
 
-    let request = match &ai_client {
-        AiClient::Azure(_ai_client) => CreateChatCompletionRequestArgs::default()
-            .max_tokens(512u16)
-            .model(MODEL)
-            .messages(messages)
-            .build(),
-        AiClient::OpenAI(_ai_client) => CreateChatCompletionRequestArgs::default()
-            .max_tokens(512u16)
-            .model(MODEL)
-            .messages(messages)
-            .functions(functions)
-            .function_call("auto")
-            .build(),
-    };
+    if !context.config.test_mode {
+        let request = match &ai_client {
+            AiClient::Azure(_ai_client) => CreateChatCompletionRequestArgs::default()
+                .max_tokens(512u16)
+                .model(MODEL)
+                .messages(messages)
+                .build(),
+            AiClient::OpenAI(_ai_client) => CreateChatCompletionRequestArgs::default()
+                .max_tokens(512u16)
+                .model(MODEL)
+                .messages(messages)
+                .functions(functions)
+                .function_call("auto")
+                .build(),
+        };
 
-    match request {
-        Err(e) => {
-            let content = format!("OpenAIError: {e}");
-            let chat_message = context
-                .octopus_database
-                .update_chat_message(chat_message.id, 100, &content, ChatMessageStatus::Answered)
-                .await?;
+        match request {
+            Err(e) => {
+                let content = format!("OpenAIError: {e}");
+                let chat_message = context
+                    .octopus_database
+                    .update_chat_message(
+                        &mut transaction,
+                        chat_message.id,
+                        100,
+                        &content,
+                        ChatMessageStatus::Answered,
+                    )
+                    .await?;
 
-            return Ok(chat_message);
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await?;
 
-            match response_message {
-                Err(e) => {
-                    let content = format!("OpenAIError: {e}");
-                    let chat_message = context
-                        .octopus_database
-                        .update_chat_message(
-                            chat_message.id,
-                            100,
-                            &content,
-                            ChatMessageStatus::Answered,
-                        )
-                        .await?;
+                return Ok(chat_message);
+            }
+            Ok(request) => {
+                let response_message = match ai_client {
+                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+                };
 
-                    return Ok(chat_message);
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                match response_message {
+                    Err(e) => {
+                        let content = format!("OpenAIError: {e}");
+                        let chat_message = context
+                            .octopus_database
+                            .update_chat_message(
+                                &mut transaction,
+                                chat_message.id,
+                                100,
+                                &content,
+                                ChatMessageStatus::Answered,
+                            )
+                            .await?;
 
-                    match response_message {
-                        None => {
-                            let content = "BadResponse";
-                            context
-                                .octopus_database
-                                .update_chat_message(
-                                    chat_message.id,
-                                    100,
-                                    content,
-                                    ChatMessageStatus::Answered,
-                                )
-                                .await?;
+                        context
+                            .octopus_database
+                            .transaction_commit(transaction)
+                            .await?;
 
-                            return Err(Box::new(AppError::BadResponse));
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
+                        return Ok(chat_message);
+                    }
+                    Ok(response_message) => {
+                        let response_message = response_message.choices.get(0);
 
-                            if let Some(function_call) = response_message.function_call {
-                                let function_name = function_call.name;
-                                let function_args: serde_json::Value =
-                                    function_call.arguments.parse()?;
-                                let ai_function_call = AiFunctionCall {
-                                    arguments: function_args.clone(),
-                                    name: function_name.clone(),
-                                };
-                                let ai_function_call = serde_json::to_value(ai_function_call)?;
-                                let chat_message = context
-                                    .octopus_database
-                                    .update_chat_message_ai_function_call(
-                                        chat_message.id,
-                                        ai_function_call,
-                                    )
-                                    .await?;
-                                let ai_function = context
-                                    .octopus_database
-                                    .try_get_ai_function_by_name(&function_name)
-                                    .await?;
-
-                                if let Some(ai_function) = ai_function {
-                                    let ai_service = context
-                                        .octopus_database
-                                        .try_get_ai_service_by_id(ai_function.ai_service_id)
-                                        .await?;
-
-                                    if let Some(ai_service) = ai_service {
-                                        function_call::handle_function_call(
-                                            &ai_function,
-                                            &ai_service,
-                                            &chat_message,
-                                            context.clone(),
-                                            &function_args,
-                                        )
-                                        .await?;
-                                    }
-                                }
-
-                                let simple_app = context
-                                    .octopus_database
-                                    .try_get_simple_app_by_formatted_name(&function_name)
-                                    .await?;
-
-                                if let Some(simple_app) = simple_app {
-                                    context
-                                        .octopus_database
-                                        .update_chat_message_simple_app_id(
-                                            chat_message.id,
-                                            100,
-                                            simple_app.id,
-                                            ChatMessageStatus::Answered,
-                                        )
-                                        .await?;
-                                }
-                            }
-
-                            if let Some(content) = response_message.content {
-                                let chat_message = context
+                        match response_message {
+                            None => {
+                                let content = "BadResponse";
+                                context
                                     .octopus_database
                                     .update_chat_message(
+                                        &mut transaction,
                                         chat_message.id,
                                         100,
-                                        &content,
+                                        content,
                                         ChatMessageStatus::Answered,
                                     )
                                     .await?;
 
-                                return Ok(chat_message);
+                                context
+                                    .octopus_database
+                                    .transaction_commit(transaction)
+                                    .await?;
+
+                                return Err(Box::new(AppError::BadResponse));
+                            }
+                            Some(response_message) => {
+                                let response_message = response_message.message.clone();
+
+                                if let Some(function_call) = response_message.function_call {
+                                    let function_name = function_call.name;
+                                    let function_args: serde_json::Value =
+                                        function_call.arguments.parse()?;
+                                    let ai_function_call = AiFunctionCall {
+                                        arguments: function_args.clone(),
+                                        name: function_name.clone(),
+                                    };
+                                    let ai_function_call = serde_json::to_value(ai_function_call)?;
+                                    let chat_message = context
+                                        .octopus_database
+                                        .update_chat_message_ai_function_call(
+                                            &mut transaction,
+                                            chat_message.id,
+                                            ai_function_call,
+                                        )
+                                        .await?;
+                                    let ai_function = context
+                                        .octopus_database
+                                        .try_get_ai_function_by_name(&function_name)
+                                        .await?;
+
+                                    if let Some(ai_function) = ai_function {
+                                        let ai_service = context
+                                            .octopus_database
+                                            .try_get_ai_service_by_id(ai_function.ai_service_id)
+                                            .await?;
+
+                                        if let Some(ai_service) = ai_service {
+                                            context
+                                                .octopus_database
+                                                .transaction_commit(transaction)
+                                                .await?;
+
+                                            let chat_message_fn =
+                                                function_call::handle_function_call(
+                                                    &ai_function,
+                                                    &ai_service,
+                                                    &chat_message,
+                                                    context.clone(),
+                                                    &function_args,
+                                                )
+                                                .await?;
+
+                                            if let Some(chat_message_fn) = chat_message_fn {
+                                                return Ok(chat_message_fn);
+                                            } else {
+                                                return Ok(chat_message);
+                                            }
+                                        }
+                                    }
+
+                                    let simple_app = context
+                                        .octopus_database
+                                        .try_get_simple_app_by_formatted_name(&function_name)
+                                        .await?;
+
+                                    if let Some(simple_app) = simple_app {
+                                        let chat_message = context
+                                            .octopus_database
+                                            .update_chat_message_simple_app_id(
+                                                &mut transaction,
+                                                chat_message.id,
+                                                100,
+                                                simple_app.id,
+                                                ChatMessageStatus::Answered,
+                                            )
+                                            .await?;
+
+                                        context
+                                            .octopus_database
+                                            .transaction_commit(transaction)
+                                            .await?;
+
+                                        return Ok(chat_message);
+                                    }
+                                }
+
+                                if let Some(content) = response_message.content {
+                                    let chat_message = context
+                                        .octopus_database
+                                        .update_chat_message(
+                                            &mut transaction,
+                                            chat_message.id,
+                                            100,
+                                            &content,
+                                            ChatMessageStatus::Answered,
+                                        )
+                                        .await?;
+
+                                    context
+                                        .octopus_database
+                                        .transaction_commit(transaction)
+                                        .await?;
+
+                                    return Ok(chat_message);
+                                }
                             }
                         }
                     }
@@ -581,6 +648,11 @@ pub async fn open_ai_request(
             }
         }
     }
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
     Ok(chat_message)
 }
