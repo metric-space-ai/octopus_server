@@ -107,8 +107,8 @@ pub enum ProcessState {
     Running,
 }
 
-pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
-    let pwd = get_pwd().await?;
+pub fn create_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
+    let pwd = get_pwd()?;
 
     let ai_service_id = ai_service.id;
     let ai_service_port = ai_service.port;
@@ -152,7 +152,7 @@ pub async fn create_environment_for_ai_service(ai_service: &AiService) -> Result
     Ok(true)
 }
 
-pub async fn delete_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
+pub fn delete_environment_for_ai_service(ai_service: &AiService) -> Result<bool> {
     let path = format!("{SERVICES_DIR}/{}", ai_service.id);
     let dir_exists = Path::new(&path).is_dir();
     if dir_exists {
@@ -179,7 +179,7 @@ pub async fn install_ai_service(ai_service: AiService, context: Arc<Context>) ->
     let process = context.process_manager.insert(process)?;
 
     if let Some(mut process) = process {
-        let environment_created = create_environment_for_ai_service(&ai_service).await?;
+        let environment_created = create_environment_for_ai_service(&ai_service)?;
 
         if environment_created {
             process.state = ProcessState::EnvironmentPrepared;
@@ -219,7 +219,7 @@ pub async fn install_and_run_ai_service(
 pub async fn run_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.status == AiServiceStatus::Setup || ai_service.status == AiServiceStatus::Stopped
     {
-        let environment_created = create_environment_for_ai_service(&ai_service).await?;
+        let environment_created = create_environment_for_ai_service(&ai_service)?;
 
         if environment_created {
             let process = Process {
@@ -301,15 +301,14 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
             && (ai_service.status == AiServiceStatus::Running
                 || ai_service.status == AiServiceStatus::Setup)
         {
-            let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
+            let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
 
             match pid {
                 None => {
                     let ai_service =
                         parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
 
-                    let environment_created =
-                        create_environment_for_ai_service(&ai_service).await?;
+                    let environment_created = create_environment_for_ai_service(&ai_service)?;
 
                     if environment_created {
                         let process = Process {
@@ -360,7 +359,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                             .await?;
 
                             if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
-                                let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
+                                let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
 
                                 if let Some(pid) = pid {
                                     let process = Process {
@@ -409,7 +408,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
             }
         }
 
-        let zombie_pids = try_get_zombie_pids().await?;
+        let zombie_pids = try_get_zombie_pids()?;
 
         for zombie_pid in zombie_pids {
             try_stop_ai_service(zombie_pid).await?;
@@ -420,7 +419,7 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
 }
 
 pub async fn stop_ai_service(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    let pid = try_get_pid(&format!("{}.py", ai_service.id)).await?;
+    let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
 
     if let Some(pid) = pid {
         try_stop_ai_service(pid).await?;
@@ -437,12 +436,12 @@ pub async fn stop_and_remove_ai_service(
 ) -> Result<AiService> {
     let ai_service = stop_ai_service(ai_service, context).await?;
 
-    delete_environment_for_ai_service(&ai_service).await?;
+    delete_environment_for_ai_service(&ai_service)?;
 
     Ok(ai_service)
 }
 
-pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
+pub fn try_get_pid(process: &str) -> Result<Option<i32>> {
     let mut pid = None;
     let ps_output = Command::new("ps").arg("ax").output()?;
 
@@ -463,7 +462,7 @@ pub async fn try_get_pid(process: &str) -> Result<Option<i32>> {
     Ok(pid)
 }
 
-pub async fn try_get_zombie_pids() -> Result<Vec<i32>> {
+pub fn try_get_zombie_pids() -> Result<Vec<i32>> {
     let mut pids = vec![];
     let ps_output = Command::new("ps").arg("ax").output()?;
 
@@ -513,7 +512,7 @@ pub async fn try_restart_ai_service(
 }
 
 pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
-    let pwd = get_pwd().await?;
+    let pwd = get_pwd()?;
 
     Command::new("/bin/bash")
         .arg(format!(
@@ -529,7 +528,7 @@ pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
     let pid = None;
 
     loop {
-        let pid_tmp = try_get_pid(&format!("{ai_service_id}.py")).await?;
+        let pid_tmp = try_get_pid(&format!("{ai_service_id}.py"))?;
 
         if let Some(pid_tmp) = pid_tmp {
             return Ok(Some(pid_tmp));

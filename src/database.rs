@@ -252,14 +252,12 @@ impl OctopusDatabase {
         let mut chat_messages_extended = vec![];
 
         for chat_message in chat_messages {
-            let chat_message_extended = self
-                .map_to_chat_message_extended(
-                    &chat_message,
-                    chat_message_files.clone(),
-                    chat_message_pictures.clone(),
-                    profiles.clone(),
-                )
-                .await?;
+            let chat_message_extended = self.map_to_chat_message_extended(
+                &chat_message,
+                chat_message_files.clone(),
+                chat_message_pictures.clone(),
+                profiles.clone(),
+            )?;
             chat_messages_extended.push(chat_message_extended);
         }
 
@@ -285,14 +283,12 @@ impl OctopusDatabase {
                     .get_profiles_by_user_ids(&[chat_message.user_id])
                     .await?;
 
-                let chat_message_extended = self
-                    .map_to_chat_message_extended(
-                        &chat_message,
-                        chat_message_files,
-                        chat_message_pictures,
-                        profiles,
-                    )
-                    .await?;
+                let chat_message_extended = self.map_to_chat_message_extended(
+                    &chat_message,
+                    chat_message_files,
+                    chat_message_pictures,
+                    profiles,
+                )?;
 
                 Ok(Some(chat_message_extended))
             }
@@ -1436,21 +1432,19 @@ impl OctopusDatabase {
                 let profiles = self
                     .get_profiles_by_user_ids(&[chat_message.user_id])
                     .await?;
-                let chat_message_extended = self
-                    .map_to_chat_message_extended(
-                        &chat_message,
-                        chat_message_files,
-                        chat_message_pictures,
-                        profiles,
-                    )
-                    .await?;
+                let chat_message_extended = self.map_to_chat_message_extended(
+                    &chat_message,
+                    chat_message_files,
+                    chat_message_pictures,
+                    profiles,
+                )?;
 
                 Ok(Some(chat_message_extended))
             }
         }
     }
 
-    pub async fn map_to_chat_message_extended(
+    pub fn map_to_chat_message_extended(
         &self,
         chat_message: &ChatMessage,
         chat_message_files: Vec<ChatMessageFile>,

@@ -90,7 +90,7 @@ pub async fn run() -> Result<()> {
     Ok(())
 }
 
-pub async fn get_pwd() -> Result<String> {
+pub fn get_pwd() -> Result<String> {
     let pwd_output = Command::new("pwd").output()?;
     let pwd_output = String::from_utf8(pwd_output.stdout.clone())?;
     let pwd = pwd_output

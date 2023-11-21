@@ -16,7 +16,7 @@ pub struct Function {
     pub return_type: String,
 }
 
-pub async fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut config_section_identified = false;
     let mut config_section_identified_line = 0;
     let mut config_lines = vec![];

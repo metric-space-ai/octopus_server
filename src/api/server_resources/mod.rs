@@ -26,7 +26,7 @@ pub async fn info(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
-    let server_resources = server_resources::get().await?;
+    let server_resources = server_resources::get()?;
 
     Ok((StatusCode::OK, Json(server_resources)).into_response())
 }

@@ -279,7 +279,7 @@ pub async fn logs(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let pwd = get_pwd().await?;
+    let pwd = get_pwd()?;
 
     let path = format!(
         "{pwd}/{SERVICES_DIR}/{}/{}.log",

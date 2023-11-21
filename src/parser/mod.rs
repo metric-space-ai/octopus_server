@@ -79,7 +79,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         code_lines.push(line.to_string());
     }
 
-    let is_ai_service = detectors::detect_is_ai_service(&code_lines).await?;
+    let is_ai_service = detectors::detect_is_ai_service(&code_lines)?;
     if !is_ai_service {
         let parser_feedback = "This Python code doesn't look like a proper AI service";
         let ai_service = context
@@ -95,43 +95,43 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         return Ok(ai_service);
     }
 
-    let app_threaded = detectors::detect_app_threaded(&code_lines).await?;
+    let app_threaded = detectors::detect_app_threaded(&code_lines)?;
 
     if let Some(device_map) = ai_service.device_map.clone() {
-        code_lines = replacers::replace_device_map(code_lines, device_map).await?;
+        code_lines = replacers::replace_device_map(code_lines, device_map)?;
     }
 
-    code_lines = fixes::fix_apt_get(code_lines).await?;
-    code_lines = fixes::fix_apt_install(code_lines).await?;
-    code_lines = fixes::fix_input_type_json(code_lines).await?;
-    code_lines = fixes::fix_methods_get(code_lines).await?;
-    code_lines = fixes::fix_return_code(code_lines).await?;
-    code_lines = fixes::fix_return_setup_status(code_lines).await?;
-    code_lines = fixes::fix_return_type_string(code_lines).await?;
-    code_lines = fixes::fix_type_int(code_lines).await?;
-    code_lines = fixes::fix_type_str(code_lines).await?;
-    code_lines = fixes::fix_urls(code_lines).await?;
+    code_lines = fixes::fix_apt_get(code_lines)?;
+    code_lines = fixes::fix_apt_install(code_lines)?;
+    code_lines = fixes::fix_input_type_json(code_lines)?;
+    code_lines = fixes::fix_methods_get(code_lines)?;
+    code_lines = fixes::fix_return_code(code_lines)?;
+    code_lines = fixes::fix_return_setup_status(code_lines)?;
+    code_lines = fixes::fix_return_type_string(code_lines)?;
+    code_lines = fixes::fix_type_int(code_lines)?;
+    code_lines = fixes::fix_type_str(code_lines)?;
+    code_lines = fixes::fix_urls(code_lines)?;
 
-    code_lines = addons::add_health_check(code_lines).await?;
-    code_lines = addons::add_handle_exception(code_lines).await?;
+    code_lines = addons::add_health_check(code_lines)?;
+    code_lines = addons::add_handle_exception(code_lines)?;
 
-    code_lines = replacers::replace_function_names(code_lines, ai_service.id).await?;
-    code_lines = replacers::replace_print(code_lines).await?;
+    code_lines = replacers::replace_function_names(code_lines, ai_service.id)?;
+    code_lines = replacers::replace_print(code_lines)?;
 
-    let last_return_jsonify_line = detectors::detect_last_return_jsonify_line(&code_lines).await?;
+    let last_return_jsonify_line = detectors::detect_last_return_jsonify_line(&code_lines)?;
 
-    code_lines = replacers::cut_code(code_lines, last_return_jsonify_line).await?;
+    code_lines = replacers::cut_code(code_lines, last_return_jsonify_line)?;
 
-    code_lines = addons::add_argparse(code_lines).await?;
-    code_lines = addons::add_main(app_threaded, code_lines).await?;
+    code_lines = addons::add_argparse(code_lines)?;
+    code_lines = addons::add_main(app_threaded, code_lines)?;
 
-    code_lines = addons::add_logging(&ai_service, code_lines).await?;
+    code_lines = addons::add_logging(&ai_service, code_lines)?;
     /*
         for code_line in &code_lines {
             tracing::info!("{}", code_line);
         }
     */
-    let config_lines = configuration::locate_config(code_lines.clone()).await?;
+    let config_lines = configuration::locate_config(code_lines.clone())?;
     let config_lines = config_lines.join("\n");
 
     let configuration: Configuration = serde_json::from_str(&config_lines)?;
@@ -249,7 +249,7 @@ pub async fn ai_service_replace_device_map(
         code_lines.push(line.to_string());
     }
 
-    let server_resources = server_resources::get().await?;
+    let server_resources = server_resources::get()?;
 
     let device_map_hash_map: HashMap<String, String> = serde_json::from_value(device_map)?;
     let mut device_map_new = HashMap::new();
@@ -262,7 +262,7 @@ pub async fn ai_service_replace_device_map(
     }
 
     let device_map = serde_json::to_value(device_map_new)?;
-    code_lines = replacers::replace_device_map(code_lines, device_map.clone()).await?;
+    code_lines = replacers::replace_device_map(code_lines, device_map.clone())?;
 
     let processed_function_body = code_lines.join("\n");
 

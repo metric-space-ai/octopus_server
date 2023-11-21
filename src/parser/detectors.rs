@@ -1,6 +1,6 @@
 use crate::Result;
 
-pub async fn detect_app_threaded(code_lines: &Vec<String>) -> Result<bool> {
+pub fn detect_app_threaded(code_lines: &Vec<String>) -> Result<bool> {
     let mut app_threaded = true;
 
     for code_line in code_lines {
@@ -15,7 +15,7 @@ pub async fn detect_app_threaded(code_lines: &Vec<String>) -> Result<bool> {
     Ok(app_threaded)
 }
 
-pub async fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<usize> {
+pub fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<usize> {
     let mut last_return_jsonify_line = 0;
 
     for (i, code_line) in code_lines.iter().enumerate() {
@@ -27,7 +27,7 @@ pub async fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<us
     Ok(last_return_jsonify_line)
 }
 
-pub async fn detect_is_ai_service(code_lines: &Vec<String>) -> Result<bool> {
+pub fn detect_is_ai_service(code_lines: &Vec<String>) -> Result<bool> {
     let mut dependencies = false;
     let mut functions = false;
     let mut setup = false;

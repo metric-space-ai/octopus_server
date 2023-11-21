@@ -1,6 +1,6 @@
 use crate::Result;
 
-pub async fn fix_apt_get(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_apt_get(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -18,7 +18,7 @@ pub async fn fix_apt_get(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_apt_install(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_apt_install(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -33,7 +33,7 @@ pub async fn fix_apt_install(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_input_type_json(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_input_type_json(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -51,7 +51,7 @@ pub async fn fix_input_type_json(code_lines: Vec<String>) -> Result<Vec<String>>
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_methods_get(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_methods_get(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -66,7 +66,7 @@ pub async fn fix_methods_get(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_return_code(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_return_code(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -94,7 +94,7 @@ pub async fn fix_return_code(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_return_type_string(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_return_type_string(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -109,7 +109,7 @@ pub async fn fix_return_type_string(code_lines: Vec<String>) -> Result<Vec<Strin
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_return_setup_status(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_return_setup_status(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -128,7 +128,7 @@ pub async fn fix_return_setup_status(code_lines: Vec<String>) -> Result<Vec<Stri
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_type_int(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_type_int(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -146,7 +146,7 @@ pub async fn fix_type_int(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_type_str(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_type_str(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -164,7 +164,7 @@ pub async fn fix_type_str(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(parsed_code_lines)
 }
 
-pub async fn fix_urls(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn fix_urls(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {

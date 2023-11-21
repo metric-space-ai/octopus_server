@@ -77,7 +77,7 @@ mod simple_apps;
 mod users;
 mod workspaces;
 
-pub async fn router(context: Arc<Context>) -> Router {
+pub fn router(context: Arc<Context>) -> Router {
     #[derive(OpenApi)]
     #[openapi(
         components(

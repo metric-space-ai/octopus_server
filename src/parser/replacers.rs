@@ -1,7 +1,7 @@
 use crate::{error::AppError, Result};
 use uuid::Uuid;
 
-pub async fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String>> {
+pub fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for (i, code_line) in code_lines.iter().enumerate() {
@@ -13,7 +13,7 @@ pub async fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String
     Ok(parsed_code_lines)
 }
 
-pub async fn replace_device_map(
+pub fn replace_device_map(
     code_lines: Vec<String>,
     device_map: serde_json::Value,
 ) -> Result<Vec<String>> {
@@ -42,10 +42,7 @@ pub async fn replace_device_map(
     Ok(parsed_code_lines)
 }
 
-pub async fn replace_function_names(
-    code_lines: Vec<String>,
-    ai_service_id: Uuid,
-) -> Result<Vec<String>> {
+pub fn replace_function_names(code_lines: Vec<String>, ai_service_id: Uuid) -> Result<Vec<String>> {
     let mut function_names = vec![];
     let mut parsed_code_lines = vec![];
     let mut functions_section_identified = false;
@@ -103,7 +100,7 @@ pub async fn replace_function_names(
     Ok(parsed_code_lines)
 }
 
-pub async fn replace_print(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn replace_print(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {

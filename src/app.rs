@@ -16,7 +16,7 @@ pub async fn get_app(args: Args) -> Result<App> {
 
     let app = App {
         context: context.clone(),
-        router: api::router(context).await,
+        router: api::router(context),
     };
 
     Ok(app)

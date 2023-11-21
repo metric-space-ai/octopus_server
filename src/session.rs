@@ -81,7 +81,7 @@ pub async fn secured(
     Err(AppError::Unauthorized)
 }
 
-pub async fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {
+pub fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {
     let token_header = headers.get("X-Auth-Token");
 
     match token_header {
@@ -104,7 +104,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let context = Arc::from_ref(state);
 
-        let session_id = session_id(parts.headers.clone()).await?;
+        let session_id = session_id(parts.headers.clone())?;
 
         let extracted_session;
 

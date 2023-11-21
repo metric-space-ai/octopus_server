@@ -25,7 +25,7 @@ pub struct ServerResources {
     pub physical_cpus: usize,
 }
 
-pub async fn get() -> Result<ServerResources> {
+pub fn get() -> Result<ServerResources> {
     let cpus = num_cpus::get();
     let mut gpus = vec![];
     let mut memory_free = String::new();

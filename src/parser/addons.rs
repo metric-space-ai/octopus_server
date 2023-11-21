@@ -1,6 +1,6 @@
 use crate::{entity::AiService, get_pwd, Result, SERVICES_DIR};
 
-pub async fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut argparse_present = false;
 
     for code_line in &code_lines {
@@ -26,7 +26,7 @@ pub async fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(code_lines)
 }
 
-pub async fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut handle_exception_present = false;
 
     for code_line in &code_lines {
@@ -56,7 +56,7 @@ pub async fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>
     Ok(code_lines)
 }
 
-pub async fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut health_check_present = false;
 
     for code_line in &code_lines {
@@ -87,10 +87,7 @@ pub async fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
     Ok(code_lines)
 }
 
-pub async fn add_logging(
-    ai_service: &AiService,
-    mut code_lines: Vec<String>,
-) -> Result<Vec<String>> {
+pub fn add_logging(ai_service: &AiService, mut code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut logging_present = false;
 
     for code_line in &code_lines {
@@ -100,7 +97,7 @@ pub async fn add_logging(
     }
 
     if !logging_present {
-        let pwd = get_pwd().await?;
+        let pwd = get_pwd()?;
 
         let mut parsed_code_lines = vec![];
 
@@ -124,7 +121,7 @@ pub async fn add_logging(
     Ok(code_lines)
 }
 
-pub async fn add_main(app_threaded: bool, code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_main(app_threaded: bool, code_lines: Vec<String>) -> Result<Vec<String>> {
     let mut main_present = false;
 
     for code_line in &code_lines {
