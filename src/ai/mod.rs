@@ -578,21 +578,16 @@ pub async fn open_ai_request(
                                                 .transaction_commit(transaction)
                                                 .await?;
 
-                                            let chat_message_fn =
-                                                function_call::handle_function_call(
-                                                    &ai_function,
-                                                    &ai_service,
-                                                    &chat_message,
-                                                    context.clone(),
-                                                    &function_args,
-                                                )
-                                                .await?;
+                                            let chat_message = function_call::handle_function_call(
+                                                &ai_function,
+                                                &ai_service,
+                                                &chat_message,
+                                                context.clone(),
+                                                &function_args,
+                                            )
+                                            .await?;
 
-                                            if let Some(chat_message_fn) = chat_message_fn {
-                                                return Ok(chat_message_fn);
-                                            } else {
-                                                return Ok(chat_message);
-                                            }
+                                            return Ok(chat_message);
                                         }
                                     }
 

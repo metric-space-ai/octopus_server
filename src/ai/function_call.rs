@@ -58,7 +58,7 @@ pub async fn handle_function_call(
     chat_message: &ChatMessage,
     context: Arc<Context>,
     function_args: &Value,
-) -> Result<Option<ChatMessage>> {
+) -> Result<ChatMessage> {
     let mut failed_connection_attempts = 0;
 
     loop {
@@ -68,7 +68,7 @@ pub async fn handle_function_call(
             let chat_message =
                 update_chat_message(ai_function, &response, context.clone(), chat_message).await?;
 
-            return Ok(Some(chat_message));
+            return Ok(chat_message);
         } else {
             failed_connection_attempts += 1;
 
@@ -82,7 +82,7 @@ pub async fn handle_function_call(
         }
     }
 
-    Ok(None)
+    Ok(chat_message.clone())
 }
 
 pub async fn function_call(
