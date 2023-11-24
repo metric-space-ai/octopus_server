@@ -5,7 +5,8 @@ use crate::{
         AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
         EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        PasswordResetToken, Port, Profile, Session, SimpleApp, User, Workspace, WorkspacesType,
+        PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended, Workspace,
+        WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -521,6 +522,33 @@ impl OctopusDatabase {
         Ok(users)
     }
 
+    pub async fn get_users_extended_by_company_id(
+        &self,
+        company_id: Uuid,
+    ) -> Result<Vec<UserExtended>> {
+        let users = self.get_users_by_company_id(company_id).await?;
+
+        let user_ids = users.iter().map(|x| x.id).collect::<Vec<Uuid>>();
+
+        let profiles = self.get_profiles_by_user_ids(&user_ids).await?;
+
+        let mut users_extended = vec![];
+
+        for user in users {
+            let profile = profiles
+                .clone()
+                .into_iter()
+                .filter(|x| x.id == user.id)
+                .collect::<Vec<Profile>>()
+                .first()
+                .cloned();
+            let user_extended = self.map_to_user_extended(&user, profile).await?;
+            users_extended.push(user_extended);
+        }
+
+        Ok(users_extended)
+    }
+
     pub async fn get_workspaces_by_company_id_and_type(
         &self,
         company_id: Uuid,
@@ -1023,6 +1051,100 @@ impl OctopusDatabase {
         .await?;
 
         Ok(workspace)
+    }
+
+    pub fn map_to_chat_message_extended(
+        &self,
+        chat_message: &ChatMessage,
+        chat_message_files: Vec<ChatMessageFile>,
+        chat_message_pictures: Vec<ChatMessagePicture>,
+        profiles: Vec<Profile>,
+    ) -> Result<ChatMessageExtended> {
+        let mut selected_chat_message_files = vec![];
+        let mut selected_chat_message_pictures = vec![];
+        let mut profile = None;
+        for mut chat_message_file in chat_message_files {
+            if chat_message_file.chat_message_id == chat_message.id {
+                if !chat_message_file.file_name.contains(PUBLIC_DIR) {
+                    chat_message_file.file_name =
+                        format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
+                }
+                selected_chat_message_files.push(chat_message_file);
+            }
+        }
+        for mut chat_message_picture in chat_message_pictures {
+            if chat_message_picture.chat_message_id == chat_message.id {
+                if !chat_message_picture.file_name.contains(PUBLIC_DIR) {
+                    chat_message_picture.file_name =
+                        format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
+                }
+                selected_chat_message_pictures.push(chat_message_picture);
+            }
+        }
+
+        for profile_tmp in profiles {
+            if profile_tmp.user_id == chat_message.user_id {
+                profile = Some(profile_tmp);
+            }
+        }
+
+        let chat_message_extended = ChatMessageExtended {
+            id: chat_message.id,
+            ai_function_id: chat_message.ai_function_id,
+            chat_id: chat_message.chat_id,
+            simple_app_id: chat_message.simple_app_id,
+            user_id: chat_message.user_id,
+            ai_function_call: chat_message.ai_function_call.clone(),
+            ai_function_error: chat_message.ai_function_error.clone(),
+            bad_reply_comment: chat_message.bad_reply_comment.clone(),
+            bad_reply_is_harmful: chat_message.bad_reply_is_harmful,
+            bad_reply_is_not_helpful: chat_message.bad_reply_is_not_helpful,
+            bad_reply_is_not_true: chat_message.bad_reply_is_not_true,
+            bypass_sensitive_information_filter: chat_message.bypass_sensitive_information_filter,
+            chat_message_files: selected_chat_message_files,
+            chat_message_pictures: selected_chat_message_pictures,
+            estimated_response_at: chat_message.estimated_response_at,
+            is_anonymized: chat_message.is_anonymized,
+            is_marked_as_not_sensitive: chat_message.is_marked_as_not_sensitive,
+            is_not_checked_by_system: chat_message.is_not_checked_by_system,
+            is_sensitive: chat_message.is_sensitive,
+            message: chat_message.message.clone(),
+            profile,
+            progress: chat_message.progress,
+            response: chat_message.response.clone(),
+            simple_app_data: chat_message.simple_app_data.clone(),
+            status: chat_message.status.clone(),
+            created_at: chat_message.created_at,
+            deleted_at: chat_message.deleted_at,
+            updated_at: chat_message.updated_at,
+        };
+
+        Ok(chat_message_extended)
+    }
+
+    pub async fn map_to_user_extended(
+        &self,
+        user: &User,
+        profile: Option<Profile>,
+    ) -> Result<UserExtended> {
+        let profile = match profile {
+            None => self.try_get_profile_by_user_id(user.id).await?,
+            Some(profile) => Some(profile),
+        };
+
+        let user_extended = UserExtended {
+            id: user.id,
+            company_id: user.company_id,
+            email: user.email.clone(),
+            is_enabled: user.is_enabled,
+            profile,
+            roles: user.roles.clone(),
+            created_at: user.created_at,
+            deleted_at: user.deleted_at,
+            updated_at: user.updated_at,
+        };
+
+        Ok(user_extended)
     }
 
     pub async fn try_delete_ai_function_by_id(
@@ -1557,75 +1679,6 @@ impl OctopusDatabase {
                 Ok(Some(chat_message_extended))
             }
         }
-    }
-
-    pub fn map_to_chat_message_extended(
-        &self,
-        chat_message: &ChatMessage,
-        chat_message_files: Vec<ChatMessageFile>,
-        chat_message_pictures: Vec<ChatMessagePicture>,
-        profiles: Vec<Profile>,
-    ) -> Result<ChatMessageExtended> {
-        let mut selected_chat_message_files = vec![];
-        let mut selected_chat_message_pictures = vec![];
-        let mut profile = None;
-        for mut chat_message_file in chat_message_files {
-            if chat_message_file.chat_message_id == chat_message.id {
-                if !chat_message_file.file_name.contains(PUBLIC_DIR) {
-                    chat_message_file.file_name =
-                        format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
-                }
-                selected_chat_message_files.push(chat_message_file);
-            }
-        }
-        for mut chat_message_picture in chat_message_pictures {
-            if chat_message_picture.chat_message_id == chat_message.id {
-                if !chat_message_picture.file_name.contains(PUBLIC_DIR) {
-                    chat_message_picture.file_name =
-                        format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
-                }
-                selected_chat_message_pictures.push(chat_message_picture);
-            }
-        }
-
-        for profile_tmp in profiles {
-            if profile_tmp.user_id == chat_message.user_id {
-                profile = Some(profile_tmp);
-            }
-        }
-
-        let chat_message_extended = ChatMessageExtended {
-            id: chat_message.id,
-            ai_function_id: chat_message.ai_function_id,
-            chat_id: chat_message.chat_id,
-            simple_app_id: chat_message.simple_app_id,
-            user_id: chat_message.user_id,
-            ai_function_call: chat_message.ai_function_call.clone(),
-            ai_function_error: chat_message.ai_function_error.clone(),
-            bad_reply_comment: chat_message.bad_reply_comment.clone(),
-            bad_reply_is_harmful: chat_message.bad_reply_is_harmful,
-            bad_reply_is_not_helpful: chat_message.bad_reply_is_not_helpful,
-            bad_reply_is_not_true: chat_message.bad_reply_is_not_true,
-            bypass_sensitive_information_filter: chat_message.bypass_sensitive_information_filter,
-            chat_message_files: selected_chat_message_files,
-            chat_message_pictures: selected_chat_message_pictures,
-            estimated_response_at: chat_message.estimated_response_at,
-            is_anonymized: chat_message.is_anonymized,
-            is_marked_as_not_sensitive: chat_message.is_marked_as_not_sensitive,
-            is_not_checked_by_system: chat_message.is_not_checked_by_system,
-            is_sensitive: chat_message.is_sensitive,
-            message: chat_message.message.clone(),
-            profile,
-            progress: chat_message.progress,
-            response: chat_message.response.clone(),
-            simple_app_data: chat_message.simple_app_data.clone(),
-            status: chat_message.status.clone(),
-            created_at: chat_message.created_at,
-            deleted_at: chat_message.deleted_at,
-            updated_at: chat_message.updated_at,
-        };
-
-        Ok(chat_message_extended)
     }
 
     pub async fn try_get_chat_message_file_by_id(

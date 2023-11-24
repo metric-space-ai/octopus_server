@@ -385,6 +385,19 @@ pub struct User {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct UserExtended {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub email: String,
+    pub is_enabled: bool,
+    pub profile: Option<Profile>,
+    pub roles: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "workspaces_types", rename_all = "snake_case")]
 pub enum WorkspacesType {

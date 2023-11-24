@@ -47,7 +47,7 @@ pub struct UserPut {
     path = "/api/v1/users",
     request_body = UserPost,
     responses(
-        (status = 201, description = "User created.", body = User),
+        (status = 201, description = "User created.", body = UserExtended),
         (status = 400, description = "Bad request.", body = ResponseError),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
@@ -111,7 +111,7 @@ pub async fn create(
                 )
                 .await?;
 
-            context
+            let profile = context
                 .octopus_database
                 .insert_profile(
                     &mut transaction,
@@ -126,7 +126,12 @@ pub async fn create(
                 .transaction_commit(transaction)
                 .await?;
 
-            Ok((StatusCode::CREATED, Json(user)).into_response())
+            let user_extended = context
+                .octopus_database
+                .map_to_user_extended(&user, Some(profile))
+                .await?;
+
+            Ok((StatusCode::CREATED, Json(user_extended)).into_response())
         }
         Some(_user_exists) => Err(AppError::UserAlreadyExists),
     }
@@ -197,7 +202,7 @@ pub async fn delete(
     get,
     path = "/api/v1/users",
     responses(
-        (status = 200, description = "List of users.", body = User),
+        (status = 200, description = "List of users.", body = UserExtended),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
@@ -217,12 +222,12 @@ pub async fn list(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let users = context
+    let users_extended = context
         .octopus_database
-        .get_users_by_company_id(session_user.company_id)
+        .get_users_extended_by_company_id(session_user.company_id)
         .await?;
 
-    Ok((StatusCode::OK, Json(users)).into_response())
+    Ok((StatusCode::OK, Json(users_extended)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -230,7 +235,7 @@ pub async fn list(
     get,
     path = "/api/v1/users/:user_id",
     responses(
-        (status = 200, description = "User read.", body = User),
+        (status = 200, description = "User read.", body = UserExtended),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User not found.", body = ResponseError),
@@ -270,7 +275,12 @@ pub async fn read(
         return Err(AppError::Forbidden);
     }
 
-    Ok((StatusCode::OK, Json(user)).into_response())
+    let user_extended = context
+        .octopus_database
+        .map_to_user_extended(&user, None)
+        .await?;
+
+    Ok((StatusCode::OK, Json(user_extended)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -309,7 +319,7 @@ pub async fn roles(
     path = "/api/v1/users/:user_id",
     request_body = UserPut,
     responses(
-        (status = 200, description = "User updated.", body = User),
+        (status = 200, description = "User updated.", body = UserExtended),
         (status = 400, description = "Bad request.", body = ResponseError),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
@@ -374,14 +384,19 @@ pub async fn update(
         .transaction_commit(transaction)
         .await?;
 
-    Ok((StatusCode::OK, Json(user)).into_response())
+    let user_extended = context
+        .octopus_database
+        .map_to_user_extended(&user, None)
+        .await?;
+
+    Ok((StatusCode::OK, Json(user_extended)).into_response())
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
         api, app,
-        entity::{User, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+        entity::{UserExtended, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
         Args,
     };
     use axum::{
@@ -494,7 +509,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
@@ -1007,7 +1022,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::CREATED);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
@@ -1071,7 +1086,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_200() {
+    async fn delete_204() {
         let args = Args {
             azure_openai_api_key: None,
             azure_openai_deployment_id: None,
@@ -1784,7 +1799,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: Vec<User> = serde_json::from_slice(&body).unwrap();
+        let body: Vec<UserExtended> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
 
@@ -1995,7 +2010,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
@@ -2105,7 +2120,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
@@ -2883,7 +2898,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
@@ -3009,7 +3024,7 @@ mod tests {
         assert_eq!(response.status(), StatusCode::OK);
 
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: User = serde_json::from_slice(&body).unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.id, second_user_id);
         assert_eq!(body.email, email);
