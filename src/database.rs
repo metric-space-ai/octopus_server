@@ -272,7 +272,7 @@ impl OctopusDatabase {
         let mut chat_messages_extended = vec![];
 
         for chat_message in chat_messages {
-            let chat_message_extended = self.map_to_chat_message_extended(
+            let chat_message_extended = Self::map_to_chat_message_extended(
                 &chat_message,
                 chat_message_files.clone(),
                 chat_message_pictures.clone(),
@@ -303,7 +303,7 @@ impl OctopusDatabase {
                     .get_profiles_by_user_ids(&[chat_message.user_id])
                     .await?;
 
-                let chat_message_extended = self.map_to_chat_message_extended(
+                let chat_message_extended = Self::map_to_chat_message_extended(
                     &chat_message,
                     chat_message_files,
                     chat_message_pictures,
@@ -512,7 +512,7 @@ impl OctopusDatabase {
     pub async fn get_users_by_company_id(&self, company_id: Uuid) -> Result<Vec<User>> {
         let users = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
             FROM users
             WHERE company_id = $1
             AND deleted_at IS NULL",
@@ -1007,6 +1007,7 @@ impl OctopusDatabase {
         company_id: Uuid,
         email: &str,
         is_enabled: bool,
+        is_invited: bool,
         pepper_id: i32,
         password: &str,
         roles: &[String],
@@ -1014,13 +1015,14 @@ impl OctopusDatabase {
         let user = sqlx::query_as!(
             User,
             "INSERT INTO users
-            (company_id, email, is_enabled, pepper_id, password, roles)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            (company_id, email, is_enabled, is_invited, pepper_id, password, roles)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (email) DO NOTHING
-            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
             company_id,
             email,
             is_enabled,
+            is_invited,
             pepper_id,
             password,
             roles
@@ -1056,7 +1058,6 @@ impl OctopusDatabase {
     }
 
     pub fn map_to_chat_message_extended(
-        &self,
         chat_message: &ChatMessage,
         chat_message_files: Vec<ChatMessageFile>,
         chat_message_pictures: Vec<ChatMessagePicture>,
@@ -1139,6 +1140,7 @@ impl OctopusDatabase {
             company_id: user.company_id,
             email: user.email.clone(),
             is_enabled: user.is_enabled,
+            is_invited: user.is_invited,
             profile,
             roles: user.roles.clone(),
             created_at: user.created_at,
@@ -1671,7 +1673,7 @@ impl OctopusDatabase {
                 let profiles = self
                     .get_profiles_by_user_ids(&[chat_message.user_id])
                     .await?;
-                let chat_message_extended = self.map_to_chat_message_extended(
+                let chat_message_extended = Self::map_to_chat_message_extended(
                     &chat_message,
                     chat_message_files,
                     chat_message_pictures,
@@ -1980,7 +1982,7 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
             FROM users
             WHERE email = $1
             AND deleted_at IS NULL",
@@ -1995,7 +1997,7 @@ impl OctopusDatabase {
     pub async fn try_get_user_by_id(&self, id: Uuid) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
-            "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
             FROM users
             WHERE id = $1
             AND deleted_at IS NULL",
@@ -2901,7 +2903,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET email = $2, is_enabled = $3, roles = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
             id,
             email,
             is_enabled,
@@ -2924,7 +2926,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET email = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
             id,
             email
         )
@@ -2945,7 +2947,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET password = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
             id,
             password
         )
@@ -2962,7 +2964,7 @@ impl OctopusDatabase {
             "UPDATE users
             SET roles = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
             id,
             roles
         )

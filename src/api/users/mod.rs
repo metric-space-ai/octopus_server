@@ -1,6 +1,7 @@
 use crate::{
     api::auth,
     context::Context,
+    email_service::send_invitation_email,
     entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
     session::{require_authenticated_session, ExtractedSession},
@@ -11,11 +12,19 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use rand::{distributions::Alphanumeric, Rng};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct UserInvitationPost {
+    #[validate(email, length(max = 256))]
+    email: String,
+    roles: Vec<String>,
+}
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct UserPost {
@@ -105,6 +114,7 @@ pub async fn create(
                     session_user.company_id,
                     &input.email,
                     input.is_enabled,
+                    false,
                     context.config.pepper_id,
                     &pw_hash,
                     &input.roles,
@@ -195,6 +205,102 @@ pub async fn delete(
         .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    post,
+    path = "/api/v1/users/invitation",
+    request_body = UserInvitationPost,
+    responses(
+        (status = 201, description = "User invited.", body = UserExtended),
+        (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn invitation(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Json(input): Json<UserInvitationPost>,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated_session(extracted_session).await?;
+    input.validate()?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
+
+    let user_exists = context
+        .octopus_database
+        .try_get_user_by_email(&input.email)
+        .await?;
+
+    match user_exists {
+        None => {
+            let password = rand::thread_rng()
+                .sample_iter(&Alphanumeric)
+                .take(12)
+                .map(char::from)
+                .collect::<String>();
+
+            let cloned_context = context.clone();
+            let cloned_password = password.clone();
+            let pw_hash = tokio::task::spawn_blocking(move || {
+                auth::hash_password(cloned_context, cloned_password)
+            })
+            .await??;
+
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
+            let user = context
+                .octopus_database
+                .insert_user(
+                    &mut transaction,
+                    session_user.company_id,
+                    &input.email,
+                    true,
+                    true,
+                    context.config.pepper_id,
+                    &pw_hash,
+                    &input.roles,
+                )
+                .await?;
+
+            let profile = context
+                .octopus_database
+                .insert_profile(&mut transaction, user.id, None, None)
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
+            let user_extended = context
+                .octopus_database
+                .map_to_user_extended(&user, Some(profile))
+                .await?;
+
+            send_invitation_email(context, &input.email, &password).await?;
+
+            Ok((StatusCode::CREATED, Json(user_extended)).into_response())
+        }
+        Some(_user_exists) => Err(AppError::UserAlreadyExists),
+    }
 }
 
 #[axum_macros::debug_handler]
@@ -870,8 +976,8 @@ mod tests {
         let response = fourth_router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{user_id}"))
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/users"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -1184,7 +1290,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_200_company_admin() {
+    async fn delete_204_company_admin() {
         let args = Args {
             azure_openai_api_key: None,
             azure_openai_deployment_id: None,
@@ -1692,6 +1798,621 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn invitation_201() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/users/invitation".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn invitation_400() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let email = "wrong email";
+        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/users/invitation".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn invitation_401() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/users/invitation".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn invitation_403() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            second_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/users/invitation"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_company_by_id(&mut transaction, company_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+
+    #[tokio::test]
+    async fn invitation_409() {
+        let args = Args {
+            azure_openai_api_key: None,
+            azure_openai_deployment_id: None,
+            azure_openai_enabled: Some(true),
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            openai_api_key: None,
+            port: None,
+            test_mode: Some(true),
+        };
+        let app = app::get_app(args).await.unwrap();
+        let router = app.router;
+        let second_router = router.clone();
+        let third_router = router.clone();
+        let fourth_router = router.clone();
+        let fifth_router = router.clone();
+
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = "password123";
+
+        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let job_title = Paragraph(1..2).fake::<String>();
+        let name = Name().fake::<String>();
+        let password = "password123";
+
+        let user = api::auth::register::tests::register_with_company_id_post(
+            third_router,
+            company_id,
+            &email,
+            &job_title,
+            &name,
+            password,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+
+        let response = fourth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/users/invitation".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.email, email);
+
+        let response = fifth_router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/users/invitation".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &email,
+                            "roles": &roles,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
 
         let mut transaction = app
             .context

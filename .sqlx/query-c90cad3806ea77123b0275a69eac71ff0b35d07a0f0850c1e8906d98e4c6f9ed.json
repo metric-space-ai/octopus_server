@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE users\n            SET email = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at",
+  "query": "INSERT INTO users\n            (company_id, email, is_enabled, is_invited, pepper_id, password, roles)\n            VALUES ($1, $2, $3, $4, $5, $6, $7)\n            ON CONFLICT (email) DO NOTHING\n            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -25,21 +25,26 @@
       },
       {
         "ordinal": 4,
+        "name": "is_invited",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
         "name": "roles",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -47,10 +52,16 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Varchar"
+        "Varchar",
+        "Bool",
+        "Bool",
+        "Int4",
+        "Varchar",
+        "VarcharArray"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -61,5 +72,5 @@
       false
     ]
   },
-  "hash": "f832be36614e742127771832dcbf54d5ff42da64568bad1fb8eea944ed1c699b"
+  "hash": "c90cad3806ea77123b0275a69eac71ff0b35d07a0f0850c1e8906d98e4c6f9ed"
 }

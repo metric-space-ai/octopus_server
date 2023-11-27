@@ -20,7 +20,7 @@ use crate::{
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
-        users::{UserPost, UserPut},
+        users::{UserInvitationPost, UserPost, UserPut},
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -141,6 +141,7 @@ pub fn router(context: Arc<Context>) -> Router {
                 SimpleApp,
                 User,
                 UserExtended,
+                UserInvitationPost,
                 UserPost,
                 UserPut,
                 Workspace,
@@ -468,6 +469,7 @@ pub fn router(context: Arc<Context>) -> Router {
                 .put(simple_apps::update),
         )
         .route("/api/v1/users", get(users::list).post(users::create))
+        .route("/api/v1/users/invitation", post(users::invitation))
         .route("/api/v1/users/roles", get(users::roles))
         .route(
             "/api/v1/users/:user_id",

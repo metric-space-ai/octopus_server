@@ -101,6 +101,7 @@ pub async fn setup(
                     company.id,
                     &input.email,
                     true,
+                    false,
                     context.config.pepper_id,
                     &pw_hash,
                     &[
@@ -356,7 +357,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.setup_required || !body.setup_required);
+        assert!(!body.setup_required || body.setup_required);
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(

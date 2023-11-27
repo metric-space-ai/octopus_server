@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, company_id, email, is_enabled, roles, created_at, deleted_at, updated_at\n            FROM users\n            WHERE company_id = $1\n            AND deleted_at IS NULL",
+  "query": "UPDATE users\n            SET password = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -25,31 +25,38 @@
       },
       {
         "ordinal": 4,
+        "name": "is_invited",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
         "name": "roles",
         "type_info": "VarcharArray"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Varchar"
       ]
     },
     "nullable": [
+      false,
       false,
       false,
       false,
@@ -60,5 +67,5 @@
       false
     ]
   },
-  "hash": "b8d67c076e934aa68e6a0117c21927893e4231a560d00e8a80e2bedf0265408c"
+  "hash": "1b7a2cda8035178c7b381de198122401e74e4f932cc6355d102992e0dfc43023"
 }

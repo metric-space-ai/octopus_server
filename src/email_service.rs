@@ -29,6 +29,47 @@ pub struct Personalization {
     pub to: Vec<Email>,
 }
 
+pub async fn send_invitation_email(
+    context: Arc<Context>,
+    email: &str,
+    password: &str,
+) -> Result<()> {
+    let content = format!("<p>Hi,</p><p>We are pleased to inform you that you have been invited to Octopus. Below is a password that you need to use to login.</p><p>{password}</p>");
+    let subject = "Invitation";
+
+    let from = Email {
+        email: FROM_EMAIL.to_string(),
+    };
+    let to = Email {
+        email: email.to_string(),
+    };
+    let personalization = Personalization { to: vec![to] };
+    let content = Content {
+        r#type: "text/html".to_string(),
+        value: content,
+    };
+    let message = Message {
+        content: vec![content],
+        from,
+        personalizations: vec![personalization],
+        subject: subject.to_string(),
+    };
+
+    if !context.config.test_mode {
+        reqwest::Client::new()
+            .post(format!("{SENDGRID_API_URL}/mail/send"))
+            .json(&message)
+            .header(
+                http::header::AUTHORIZATION,
+                format!("Bearer {}", context.config.sendgrid_api_key),
+            )
+            .send()
+            .await?;
+    }
+
+    Ok(())
+}
+
 pub async fn send_password_reset_request_email(
     context: Arc<Context>,
     email: &str,
@@ -55,18 +96,17 @@ pub async fn send_password_reset_request_email(
         subject: subject.to_string(),
     };
 
-    let response = reqwest::Client::new()
-        .post(format!("{SENDGRID_API_URL}/mail/send"))
-        .json(&message)
-        .header(
-            http::header::AUTHORIZATION,
-            format!("Bearer {}", context.config.sendgrid_api_key),
-        )
-        .send()
-        .await?;
-    tracing::info!("BBBBBB");
-    tracing::info!("statua = {:?}", response.status());
-    tracing::info!("text = {:?}", response.text().await?);
+    if !context.config.test_mode {
+        reqwest::Client::new()
+            .post(format!("{SENDGRID_API_URL}/mail/send"))
+            .json(&message)
+            .header(
+                http::header::AUTHORIZATION,
+                format!("Bearer {}", context.config.sendgrid_api_key),
+            )
+            .send()
+            .await?;
+    }
 
     Ok(())
 }
