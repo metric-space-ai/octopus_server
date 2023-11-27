@@ -371,7 +371,7 @@ pub async fn open_ai_request(
 
     let ai_functions = context
         .octopus_database
-        .get_ai_functions_for_request()
+        .get_ai_functions_for_request(user.id)
         .await?;
 
     for ai_function in ai_functions {

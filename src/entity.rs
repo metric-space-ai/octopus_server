@@ -117,6 +117,7 @@ pub enum AiServiceStatus {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiService {
     pub id: Uuid,
+    pub allowed_user_ids: Option<Vec<Uuid>>,
     pub device_map: Option<serde_json::Value>,
     pub health_check_execution_time: i32,
     pub health_check_status: AiServiceHealthCheckStatus,

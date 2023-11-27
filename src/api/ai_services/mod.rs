@@ -21,6 +21,16 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct AiServiceAllowedUsersPut {
+    pub allowed_user_ids: Vec<Uuid>,
+}
+
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct AiServiceConfigurationPut {
+    pub device_map: serde_json::Value,
+}
+
 #[derive(Clone, Debug, Deserialize, ToSchema)]
 pub enum AiServiceOperation {
     Disable,
@@ -40,14 +50,60 @@ pub struct AiServiceOperationResponse {
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct AiServiceConfigurationPut {
-    pub device_map: serde_json::Value,
-}
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiServicePriorityPut {
     #[validate(range(min = 0, max = 31))]
     pub priority: i32,
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/ai-services/:id/allowed-users",
+    request_body = AiServiceAllowedUsersPut,
+    responses(
+        (status = 200, description = "AI Service configured.", body = AiService),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn allowed_users(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+    Json(input): Json<AiServiceAllowedUsersPut>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    input.validate()?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let ai_service = context
+        .octopus_database
+        .update_ai_service_allowed_user_ids(
+            &mut transaction,
+            ai_service.id,
+            &input.allowed_user_ids,
+        )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+
+    Ok((StatusCode::OK, Json(ai_service)).into_response())
 }
 
 #[axum_macros::debug_handler]

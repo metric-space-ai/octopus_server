@@ -79,7 +79,7 @@ impl OctopusDatabase {
         Ok(ai_functions)
     }
 
-    pub async fn get_ai_functions_for_request(&self) -> Result<Vec<AiFunction>> {
+    pub async fn get_ai_functions_for_request(&self, user_id: Uuid) -> Result<Vec<AiFunction>> {
         let is_enabled = true;
         let health_check_status = AiServiceHealthCheckStatus::Ok;
         let setup_status = AiServiceSetupStatus::Performed;
@@ -96,12 +96,14 @@ impl OctopusDatabase {
             AND ais.status = $4
             AND aif.deleted_at IS NULL
             AND ais.deleted_at IS NULL
+            AND (ais.allowed_user_ids IS NULL OR $5 = ANY(ais.allowed_user_ids))
             ORDER BY name ASC",
         )
         .bind(is_enabled)
         .bind(health_check_status)
         .bind(setup_status)
         .bind(status)
+        .bind(user_id)
         .fetch_all(&*self.pool)
         .await?;
 
@@ -111,7 +113,7 @@ impl OctopusDatabase {
     pub async fn get_ai_services(&self) -> Result<Vec<AiService>> {
         let ai_services = sqlx::query_as!(
             AiService,
-            r#"SELECT id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_services
             WHERE deleted_at IS NULL
             ORDER BY priority DESC, original_file_name ASC"#
@@ -632,7 +634,7 @@ impl OctopusDatabase {
             r#"INSERT INTO ai_services
             (original_file_name, original_function_body, port)
             VALUES ($1, $2, $3)
-            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             original_file_name,
             original_function_body,
             port,
@@ -1535,7 +1537,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_service_by_id(&self, id: Uuid) -> Result<Option<AiService>> {
         let ai_service = sqlx::query_as!(
             AiService,
-            r#"SELECT id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_services
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -2116,11 +2118,32 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET is_enabled = $2, original_file_name = $3, original_function_body = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             is_enabled,
             original_file_name,
             original_function_body,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service)
+    }
+
+    pub async fn update_ai_service_allowed_user_ids(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        allowed_user_ids: &[Uuid],
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as!(
+            AiService,
+            r#"UPDATE ai_services
+            SET allowed_user_ids = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            allowed_user_ids,
         )
         .fetch_one(&mut **transaction)
         .await?;
@@ -2139,7 +2162,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET device_map = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(device_map)
@@ -2162,7 +2185,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET device_map = $2, processed_function_body = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             device_map,
             processed_function_body,
@@ -2184,7 +2207,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET health_check_execution_time = $2, health_check_status = $3, health_check_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(health_check_execution_time)
@@ -2206,7 +2229,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET is_enabled = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             is_enabled,
         )
@@ -2228,7 +2251,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET is_enabled = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(is_enabled)
@@ -2252,7 +2275,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET parser_feedback = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(parser_feedback)
@@ -2275,7 +2298,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET priority = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             priority,
         )
@@ -2297,7 +2320,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET processed_function_body = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(processed_function_body)
@@ -2319,7 +2342,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET required_python_version = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(required_python_version)
@@ -2340,7 +2363,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET setup_execution_time = $2, setup_status = $3, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(setup_execution_time)
@@ -2362,7 +2385,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET progress = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(progress)
