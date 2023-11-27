@@ -4,8 +4,8 @@ use crate::{
     entity::{AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus},
     Result,
 };
-use axum::http::StatusCode;
 use chrono::Utc;
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::{sleep, Duration};

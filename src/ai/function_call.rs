@@ -7,9 +7,8 @@ use crate::{
     error::AppError,
     Result,
 };
-use axum::http::StatusCode;
 use base64::{alphabet, engine, Engine};
-use http::header::CONTENT_TYPE;
+use reqwest::{header::CONTENT_TYPE, StatusCode};
 use serde::{Deserialize, Serialize};
 use serde_json::value::Value;
 use std::{fs::File, io::Write, sync::Arc};

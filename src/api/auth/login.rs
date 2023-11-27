@@ -100,6 +100,7 @@ pub mod tests {
         },
         Fake,
     };
+    use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;
 
@@ -129,7 +130,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::CREATED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: SessionResponse = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, user_id);

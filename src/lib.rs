@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use clap::Parser;
-use std::{error::Error, net::SocketAddr, process::Command};
+use std::{error::Error, process::Command};
 use tokio::task;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -14,6 +14,7 @@ mod database;
 mod email_service;
 mod entity;
 mod error;
+mod multipart;
 mod parser;
 mod process_manager;
 mod server_resources;
@@ -80,12 +81,12 @@ pub async fn run() -> Result<()> {
         }
     });
 
-    let addr = SocketAddr::from(([0, 0, 0, 0], app.context.config.port));
-    info!("listening on {}", addr);
+    let listener =
+        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.context.config.port)).await?;
 
-    axum::Server::bind(&addr)
-        .serve(app.router.into_make_service())
-        .await?;
+    info!("listening on {}", listener.local_addr()?);
+
+    axum::serve(listener, app.router).await.unwrap();
 
     Ok(())
 }

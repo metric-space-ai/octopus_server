@@ -16,8 +16,8 @@ use async_openai::{
     },
     Client,
 };
-use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::Arc;

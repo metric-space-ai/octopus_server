@@ -200,6 +200,7 @@ mod tests {
         },
         Fake,
     };
+    use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     #[tokio::test]
@@ -1114,7 +1115,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<ChatMessageFile> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1616,7 +1621,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessageFile = serde_json::from_slice(&body).unwrap();
 
         assert!(body.file_name.contains(file_name));

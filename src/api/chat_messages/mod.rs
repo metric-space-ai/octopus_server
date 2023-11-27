@@ -15,6 +15,7 @@ use axum::{
     Json,
 };
 use chrono::{Duration, Utc};
+use reqwest::StatusCode as ReqwestStatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -199,7 +200,7 @@ pub async fn anonymize(
                         .await;
 
                     if let Ok(response) = response {
-                        if response.status() == StatusCode::CREATED {
+                        if response.status() == ReqwestStatusCode::CREATED {
                             let function_anonymization_response: Result<
                                 FunctionAnonymizationResponse,
                                 reqwest::Error,
@@ -1080,6 +1081,7 @@ pub mod tests {
         },
         Fake,
     };
+    use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;
 
@@ -1110,7 +1112,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::CREATED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.message, message);
@@ -2563,7 +2569,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<ChatMessage> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -3038,7 +3048,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Option<ChatMessage> = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.unwrap().message, message);
@@ -3513,7 +3527,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.message, message);
@@ -4019,7 +4037,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.message, message);
@@ -4688,7 +4710,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.message, message);
@@ -5380,7 +5406,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_anonymized);
@@ -6052,7 +6082,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_anonymized);
@@ -6235,7 +6269,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.message, message);
@@ -6962,7 +7000,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert!(body.is_marked_as_not_sensitive);
@@ -7634,7 +7676,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: ChatMessage = serde_json::from_slice(&body).unwrap();
 
         assert!(body.is_marked_as_not_sensitive);

@@ -206,7 +206,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::Profile, Args};
+    use crate::{api, app, entity::Profile, multipart, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -219,8 +219,7 @@ mod tests {
         },
         Fake,
     };
-    extern crate hyper_multipart_rfc7578 as hyper_multipart;
-    use hyper_multipart::client::multipart;
+    use http_body_util::BodyExt;
     use tower::ServiceExt;
 
     #[tokio::test]
@@ -282,22 +281,33 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, second_user_id);
@@ -407,22 +417,33 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), admin_session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, second_user_id);
@@ -533,22 +554,33 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, second_user_id);
@@ -637,19 +669,25 @@ mod tests {
             api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();
-
         assert_eq!(response.status(), StatusCode::OK);
 
         let email = format!(
@@ -786,15 +824,22 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -1043,22 +1088,33 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, second_user_id);
@@ -1152,22 +1208,33 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
-            .header("X-Auth-Token".to_string(), admin_session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Profile = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.user_id, second_user_id);
@@ -1259,14 +1326,21 @@ mod tests {
 
         api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
-            .uri(format!("/api/v1/profile-pictures/{second_user_id}"));
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .uri(format!("/api/v1/profile-pictures/{second_user_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -1363,15 +1437,22 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -1483,15 +1564,22 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{user_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fifth_router.oneshot(request).await.unwrap();
@@ -1601,15 +1689,22 @@ mod tests {
 
         let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.png", "data/test/test.png", mime::IMAGE_PNG)
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/profile-pictures/{third_user_id}"))
-            .header("X-Auth-Token".to_string(), admin_session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();

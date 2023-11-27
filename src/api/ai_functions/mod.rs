@@ -293,6 +293,7 @@ mod tests {
         },
         Fake,
     };
+    use http_body_util::BodyExt;
     use tokio::time::{sleep, Duration};
     use tower::ServiceExt;
     use uuid::Uuid;
@@ -358,7 +359,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -381,7 +386,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -504,7 +513,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -527,7 +540,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -738,7 +755,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -761,7 +782,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -858,7 +883,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1051,7 +1080,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1074,7 +1107,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1104,7 +1141,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.ai_service_id, ai_service_id);
@@ -1202,7 +1243,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1225,7 +1270,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1347,7 +1396,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1370,7 +1423,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1584,7 +1641,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1607,7 +1668,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1644,7 +1709,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiFunction = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.ai_service_id, ai_service_id);
@@ -1743,7 +1812,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1766,7 +1839,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());

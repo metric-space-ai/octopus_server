@@ -300,7 +300,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::SimpleApp, Args};
+    use crate::{api, app, entity::SimpleApp, multipart, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -314,28 +314,38 @@ mod tests {
         },
         Fake,
     };
-    extern crate hyper_multipart_rfc7578 as hyper_multipart;
-    use hyper_multipart::client::multipart;
+    use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;
 
     pub async fn simple_apps_create(router: Router, session_id: Uuid) -> SimpleApp {
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.html", "data/test/test.html", mime::TEXT_HTML)
-            .unwrap();
-        let req_builder = Request::builder()
-            .method(http::Method::POST)
-            .uri("/api/v1/simple-apps")
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+        let body = multipart::tests::file_data("text/html", "test.html", "data/test/test.html")
+            .await
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/simple-apps")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.clone().oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::CREATED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
         assert!(body.is_enabled);
@@ -448,14 +458,15 @@ mod tests {
             api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
-        let form = multipart::Form::default();
-
-        let req_builder = Request::builder()
+        let request = Request::builder()
             .method(http::Method::POST)
-            .uri("/api/v1/simple-apps")
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .uri("/api/v1/ai-services")
+            .header(
+                http::header::CONTENT_TYPE,
+                mime::MULTIPART_FORM_DATA.as_ref(),
+            )
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(Body::empty())
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();
@@ -546,15 +557,22 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.html", "data/test/test.html", mime::TEXT_HTML)
+        let body = multipart::tests::file_data("text/html", "test.html", "data/test/test.html")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::POST)
             .uri("/api/v1/simple-apps")
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -646,8 +664,12 @@ mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body = String::from_utf8(body.to_vec()).unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body = String::from_utf8(body.clone()).unwrap();
 
         assert!(body.contains("doctype html"));
 
@@ -1178,7 +1200,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<SimpleApp> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -1354,7 +1380,11 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
         assert!(body.is_enabled);
@@ -1593,22 +1623,33 @@ mod tests {
         let simple_app = simple_apps_create(third_router, session_id).await;
         let simple_app_id = simple_app.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.html", "data/test/test.html", mime::TEXT_HTML)
+        let body = multipart::tests::file_data("text/html", "test.html", "data/test/test.html")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: SimpleApp = serde_json::from_slice(&body).unwrap();
 
         assert!(body.is_enabled);
@@ -1684,13 +1725,15 @@ mod tests {
         let simple_app = simple_apps_create(third_router, session_id).await;
         let simple_app_id = simple_app.id;
 
-        let form = multipart::Form::default();
-        let req_builder = Request::builder()
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(
+                http::header::CONTENT_TYPE,
+                mime::MULTIPART_FORM_DATA.as_ref(),
+            )
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(Body::empty())
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -1796,15 +1839,22 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.html", "data/test/test.html", mime::TEXT_HTML)
+        let body = multipart::tests::file_data("text/html", "test.html", "data/test/test.html")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = sixth_router.oneshot(request).await.unwrap();
@@ -1886,15 +1936,22 @@ mod tests {
 
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime("test.html", "data/test/test.html", mime::TEXT_HTML)
+        let body = multipart::tests::file_data("text/html", "test.html", "data/test/test.html")
+            .await
             .unwrap();
-        let req_builder = Request::builder()
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();

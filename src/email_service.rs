@@ -1,4 +1,5 @@
 use crate::{context::Context, Result};
+use reqwest::header::AUTHORIZATION;
 use serde::Serialize;
 use std::sync::Arc;
 
@@ -60,7 +61,7 @@ pub async fn send_invitation_email(
             .post(format!("{SENDGRID_API_URL}/mail/send"))
             .json(&message)
             .header(
-                http::header::AUTHORIZATION,
+                AUTHORIZATION,
                 format!("Bearer {}", context.config.sendgrid_api_key),
             )
             .send()
@@ -101,7 +102,7 @@ pub async fn send_password_reset_request_email(
             .post(format!("{SENDGRID_API_URL}/mail/send"))
             .json(&message)
             .header(
-                http::header::AUTHORIZATION,
+                AUTHORIZATION,
                 format!("Bearer {}", context.config.sendgrid_api_key),
             )
             .send()

@@ -690,12 +690,12 @@ pub mod tests {
     use crate::{
         api, app,
         entity::{AiService, AiServiceStatus},
-        Args,
+        multipart, Args,
     };
-    use async_recursion::async_recursion;
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        response::Response,
         Router,
     };
     use fake::{
@@ -705,45 +705,58 @@ pub mod tests {
         },
         Fake,
     };
-    extern crate hyper_multipart_rfc7578 as hyper_multipart;
-    use hyper_multipart::client::multipart;
+    use http_body_util::BodyExt;
     use tokio::time::{sleep, Duration};
     use tower::ServiceExt;
     use uuid::Uuid;
 
-    #[async_recursion]
-    pub async fn ai_service_create(router: Router, session_id: Uuid) -> AiService {
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime(
-            "test.py",
-            "data/test/test.py",
-            mime::APPLICATION_OCTET_STREAM,
-        )
-        .unwrap();
-        let req_builder = Request::builder()
+    pub async fn ai_service_request(
+        router: Router,
+        session_id: Uuid,
+        body: &str,
+        value: &str,
+    ) -> Response<Body> {
+        let request = Request::builder()
             .method(http::Method::POST)
             .uri("/api/v1/ai-services")
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body.to_string())
             .unwrap();
 
-        let response = router.clone().oneshot(request).await.unwrap();
+        router.clone().oneshot(request).await.unwrap()
+    }
 
-        if response.status() == StatusCode::CREATED {
-            assert_eq!(response.status(), StatusCode::CREATED);
+    pub async fn ai_service_create(router: Router, session_id: Uuid) -> AiService {
+        let body =
+            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
+                .await
+                .unwrap();
 
-            let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-            let body: AiService = serde_json::from_slice(&body).unwrap();
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
 
-            assert!(!body.is_enabled);
-            assert_eq!(body.status, AiServiceStatus::Configuration);
+        loop {
+            let response = ai_service_request(router.clone(), session_id, &body, &value).await;
 
-            return body;
-        } else {
-            let ai_service = ai_service_create(router, session_id).await;
+            if response.status() == StatusCode::CREATED {
+                assert_eq!(response.status(), StatusCode::CREATED);
 
-            return ai_service;
+                let body = BodyExt::collect(response.into_body())
+                    .await
+                    .unwrap()
+                    .to_bytes()
+                    .to_vec();
+                let body: AiService = serde_json::from_slice(&body).unwrap();
+
+                assert!(!body.is_enabled);
+                assert_eq!(body.status, AiServiceStatus::Configuration);
+
+                return body;
+            }
         }
     }
 
@@ -808,7 +821,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1083,7 +1100,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1509,13 +1530,15 @@ pub mod tests {
             api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let form = multipart::Form::default();
-        let req_builder = Request::builder()
+        let request = Request::builder()
             .method(http::Method::POST)
             .uri("/api/v1/ai-services")
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(
+                http::header::CONTENT_TYPE,
+                mime::MULTIPART_FORM_DATA.as_ref(),
+            )
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(Body::empty())
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();
@@ -1581,18 +1604,22 @@ pub mod tests {
 
         api::auth::login::tests::login_post(second_router, &email, &password, user_id).await;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime(
-            "test.py",
-            "data/test/test.py",
-            mime::APPLICATION_OCTET_STREAM,
-        )
-        .unwrap();
-        let req_builder = Request::builder()
+        let body =
+            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
+                .await
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::POST)
-            .uri("/api/v1/ai-services");
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .uri("/api/v1/ai-services")
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();
@@ -1928,7 +1955,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -1951,7 +1982,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -2049,7 +2084,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -2321,7 +2360,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: Vec<AiService> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
@@ -2497,9 +2540,10 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body())
+        let body = BodyExt::collect(response.into_body())
             .await
             .unwrap()
+            .to_bytes()
             .to_vec();
         let body = String::from_utf8(body).unwrap();
 
@@ -2761,7 +2805,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -3031,7 +3079,11 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -3271,26 +3323,34 @@ pub mod tests {
         let ai_service = ai_service_create(third_router, session_id).await;
         let ai_service_id = ai_service.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime(
-            "test.py",
-            "data/test/test.py",
-            mime::APPLICATION_OCTET_STREAM,
-        )
-        .unwrap();
-        let req_builder = Request::builder()
+        let body =
+            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
+                .await
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/ai-services/{ai_service_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_enabled);
@@ -3367,13 +3427,15 @@ pub mod tests {
         let ai_service = ai_service_create(third_router, session_id).await;
         let ai_service_id = ai_service.id;
 
-        let form = multipart::Form::default();
-        let req_builder = Request::builder()
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/ai-services/{ai_service_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(
+                http::header::CONTENT_TYPE,
+                mime::MULTIPART_FORM_DATA.as_ref(),
+            )
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(Body::empty())
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -3451,18 +3513,22 @@ pub mod tests {
         let ai_service = ai_service_create(third_router, session_id).await;
         let ai_service_id = ai_service.id;
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime(
-            "test.py",
-            "data/test/test.py",
-            mime::APPLICATION_OCTET_STREAM,
-        )
-        .unwrap();
-        let req_builder = Request::builder()
+        let body =
+            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
+                .await
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
-            .uri(format!("/api/v1/ai-services/{ai_service_id}"));
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .uri(format!("/api/v1/ai-services/{ai_service_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
             .unwrap();
 
         let response = fourth_router.oneshot(request).await.unwrap();
@@ -3538,19 +3604,23 @@ pub mod tests {
 
         let ai_service_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let mut form = multipart::Form::default();
-        form.add_file_with_mime(
-            "test.py",
-            "data/test/test.py",
-            mime::APPLICATION_OCTET_STREAM,
-        )
-        .unwrap();
-        let req_builder = Request::builder()
+        let body =
+            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
+                .await
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
             .method(http::Method::PUT)
             .uri(format!("/api/v1/ai-services/{ai_service_id}"))
-            .header("X-Auth-Token".to_string(), session_id.to_string());
-        let request = form
-            .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = third_router.oneshot(request).await.unwrap();
