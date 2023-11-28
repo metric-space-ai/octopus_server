@@ -235,6 +235,7 @@ pub fn router(context: Arc<Context>) -> Router {
             simple_apps::update,
             users::create,
             users::delete,
+            users::invitation,
             users::list,
             users::read,
             users::roles,
