@@ -110,39 +110,41 @@ pub async fn open_ai_post_parsing_code_check(
         chat_completion_request_message,
     ));
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
+    if !context.config.test_mode {
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .build();
 
-    match request {
-        Err(e) => {
-            tracing::error!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
+        match request {
+            Err(e) => {
+                tracing::error!("OpenAIError: {e}");
+            }
+            Ok(request) => {
+                let response_message = match ai_client {
+                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+                };
 
-            match response_message {
-                Err(e) => {
-                    tracing::error!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                match response_message {
+                    Err(e) => {
+                        tracing::error!("OpenAIError: {e}");
+                    }
+                    Ok(response_message) => {
+                        let response_message = response_message.choices.get(0);
 
-                    match response_message {
-                        None => {
-                            tracing::error!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
+                        match response_message {
+                            None => {
+                                tracing::error!("BadResponse");
+                            }
+                            Some(response_message) => {
+                                let response_message = response_message.message.clone();
 
-                            if let Some(content) = response_message.content {
-                                let content =
-                                    if content.starts_with("```json") && content.ends_with("```") {
+                                if let Some(content) = response_message.content {
+                                    let content = if content.starts_with("```json")
+                                        && content.ends_with("```")
+                                    {
                                         content
                                             .strip_prefix("```json")
                                             .ok_or(AppError::Parsing)?
@@ -154,16 +156,25 @@ pub async fn open_ai_post_parsing_code_check(
                                         content
                                     };
 
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&content)?;
+                                    let response: ParsingCodeCheckResponse =
+                                        serde_json::from_str(&content)?;
 
-                                return Ok(Some(response));
+                                    return Ok(Some(response));
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    } else {
+        let response = ParsingCodeCheckResponse {
+            fixing_proposal: None,
+            is_passed: true,
+            reason: None,
+        };
+
+        return Ok(Some(response));
     }
 
     Ok(None)
@@ -199,39 +210,41 @@ pub async fn open_ai_pre_parsing_code_check(
         chat_completion_request_message,
     ));
 
-    let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
-        .model(MODEL)
-        .messages(messages)
-        .build();
+    if !context.config.test_mode {
+        let request = CreateChatCompletionRequestArgs::default()
+            .max_tokens(512u16)
+            .model(MODEL)
+            .messages(messages)
+            .build();
 
-    match request {
-        Err(e) => {
-            tracing::error!("OpenAIError: {e}");
-        }
-        Ok(request) => {
-            let response_message = match ai_client {
-                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-            };
+        match request {
+            Err(e) => {
+                tracing::error!("OpenAIError: {e}");
+            }
+            Ok(request) => {
+                let response_message = match ai_client {
+                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+                };
 
-            match response_message {
-                Err(e) => {
-                    tracing::error!("OpenAIError: {e}");
-                }
-                Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                match response_message {
+                    Err(e) => {
+                        tracing::error!("OpenAIError: {e}");
+                    }
+                    Ok(response_message) => {
+                        let response_message = response_message.choices.get(0);
 
-                    match response_message {
-                        None => {
-                            tracing::error!("BadResponse");
-                        }
-                        Some(response_message) => {
-                            let response_message = response_message.message.clone();
+                        match response_message {
+                            None => {
+                                tracing::error!("BadResponse");
+                            }
+                            Some(response_message) => {
+                                let response_message = response_message.message.clone();
 
-                            if let Some(content) = response_message.content {
-                                let content =
-                                    if content.starts_with("```json") && content.ends_with("```") {
+                                if let Some(content) = response_message.content {
+                                    let content = if content.starts_with("```json")
+                                        && content.ends_with("```")
+                                    {
                                         content
                                             .strip_prefix("```json")
                                             .ok_or(AppError::Parsing)?
@@ -243,16 +256,25 @@ pub async fn open_ai_pre_parsing_code_check(
                                         content
                                     };
 
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&content)?;
+                                    let response: ParsingCodeCheckResponse =
+                                        serde_json::from_str(&content)?;
 
-                                return Ok(Some(response));
+                                    return Ok(Some(response));
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    } else {
+        let response = ParsingCodeCheckResponse {
+            fixing_proposal: None,
+            is_passed: true,
+            reason: None,
+        };
+
+        return Ok(Some(response));
     }
 
     Ok(None)

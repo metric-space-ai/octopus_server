@@ -124,9 +124,12 @@ impl OctopusDatabase {
         Ok(ai_services)
     }
 
-    pub async fn get_ai_services_max_port(&self) -> Result<Port> {
+    pub async fn get_ai_services_max_port(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+    ) -> Result<Port> {
         let port = sqlx::query_as::<_, Port>("SELECT MAX(port) FROM ai_services")
-            .fetch_one(&*self.pool)
+            .fetch_one(&mut **transaction)
             .await?;
 
         Ok(port)

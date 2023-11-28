@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.16"
+async-openai = "0.17"
 axum = { version = "0.6", features = ["multipart"] }
 axum-macros = "0.3"
 base64 = "0.21"
