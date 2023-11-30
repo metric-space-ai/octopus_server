@@ -361,7 +361,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -391,7 +391,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let response = sixth_router
@@ -507,7 +507,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -537,7 +537,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let response = sixth_router
@@ -741,7 +741,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -861,7 +861,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1054,7 +1054,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1084,7 +1084,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let response = sixth_router
@@ -1205,7 +1205,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1235,7 +1235,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let response = sixth_router
@@ -1350,7 +1350,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1381,7 +1381,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let response = sixth_router
@@ -1587,7 +1587,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1617,7 +1617,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let is_enabled = true;
@@ -1746,7 +1746,7 @@ mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1776,7 +1776,7 @@ mod tests {
             .map(|x| x.id)
             .collect::<Vec<Uuid>>()
             .first()
-            .cloned()
+            .copied()
             .unwrap();
 
         let is_enabled = true;

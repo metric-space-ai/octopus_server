@@ -736,7 +736,7 @@ pub mod tests {
             let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
             let body: AiService = serde_json::from_slice(&body).unwrap();
 
-            assert_eq!(body.is_enabled, false);
+            assert!(!body.is_enabled);
             assert_eq!(body.status, AiServiceStatus::Configuration);
 
             return body;
@@ -811,7 +811,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::Configuration);
         assert_eq!(body.allowed_user_ids, Some(allowed_user_ids));
 
@@ -1086,7 +1086,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         let mut transaction = app
@@ -1931,7 +1931,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -1954,7 +1954,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingFinished);
 
         let mut transaction = app
@@ -2052,7 +2052,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
@@ -2764,7 +2764,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::Configuration);
         assert_eq!(body.priority, priority);
 
@@ -3034,7 +3034,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::Configuration);
 
         let mut transaction = app
@@ -3293,7 +3293,7 @@ pub mod tests {
         let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
+        assert!(!body.is_enabled);
         assert_eq!(body.status, AiServiceStatus::Configuration);
 
         let mut transaction = app

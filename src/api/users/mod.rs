@@ -977,7 +977,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users"))
+                    .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
@@ -2252,7 +2252,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/users/invitation"))
+                    .uri("/api/v1/users/invitation".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
