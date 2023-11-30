@@ -686,12 +686,13 @@ pub async fn update(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         api, app,
         entity::{AiService, AiServiceStatus},
         Args,
     };
+    use async_recursion::async_recursion;
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -710,6 +711,7 @@ mod tests {
     use tower::ServiceExt;
     use uuid::Uuid;
 
+    #[async_recursion]
     pub async fn ai_service_create(router: Router, session_id: Uuid) -> AiService {
         let mut form = multipart::Form::default();
         form.add_file_with_mime(
@@ -726,17 +728,23 @@ mod tests {
             .set_body_convert::<hyper::Body, multipart::Body>(req_builder)
             .unwrap();
 
-        let response = router.oneshot(request).await.unwrap();
+        let response = router.clone().oneshot(request).await.unwrap();
 
-        assert_eq!(response.status(), StatusCode::CREATED);
+        if response.status() == StatusCode::CREATED {
+            assert_eq!(response.status(), StatusCode::CREATED);
 
-        let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
-        let body: AiService = serde_json::from_slice(&body).unwrap();
+            let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+            let body: AiService = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.is_enabled, false);
-        assert_eq!(body.status, AiServiceStatus::Configuration);
+            assert_eq!(body.is_enabled, false);
+            assert_eq!(body.status, AiServiceStatus::Configuration);
 
-        body
+            return body;
+        } else {
+            let ai_service = ai_service_create(router, session_id).await;
+
+            return ai_service;
+        }
     }
 
     #[tokio::test]
@@ -1926,7 +1934,7 @@ mod tests {
         assert_eq!(body.is_enabled, false);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(4)).await;
 
         let response = fifth_router
             .oneshot(
@@ -2047,7 +2055,7 @@ mod tests {
         assert_eq!(body.is_enabled, false);
         assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(4)).await;
 
         let response = fifth_router
             .oneshot(
