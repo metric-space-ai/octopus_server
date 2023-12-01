@@ -11,8 +11,8 @@ use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
         ChatCompletionFunctionsArgs, ChatCompletionRequestAssistantMessageArgs,
-        ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs,
-        CreateChatCompletionRequestArgs,
+        ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs,
+        ChatCompletionToolType, CreateChatCompletionRequestArgs,
     },
     Client,
 };
@@ -379,10 +379,15 @@ pub async fn open_ai_request(
             && ai_function.formatted_name != "querycontent"
             && ai_function.formatted_name != "sensitive_information"
         {
-            let function = ChatCompletionFunctionsArgs::default()
-                .name(ai_function.name)
-                .description(ai_function.description)
-                .parameters(json!(ai_function.parameters))
+            let function = ChatCompletionToolArgs::default()
+                .r#type(ChatCompletionToolType::Function)
+                .function(
+                    ChatCompletionFunctionsArgs::default()
+                        .name(ai_function.name)
+                        .description(ai_function.description)
+                        .parameters(json!(ai_function.parameters))
+                        .build()?,
+                )
                 .build()?;
 
             functions.push(function);
@@ -395,19 +400,24 @@ pub async fn open_ai_request(
         .await?;
 
     for simple_app in simple_apps {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name(simple_app.formatted_name)
-            .description(simple_app.description)
-            .parameters(json!({
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Game title",
-                    },
-                },
-                "required": ["title"],
-            }))
+        let function = ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name(simple_app.formatted_name)
+                    .description(simple_app.description)
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "description": "Game title",
+                            },
+                        },
+                        "required": ["title"],
+                    }))
+                    .build()?,
+            )
             .build()?;
 
         functions.push(function);
@@ -427,27 +437,32 @@ pub async fn open_ai_request(
         .await?;
 
     if functions.is_empty() {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name("dummy-function")
-            .description("This is a dummy function that should not be used")
-            .parameters(json!({
-                "type": "object",
-                "properties": {
-                    "parameter1": {
-                        "type": "string",
-                        "description": "This parameter should not be used",
-                    },
-                    "parameter2": {
-                        "type": "string",
-                        "description": "This parameter should not be used",
-                    },
-                    "parameter3": {
-                        "type": "string",
-                        "description": "This parameter should not be used",
-                    },
-                },
-                "required": ["parameter1", "parameter2", "parameter3"],
-            }))
+        let function = ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name("dummy-function")
+                    .description("This is a dummy function that should not be used")
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "parameter1": {
+                                "type": "string",
+                                "description": "This parameter should not be used",
+                            },
+                            "parameter2": {
+                                "type": "string",
+                                "description": "This parameter should not be used",
+                            },
+                            "parameter3": {
+                                "type": "string",
+                                "description": "This parameter should not be used",
+                            },
+                        },
+                        "required": ["parameter1", "parameter2", "parameter3"],
+                    }))
+                    .build()?,
+            )
             .build()?;
 
         functions.push(function);
@@ -464,8 +479,7 @@ pub async fn open_ai_request(
                 .max_tokens(512u16)
                 .model(MODEL)
                 .messages(messages)
-                .functions(functions)
-                .function_call("auto")
+                .tools(functions)
                 .build(),
         };
 
@@ -544,76 +558,80 @@ pub async fn open_ai_request(
                             Some(response_message) => {
                                 let response_message = response_message.message.clone();
 
-                                if let Some(function_call) = response_message.function_call {
-                                    let function_name = function_call.name;
-                                    let function_args: serde_json::Value =
-                                        function_call.arguments.parse()?;
-                                    let ai_function_call = AiFunctionCall {
-                                        arguments: function_args.clone(),
-                                        name: function_name.clone(),
-                                    };
-                                    let ai_function_call = serde_json::to_value(ai_function_call)?;
-                                    let chat_message = context
-                                        .octopus_database
-                                        .update_chat_message_ai_function_call(
-                                            &mut transaction,
-                                            chat_message.id,
-                                            ai_function_call,
-                                        )
-                                        .await?;
-                                    let ai_function = context
-                                        .octopus_database
-                                        .try_get_ai_function_by_name(&function_name)
-                                        .await?;
-
-                                    if let Some(ai_function) = ai_function {
-                                        let ai_service = context
+                                if let Some(function_calls) = response_message.tool_calls {
+                                    for function_call in function_calls {
+                                        let function_name = function_call.function.name;
+                                        let function_args: serde_json::Value =
+                                            function_call.function.arguments.parse()?;
+                                        let ai_function_call = AiFunctionCall {
+                                            arguments: function_args.clone(),
+                                            name: function_name.clone(),
+                                        };
+                                        let ai_function_call =
+                                            serde_json::to_value(ai_function_call)?;
+                                        let chat_message = context
                                             .octopus_database
-                                            .try_get_ai_service_by_id(ai_function.ai_service_id)
+                                            .update_chat_message_ai_function_call(
+                                                &mut transaction,
+                                                chat_message.id,
+                                                ai_function_call,
+                                            )
+                                            .await?;
+                                        let ai_function = context
+                                            .octopus_database
+                                            .try_get_ai_function_by_name(&function_name)
                                             .await?;
 
-                                        if let Some(ai_service) = ai_service {
+                                        if let Some(ai_function) = ai_function {
+                                            let ai_service = context
+                                                .octopus_database
+                                                .try_get_ai_service_by_id(ai_function.ai_service_id)
+                                                .await?;
+
+                                            if let Some(ai_service) = ai_service {
+                                                context
+                                                    .octopus_database
+                                                    .transaction_commit(transaction)
+                                                    .await?;
+
+                                                let chat_message =
+                                                    function_call::handle_function_call(
+                                                        &ai_function,
+                                                        &ai_service,
+                                                        &chat_message,
+                                                        context.clone(),
+                                                        &function_args,
+                                                    )
+                                                    .await?;
+
+                                                return Ok(chat_message);
+                                            }
+                                        }
+
+                                        let simple_app = context
+                                            .octopus_database
+                                            .try_get_simple_app_by_formatted_name(&function_name)
+                                            .await?;
+
+                                        if let Some(simple_app) = simple_app {
+                                            let chat_message = context
+                                                .octopus_database
+                                                .update_chat_message_simple_app_id(
+                                                    &mut transaction,
+                                                    chat_message.id,
+                                                    100,
+                                                    simple_app.id,
+                                                    ChatMessageStatus::Answered,
+                                                )
+                                                .await?;
+
                                             context
                                                 .octopus_database
                                                 .transaction_commit(transaction)
                                                 .await?;
 
-                                            let chat_message = function_call::handle_function_call(
-                                                &ai_function,
-                                                &ai_service,
-                                                &chat_message,
-                                                context.clone(),
-                                                &function_args,
-                                            )
-                                            .await?;
-
                                             return Ok(chat_message);
                                         }
-                                    }
-
-                                    let simple_app = context
-                                        .octopus_database
-                                        .try_get_simple_app_by_formatted_name(&function_name)
-                                        .await?;
-
-                                    if let Some(simple_app) = simple_app {
-                                        let chat_message = context
-                                            .octopus_database
-                                            .update_chat_message_simple_app_id(
-                                                &mut transaction,
-                                                chat_message.id,
-                                                100,
-                                                simple_app.id,
-                                                ChatMessageStatus::Answered,
-                                            )
-                                            .await?;
-
-                                        context
-                                            .octopus_database
-                                            .transaction_commit(transaction)
-                                            .await?;
-
-                                        return Ok(chat_message);
                                     }
                                 }
 
