@@ -1,7 +1,7 @@
 use crate::{error::AppError, Result};
 use uuid::Uuid;
 
-pub fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String>> {
+pub fn cut_code(code_lines: &[String], line: usize) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for (i, code_line) in code_lines.iter().enumerate() {
@@ -10,13 +10,10 @@ pub fn cut_code(code_lines: Vec<String>, line: usize) -> Result<Vec<String>> {
         }
     }
 
-    Ok(parsed_code_lines)
+    parsed_code_lines
 }
 
-pub fn replace_device_map(
-    code_lines: Vec<String>,
-    device_map: serde_json::Value,
-) -> Result<Vec<String>> {
+pub fn replace_device_map(code_lines: Vec<String>, device_map: &serde_json::Value) -> Vec<String> {
     let mut parsed_code_lines = vec![];
     let mut remove_mode = false;
     let mut ends_in_same_line = false;
@@ -39,15 +36,15 @@ pub fn replace_device_map(
         }
     }
 
-    Ok(parsed_code_lines)
+    parsed_code_lines
 }
 
-pub fn replace_function_names(code_lines: Vec<String>, ai_service_id: Uuid) -> Result<Vec<String>> {
+pub fn replace_function_names(code_lines: &[String], ai_service_id: Uuid) -> Result<Vec<String>> {
     let mut function_names = vec![];
     let mut parsed_code_lines = vec![];
     let mut functions_section_identified = false;
 
-    for code_line in &code_lines {
+    for code_line in code_lines {
         if code_line.contains("\"functions\":") {
             functions_section_identified = true;
         }
@@ -100,7 +97,22 @@ pub fn replace_function_names(code_lines: Vec<String>, ai_service_id: Uuid) -> R
     Ok(parsed_code_lines)
 }
 
-pub fn replace_print(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
+    let mut parsed_code_lines = vec![];
+
+    for code_line in code_lines {
+        if code_line.contains("pip") && code_line.contains("install") {
+            let new_line = code_line.replace("pip", "mamba");
+            parsed_code_lines.push(new_line);
+        } else {
+            parsed_code_lines.push(code_line);
+        }
+    }
+
+    parsed_code_lines
+}
+
+pub fn replace_print(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
@@ -112,5 +124,5 @@ pub fn replace_print(code_lines: Vec<String>) -> Result<Vec<String>> {
         }
     }
 
-    Ok(parsed_code_lines)
+    parsed_code_lines
 }

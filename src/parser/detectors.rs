@@ -1,6 +1,4 @@
-use crate::Result;
-
-pub fn detect_app_threaded(code_lines: &Vec<String>) -> Result<bool> {
+pub fn detect_app_threaded(code_lines: &Vec<String>) -> bool {
     let mut app_threaded = true;
 
     for code_line in code_lines {
@@ -12,10 +10,10 @@ pub fn detect_app_threaded(code_lines: &Vec<String>) -> Result<bool> {
         }
     }
 
-    Ok(app_threaded)
+    app_threaded
 }
 
-pub fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<usize> {
+pub fn detect_last_return_jsonify_line(code_lines: &[String]) -> usize {
     let mut last_return_jsonify_line = 0;
 
     for (i, code_line) in code_lines.iter().enumerate() {
@@ -24,10 +22,10 @@ pub fn detect_last_return_jsonify_line(code_lines: &[String]) -> Result<usize> {
         }
     }
 
-    Ok(last_return_jsonify_line)
+    last_return_jsonify_line
 }
 
-pub fn detect_is_ai_service(code_lines: &Vec<String>) -> Result<bool> {
+pub fn detect_is_ai_service(code_lines: &Vec<String>) -> bool {
     let mut dependencies = false;
     let mut functions = false;
     let mut setup = false;
@@ -52,8 +50,8 @@ pub fn detect_is_ai_service(code_lines: &Vec<String>) -> Result<bool> {
     }
 
     if dependencies && functions && setup {
-        return Ok(true);
+        return true;
     }
 
-    Ok(false)
+    false
 }

@@ -147,6 +147,8 @@ ARG OCTOPUS_SERVER_PORT
 ARG OPENAI_API_KEY
 ARG SENDGRID_API_KEY
 RUN conda init
+RUN conda config --add channels conda-forge
+RUN conda install -y -n base mamba
 WORKDIR /octopus_server
 COPY --from=builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=builder /usr/local/cargo/bin/sqlx ./

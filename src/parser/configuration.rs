@@ -1,4 +1,4 @@
-use crate::{entity::AiServiceRequiredPythonVersion, Result};
+use crate::entity::AiServiceRequiredPythonVersion;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -16,7 +16,7 @@ pub struct Function {
     pub return_type: String,
 }
 
-pub fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn locate_config(code_lines: &[String]) -> Vec<String> {
     let mut config_section_identified = false;
     let mut config_section_identified_line = 0;
     let mut config_lines = vec![];
@@ -58,5 +58,5 @@ pub fn locate_config(code_lines: Vec<String>) -> Result<Vec<String>> {
         }
     }
 
-    Ok(parsed_config_lines)
+    parsed_config_lines
 }

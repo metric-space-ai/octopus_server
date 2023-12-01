@@ -1,6 +1,6 @@
 use crate::{entity::AiService, get_pwd, Result, SERVICES_DIR};
 
-pub fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_argparse(code_lines: Vec<String>) -> Vec<String> {
     let mut argparse_present = false;
 
     for code_line in &code_lines {
@@ -20,13 +20,13 @@ pub fn add_argparse(code_lines: Vec<String>) -> Result<Vec<String>> {
         parsed_code_lines.push("parser.add_argument(\"--port\", type=int, default=\"5000\", help=\"set the port for the service\")".to_string());
         parsed_code_lines.push("args = parser.parse_args()".to_string());
 
-        return Ok(parsed_code_lines);
+        return parsed_code_lines;
     }
 
-    Ok(code_lines)
+    code_lines
 }
 
-pub fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_handle_exception(code_lines: Vec<String>) -> Vec<String> {
     let mut handle_exception_present = false;
 
     for code_line in &code_lines {
@@ -50,13 +50,13 @@ pub fn add_handle_exception(code_lines: Vec<String>) -> Result<Vec<String>> {
             }
         }
 
-        return Ok(parsed_code_lines);
+        return parsed_code_lines;
     }
 
-    Ok(code_lines)
+    code_lines
 }
 
-pub fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_health_check(code_lines: Vec<String>) -> Vec<String> {
     let mut health_check_present = false;
 
     for code_line in &code_lines {
@@ -81,10 +81,10 @@ pub fn add_health_check(code_lines: Vec<String>) -> Result<Vec<String>> {
             }
         }
 
-        return Ok(parsed_code_lines);
+        return parsed_code_lines;
     }
 
-    Ok(code_lines)
+    code_lines
 }
 
 pub fn add_logging(ai_service: &AiService, mut code_lines: Vec<String>) -> Result<Vec<String>> {
@@ -121,7 +121,7 @@ pub fn add_logging(ai_service: &AiService, mut code_lines: Vec<String>) -> Resul
     Ok(code_lines)
 }
 
-pub fn add_main(app_threaded: bool, code_lines: Vec<String>) -> Result<Vec<String>> {
+pub fn add_main(app_threaded: bool, code_lines: Vec<String>) -> Vec<String> {
     let mut main_present = false;
 
     for code_line in &code_lines {
@@ -145,8 +145,8 @@ pub fn add_main(app_threaded: bool, code_lines: Vec<String>) -> Result<Vec<Strin
             );
         }
 
-        return Ok(parsed_code_lines);
+        return parsed_code_lines;
     }
 
-    Ok(code_lines)
+    code_lines
 }
