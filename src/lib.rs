@@ -29,25 +29,9 @@ pub const SERVICES_DIR: &str = "services";
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct Args {
-    /// Azure OpenAI API key
-    #[arg(long)]
-    pub azure_openai_api_key: Option<String>,
-
-    /// Azure OpenAI deployment id
-    #[arg(long)]
-    pub azure_openai_deployment_id: Option<String>,
-
-    /// Azure OpenAI enabled
-    #[arg(long)]
-    pub azure_openai_enabled: Option<bool>,
-
     /// Database url
     #[arg(short, long)]
     pub database_url: Option<String>,
-
-    /// OpenAI API key
-    #[arg(short, long)]
-    pub openai_api_key: Option<String>,
 
     /// Port
     #[arg(short, long)]
@@ -82,7 +66,8 @@ pub async fn run() -> Result<()> {
     });
 
     let listener =
-        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.context.config.port)).await?;
+        tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.context.get_config().await?.port))
+            .await?;
 
     info!("listening on {}", listener.local_addr()?);
 

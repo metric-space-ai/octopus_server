@@ -98,12 +98,11 @@ pub async fn create(
                 return Err(AppError::PasswordDoesNotMatch);
             }
 
-            let cloned_context = context.clone();
             let cloned_password = input.password.clone();
-            let pw_hash = tokio::task::spawn_blocking(move || {
-                auth::hash_password(cloned_context, cloned_password)
-            })
-            .await??;
+            let config = context.get_config().await?;
+            let pw_hash =
+                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                    .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -115,7 +114,7 @@ pub async fn create(
                     &input.email,
                     input.is_enabled,
                     false,
-                    context.config.pepper_id,
+                    context.get_config().await?.pepper_id,
                     &pw_hash,
                     &input.roles,
                 )
@@ -257,12 +256,11 @@ pub async fn invitation(
                 .map(char::from)
                 .collect::<String>();
 
-            let cloned_context = context.clone();
             let cloned_password = password.clone();
-            let pw_hash = tokio::task::spawn_blocking(move || {
-                auth::hash_password(cloned_context, cloned_password)
-            })
-            .await??;
+            let config = context.get_config().await?;
+            let pw_hash =
+                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                    .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -274,7 +272,7 @@ pub async fn invitation(
                     &input.email,
                     true,
                     true,
-                    context.config.pepper_id,
+                    context.get_config().await?.pepper_id,
                     &pw_hash,
                     &input.roles,
                 )
@@ -523,13 +521,9 @@ mod tests {
     #[tokio::test]
     async fn create_201() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -660,13 +654,9 @@ mod tests {
     #[tokio::test]
     async fn create_400() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -787,13 +777,9 @@ mod tests {
     #[tokio::test]
     async fn create_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -911,13 +897,9 @@ mod tests {
     #[tokio::test]
     async fn create_403() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1039,13 +1021,9 @@ mod tests {
     #[tokio::test]
     async fn create_409() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1203,13 +1181,9 @@ mod tests {
     #[tokio::test]
     async fn delete_204() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1301,13 +1275,9 @@ mod tests {
     #[tokio::test]
     async fn delete_204_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1399,13 +1369,9 @@ mod tests {
     #[tokio::test]
     async fn delete_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1500,13 +1466,9 @@ mod tests {
     #[tokio::test]
     async fn delete_403() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1605,13 +1567,9 @@ mod tests {
     #[tokio::test]
     async fn delete_403_different_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1737,13 +1695,9 @@ mod tests {
     #[tokio::test]
     async fn delete_404() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1843,13 +1797,9 @@ mod tests {
     #[tokio::test]
     async fn invitation_201() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -1970,13 +1920,9 @@ mod tests {
     #[tokio::test]
     async fn invitation_400() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2083,13 +2029,9 @@ mod tests {
     #[tokio::test]
     async fn invitation_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2198,13 +2140,9 @@ mod tests {
     #[tokio::test]
     async fn invitation_403() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2317,13 +2255,9 @@ mod tests {
     #[tokio::test]
     async fn invitation_409() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2466,13 +2400,9 @@ mod tests {
     #[tokio::test]
     async fn list_200() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2580,13 +2510,9 @@ mod tests {
     #[tokio::test]
     async fn list_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2681,13 +2607,9 @@ mod tests {
     #[tokio::test]
     async fn read_200() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2796,13 +2718,9 @@ mod tests {
     #[tokio::test]
     async fn read_200_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -2910,13 +2828,9 @@ mod tests {
     #[tokio::test]
     async fn read_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3011,13 +2925,9 @@ mod tests {
     #[tokio::test]
     async fn read_403() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3116,13 +3026,9 @@ mod tests {
     #[tokio::test]
     async fn read_403_different_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3248,13 +3154,9 @@ mod tests {
     #[tokio::test]
     async fn read_404() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3354,13 +3256,9 @@ mod tests {
     #[tokio::test]
     async fn roles_200() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3468,13 +3366,9 @@ mod tests {
     #[tokio::test]
     async fn roles_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3569,13 +3463,9 @@ mod tests {
     #[tokio::test]
     async fn update_200() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3696,13 +3586,9 @@ mod tests {
     #[tokio::test]
     async fn update_200_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3827,13 +3713,9 @@ mod tests {
     #[tokio::test]
     async fn update_400() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -3945,13 +3827,9 @@ mod tests {
     #[tokio::test]
     async fn update_401() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -4058,13 +3936,9 @@ mod tests {
     #[tokio::test]
     async fn update_403() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -4175,13 +4049,9 @@ mod tests {
     #[tokio::test]
     async fn update_403_different_company_admin() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -4323,13 +4193,9 @@ mod tests {
     #[tokio::test]
     async fn update_404() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };

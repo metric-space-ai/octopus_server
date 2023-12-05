@@ -228,7 +228,7 @@ pub async fn install_and_run_ai_service(
     ai_service: AiService,
     context: Arc<Context>,
 ) -> Result<AiService> {
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let ai_service = stop_ai_service(ai_service, context.clone()).await?;
         let ai_service = parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
         let ai_service = install_ai_service(ai_service, context.clone()).await?;

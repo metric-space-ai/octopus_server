@@ -23,9 +23,11 @@ pub async fn get_app(args: Args) -> Result<App> {
 }
 
 pub async fn get_context(args: Args) -> Result<Arc<Context>> {
-    let config = config::load(args)?;
+    let mut config = config::load(args)?;
     let pool = PgPoolOptions::new().connect(&config.database_url).await?;
     let octopus_database = OctopusDatabase::new(pool);
+    let parameters = octopus_database.get_parameters().await?;
+    config.set_parameters(parameters);
     let process_manager = ProcessManager::new();
     let context = Arc::new(Context::new(config, octopus_database, process_manager));
 

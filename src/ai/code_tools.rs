@@ -26,7 +26,7 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
         chat_completion_request_message,
     ));
 
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model(MODEL)
@@ -110,7 +110,7 @@ pub async fn open_ai_post_parsing_code_check(
         chat_completion_request_message,
     ));
 
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model(MODEL)
@@ -210,7 +210,7 @@ pub async fn open_ai_pre_parsing_code_check(
         chat_completion_request_message,
     ));
 
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model(MODEL)
@@ -314,7 +314,7 @@ pub async fn open_ai_simple_app_meta_extraction(
         chat_completion_request_message,
     ));
 
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let request = CreateChatCompletionRequestArgs::default()
             .max_tokens(512u16)
             .model(MODEL)

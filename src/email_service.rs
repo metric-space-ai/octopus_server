@@ -56,16 +56,19 @@ pub async fn send_invitation_email(
         subject: subject.to_string(),
     };
 
-    if !context.config.test_mode {
-        reqwest::Client::new()
-            .post(format!("{SENDGRID_API_URL}/mail/send"))
-            .json(&message)
-            .header(
-                AUTHORIZATION,
-                format!("Bearer {}", context.config.sendgrid_api_key),
-            )
-            .send()
-            .await?;
+    if !context.get_config().await?.test_mode {
+        let sendgrid_api_key = context.get_config().await?.get_parameter_sendgrid_api_key();
+
+        if let Some(sendgrid_api_key) = sendgrid_api_key {
+            reqwest::Client::new()
+                .post(format!("{SENDGRID_API_URL}/mail/send"))
+                .json(&message)
+                .header(AUTHORIZATION, format!("Bearer {}", sendgrid_api_key))
+                .send()
+                .await?;
+        } else {
+            tracing::error!("Missing SENDGRID_API_KEY");
+        }
     }
 
     Ok(())
@@ -97,16 +100,19 @@ pub async fn send_password_reset_request_email(
         subject: subject.to_string(),
     };
 
-    if !context.config.test_mode {
-        reqwest::Client::new()
-            .post(format!("{SENDGRID_API_URL}/mail/send"))
-            .json(&message)
-            .header(
-                AUTHORIZATION,
-                format!("Bearer {}", context.config.sendgrid_api_key),
-            )
-            .send()
-            .await?;
+    if !context.get_config().await?.test_mode {
+        let sendgrid_api_key = context.get_config().await?.get_parameter_sendgrid_api_key();
+
+        if let Some(sendgrid_api_key) = sendgrid_api_key {
+            reqwest::Client::new()
+                .post(format!("{SENDGRID_API_URL}/mail/send"))
+                .json(&message)
+                .header(AUTHORIZATION, format!("Bearer {}", sendgrid_api_key))
+                .send()
+                .await?;
+        } else {
+            tracing::error!("Missing SENDGRID_API_KEY");
+        }
     }
 
     Ok(())

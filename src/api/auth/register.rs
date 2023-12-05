@@ -47,12 +47,11 @@ pub async fn register(
                 return Err(AppError::PasswordDoesNotMatch);
             }
 
-            let cloned_context = context.clone();
             let cloned_password = input.password.clone();
-            let pw_hash = tokio::task::spawn_blocking(move || {
-                auth::hash_password(cloned_context, cloned_password)
-            })
-            .await??;
+            let config = context.get_config().await?;
+            let pw_hash =
+                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                    .await??;
 
             let company = context
                 .octopus_database
@@ -70,7 +69,7 @@ pub async fn register(
                     &input.email,
                     true,
                     false,
-                    context.config.pepper_id,
+                    context.get_config().await?.pepper_id,
                     &pw_hash,
                     &[ROLE_PUBLIC_USER.to_string(), ROLE_PRIVATE_USER.to_string()],
                 )
@@ -115,12 +114,11 @@ pub async fn register_with_company_id(
                 return Err(AppError::PasswordDoesNotMatch);
             }
 
-            let cloned_context = context.clone();
             let cloned_password = input.password.clone();
-            let pw_hash = tokio::task::spawn_blocking(move || {
-                auth::hash_password(cloned_context, cloned_password)
-            })
-            .await??;
+            let config = context.get_config().await?;
+            let pw_hash =
+                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                    .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -132,7 +130,7 @@ pub async fn register_with_company_id(
                     &input.email,
                     true,
                     false,
-                    context.config.pepper_id,
+                    context.get_config().await?.pepper_id,
                     &pw_hash,
                     &[ROLE_PUBLIC_USER.to_string()],
                 )
@@ -240,13 +238,9 @@ pub mod tests {
     #[tokio::test]
     async fn register_201() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -323,13 +317,9 @@ pub mod tests {
     #[tokio::test]
     async fn register_400() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };
@@ -413,13 +403,9 @@ pub mod tests {
     #[tokio::test]
     async fn register_409() {
         let args = Args {
-            azure_openai_api_key: None,
-            azure_openai_deployment_id: None,
-            azure_openai_enabled: Some(true),
             database_url: Some(String::from(
                 "postgres://admin:admin@db/octopus_server_test",
             )),
-            openai_api_key: None,
             port: None,
             test_mode: Some(true),
         };

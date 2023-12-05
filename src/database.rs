@@ -4,7 +4,7 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
         AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
+        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, Parameter,
         PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended, Workspace,
         WorkspacesType,
     },
@@ -468,6 +468,20 @@ impl OctopusDatabase {
         Ok(example_prompt_categories)
     }
 
+    pub async fn get_parameters(&self) -> Result<Vec<Parameter>> {
+        let parameters = sqlx::query_as!(
+            Parameter,
+            "SELECT id, name, value, created_at, deleted_at, updated_at
+            FROM parameters
+            WHERE deleted_at IS NULL
+            ORDER BY name ASC"
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(parameters)
+    }
+
     pub async fn get_profiles_by_user_ids(&self, user_ids: &[Uuid]) -> Result<Vec<Profile>> {
         let profiles = sqlx::query_as!(
             Profile,
@@ -905,6 +919,27 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn insert_parameter(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        name: &str,
+        value: &str,
+    ) -> Result<Parameter> {
+        let parameter = sqlx::query_as!(
+            Parameter,
+            "INSERT INTO parameters
+            (name, value)
+            VALUES ($1, $2)
+            RETURNING id, name, value, created_at, deleted_at, updated_at",
+            name,
+            value
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(parameter)
     }
 
     pub async fn insert_password_reset_token(
@@ -1381,6 +1416,25 @@ impl OctopusDatabase {
         Ok(inspection_disabling)
     }
 
+    pub async fn try_delete_parameter_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let parameter = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE parameters
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(parameter)
+    }
+
     pub async fn try_delete_password_reset_token_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -1848,6 +1902,35 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn try_get_parameter_by_id(&self, id: Uuid) -> Result<Option<Parameter>> {
+        let parameter = sqlx::query_as!(
+            Parameter,
+            "SELECT id, name, value, created_at, deleted_at, updated_at
+            FROM parameters
+            WHERE id = $1
+            AND deleted_at IS NULL",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(parameter)
+    }
+
+    pub async fn try_get_parameter_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let parameter_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id
+            FROM parameters
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(parameter_id)
     }
 
     pub async fn try_get_password_reset_token_by_token(
@@ -2813,6 +2896,29 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn update_parameter(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        name: &str,
+        value: &str,
+    ) -> Result<Parameter> {
+        let parameter = sqlx::query_as!(
+            Parameter,
+            "UPDATE parameters
+            SET name = $2, value = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, name, value, created_at, deleted_at, updated_at",
+            id,
+            name,
+            value
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(parameter)
     }
 
     pub async fn update_profile(

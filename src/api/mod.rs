@@ -17,6 +17,7 @@ use crate::{
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         inspection_disablings::InspectionDisablingPost,
+        parameters::{ParameterPost, ParameterPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
@@ -29,8 +30,8 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
         AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt,
-        ExamplePromptCategory, InspectionDisabling, PasswordResetToken, Profile, SimpleApp, User,
-        UserExtended, Workspace, WorkspacesType,
+        ExamplePromptCategory, InspectionDisabling, Parameter, PasswordResetToken, Profile,
+        SimpleApp, User, UserExtended, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -68,6 +69,7 @@ mod chats;
 mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
+mod parameters;
 mod password_resets;
 mod profile_pictures;
 mod profiles;
@@ -126,6 +128,9 @@ pub fn router(context: Arc<Context>) -> Router {
                 InspectionDisabling,
                 InspectionDisablingPost,
                 LoginPost,
+                Parameter,
+                ParameterPost,
+                ParameterPut,
                 PasswordResetPost,
                 PasswordResetPut,
                 PasswordResetToken,
@@ -216,6 +221,12 @@ pub fn router(context: Arc<Context>) -> Router {
             inspection_disablings::read,
             login::login,
             logout::logout,
+            parameters::create,
+            parameters::delete,
+            parameters::list,
+            parameters::names,
+            parameters::read,
+            parameters::update,
             password_resets::change_password,
             password_resets::request,
             password_resets::validate,
@@ -262,6 +273,7 @@ pub fn router(context: Arc<Context>) -> Router {
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
+            (name = "parameters", description = "Parameters API."),
             (name = "password_resets", description = "Password resets API."),
             (name = "profiles", description = "Profiles API."),
             (name = "profile_pictures", description = "Profile pictures API."),
@@ -300,6 +312,48 @@ pub fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/auth/:user_id",
             put(change_password::change_password),
+        )
+        .route(
+            "/api/v1/ai-functions/direct-call",
+            post(ai_functions::direct_call),
+        )
+        .route(
+            "/api/v1/ai-functions/:ai_service_id",
+            get(ai_functions::list),
+        )
+        .route(
+            "/api/v1/ai-functions/:ai_service_id/:ai_function_id",
+            delete(ai_functions::delete)
+                .get(ai_functions::read)
+                .put(ai_functions::update),
+        )
+        .route(
+            "/api/v1/ai-services",
+            get(ai_services::list).post(ai_services::create),
+        )
+        .route(
+            "/api/v1/ai-services/:id/allowed-users",
+            put(ai_services::allowed_users),
+        )
+        .route(
+            "/api/v1/ai-services/:id/configuration",
+            put(ai_services::configuration),
+        )
+        .route(
+            "/api/v1/ai-services/:id/installation",
+            put(ai_services::installation),
+        )
+        .route("/api/v1/ai-services/:id/logs", get(ai_services::logs))
+        .route(
+            "/api/v1/ai-services/:id/priority",
+            put(ai_services::priority),
+        )
+        .route(
+            "/api/v1/ai-services/:id",
+            delete(ai_services::delete)
+                .get(ai_services::read)
+                .post(ai_services::operation)
+                .put(ai_services::update),
         )
         .route(
             "/api/v1/chat-activities/:chat_id",
@@ -372,48 +426,6 @@ pub fn router(context: Arc<Context>) -> Router {
             delete(chats::delete).get(chats::read).put(chats::update),
         )
         .route(
-            "/api/v1/ai-functions/direct-call",
-            post(ai_functions::direct_call),
-        )
-        .route(
-            "/api/v1/ai-functions/:ai_service_id",
-            get(ai_functions::list),
-        )
-        .route(
-            "/api/v1/ai-functions/:ai_service_id/:ai_function_id",
-            delete(ai_functions::delete)
-                .get(ai_functions::read)
-                .put(ai_functions::update),
-        )
-        .route(
-            "/api/v1/ai-services",
-            get(ai_services::list).post(ai_services::create),
-        )
-        .route(
-            "/api/v1/ai-services/:id/allowed-users",
-            put(ai_services::allowed_users),
-        )
-        .route(
-            "/api/v1/ai-services/:id/configuration",
-            put(ai_services::configuration),
-        )
-        .route(
-            "/api/v1/ai-services/:id/installation",
-            put(ai_services::installation),
-        )
-        .route("/api/v1/ai-services/:id/logs", get(ai_services::logs))
-        .route(
-            "/api/v1/ai-services/:id/priority",
-            put(ai_services::priority),
-        )
-        .route(
-            "/api/v1/ai-services/:id",
-            delete(ai_services::delete)
-                .get(ai_services::read)
-                .post(ai_services::operation)
-                .put(ai_services::update),
-        )
-        .route(
             "/api/v1/example-prompts",
             get(example_prompts::list).post(example_prompts::create),
         )
@@ -442,6 +454,17 @@ pub fn router(context: Arc<Context>) -> Router {
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
+        )
+        .route(
+            "/api/v1/parameters",
+            get(parameters::list).post(parameters::create),
+        )
+        .route("/api/v1/parameters/names", get(parameters::names))
+        .route(
+            "/api/v1/parameters/:id",
+            delete(parameters::delete)
+                .get(parameters::read)
+                .put(parameters::update),
         )
         .route("/api/v1/password-resets", post(password_resets::request))
         .route(

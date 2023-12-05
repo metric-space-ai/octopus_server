@@ -74,16 +74,21 @@ pub enum AiClient {
 }
 
 pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
-    let ai_client = if context.config.azure_openai_enabled {
+    let azure_openai_enabled = context
+        .get_config()
+        .await?
+        .get_parameter_azure_openai_enabled();
+
+    let ai_client = if azure_openai_enabled {
         let api_key = context
-            .config
-            .azure_openai_api_key
-            .clone()
+            .get_config()
+            .await?
+            .get_parameter_azure_openai_api_key()
             .ok_or(AppError::Config)?;
         let deployment_id = context
-            .config
-            .azure_openai_deployment_id
-            .clone()
+            .get_config()
+            .await?
+            .get_parameter_azure_openai_deployment_id()
             .ok_or(AppError::Config)?;
         let config = AzureConfig::new()
             .with_api_base(AZURE_OPENAI_BASE_URL)
@@ -94,9 +99,9 @@ pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
         AiClient::Azure(Client::with_config(config))
     } else {
         let api_key = context
-            .config
-            .openai_api_key
-            .clone()
+            .get_config()
+            .await?
+            .get_parameter_openai_api_key()
             .ok_or(AppError::Config)?;
         let config = OpenAIConfig::new().with_api_key(api_key);
 
@@ -468,7 +473,7 @@ pub async fn open_ai_request(
         functions.push(function);
     }
 
-    if !context.config.test_mode {
+    if !context.get_config().await?.test_mode {
         let request = match &ai_client {
             AiClient::Azure(_ai_client) => CreateChatCompletionRequestArgs::default()
                 .max_tokens(512u16)

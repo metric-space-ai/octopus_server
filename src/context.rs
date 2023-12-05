@@ -1,7 +1,8 @@
-use crate::{config::Config, database::OctopusDatabase, process_manager::ProcessManager};
+use crate::{config::Config, database::OctopusDatabase, process_manager::ProcessManager, Result};
+use tokio::sync::RwLock;
 
 pub struct Context {
-    pub config: Config,
+    pub config: RwLock<Config>,
     pub octopus_database: OctopusDatabase,
     pub process_manager: ProcessManager,
 }
@@ -13,9 +14,22 @@ impl Context {
         process_manager: ProcessManager,
     ) -> Self {
         Self {
-            config,
+            config: RwLock::new(config),
             octopus_database,
             process_manager,
         }
+    }
+
+    pub async fn get_config(&self) -> Result<Config> {
+        let config = self.config.read().await;
+
+        Ok(config.clone())
+    }
+
+    pub async fn set_config(&self, new_config: Config) -> Result<Config> {
+        let mut config = self.config.write().await;
+        config.parameters = new_config.parameters;
+
+        Ok(config.clone())
     }
 }

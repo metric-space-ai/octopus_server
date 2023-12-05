@@ -318,6 +318,23 @@ pub struct InspectionDisabling {
     pub updated_at: DateTime<Utc>,
 }
 
+pub const PARAMETER_NAME_AZURE_OPENAI_API_KEY: &str = "AZURE_OPENAI_API_KEY";
+pub const PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID: &str = "AZURE_OPENAI_DEPLOYMENT_ID";
+pub const PARAMETER_NAME_AZURE_OPENAI_ENABLED: &str = "AZURE_OPENAI_ENABLED";
+pub const PARAMETER_NAME_OCTOPUS_DOMAIN: &str = "OCTOPUS_DOMAIN";
+pub const PARAMETER_NAME_OPENAI_API_KEY: &str = "OPENAI_API_KEY";
+pub const PARAMETER_NAME_SENDGRID_API_KEY: &str = "SENDGRID_API_KEY";
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Parameter {
+    pub id: Uuid,
+    pub name: String,
+    pub value: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct PasswordResetToken {
     pub id: Uuid,

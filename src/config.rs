@@ -1,81 +1,137 @@
-use crate::{Args, Result};
+use crate::{
+    entity::{
+        Parameter, PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
+        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_OPENAI_API_KEY,
+        PARAMETER_NAME_SENDGRID_API_KEY,
+    },
+    Args, Result,
+};
 
 #[derive(Clone, Debug)]
 pub struct Config {
-    pub azure_openai_api_key: Option<String>,
-    pub azure_openai_deployment_id: Option<String>,
-    pub azure_openai_enabled: bool,
     pub database_url: String,
-    pub openai_api_key: Option<String>,
+    pub parameters: Vec<Parameter>,
     pub pepper: String,
     pub pepper_id: i32,
     pub port: u16,
-    pub sendgrid_api_key: String,
     pub test_mode: bool,
 }
 
 impl Config {
-    #[allow(clippy::too_many_arguments)]
     pub fn new(
-        azure_openai_api_key: Option<String>,
-        azure_openai_deployment_id: Option<String>,
-        azure_openai_enabled: bool,
         database_url: String,
-        openai_api_key: Option<String>,
+        parameters: Vec<Parameter>,
         pepper: String,
         pepper_id: i32,
         port: u16,
-        sendgrid_api_key: String,
         test_mode: bool,
     ) -> Self {
         Self {
-            azure_openai_api_key,
-            azure_openai_deployment_id,
-            azure_openai_enabled,
             database_url,
-            openai_api_key,
+            parameters,
             pepper,
             pepper_id,
             port,
-            sendgrid_api_key,
             test_mode,
         }
+    }
+
+    pub fn get_parameter_azure_openai_api_key(&self) -> Option<String> {
+        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_API_KEY) {
+            None => {
+                if let Ok(val) = std::env::var("AZURE_OPENAI_API_KEY") {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            Some(azure_openai_api_key) => Some(azure_openai_api_key),
+        }
+    }
+
+    pub fn get_parameter_azure_openai_deployment_id(&self) -> Option<String> {
+        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID) {
+            None => {
+                if let Ok(val) = std::env::var("AZURE_OPENAI_DEPLOYMENT_ID") {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            Some(azure_openai_deployment_id) => Some(azure_openai_deployment_id),
+        }
+    }
+
+    pub fn get_parameter_azure_openai_enabled(&self) -> bool {
+        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_ENABLED) {
+            None => {
+                let val = std::env::var("AZURE_OPENAI_ENABLED");
+                if let Ok(val) = val {
+                    if let Ok(val) = val.parse::<bool>() {
+                        val
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            }
+            Some(azure_openai_enabled) => {
+                let parse_result = azure_openai_enabled.parse::<bool>();
+
+                parse_result.unwrap_or(false)
+            }
+        }
+    }
+
+    pub fn get_parameter_openai_api_key(&self) -> Option<String> {
+        match self.get_parameter_value(PARAMETER_NAME_OPENAI_API_KEY) {
+            None => {
+                if let Ok(val) = std::env::var("OPENAI_API_KEY") {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            Some(openai_api_key) => Some(openai_api_key),
+        }
+    }
+
+    pub fn get_parameter_sendgrid_api_key(&self) -> Option<String> {
+        match self.get_parameter_value(PARAMETER_NAME_SENDGRID_API_KEY) {
+            None => {
+                if let Ok(val) = std::env::var("SENDGRID_API_KEY") {
+                    Some(val)
+                } else {
+                    None
+                }
+            }
+            Some(sendgrid_api_key) => Some(sendgrid_api_key),
+        }
+    }
+
+    pub fn get_parameter_value(&self, name: &str) -> Option<String> {
+        for parameter in &self.parameters {
+            if parameter.name == name {
+                return Some(parameter.value.clone());
+            }
+        }
+
+        None
+    }
+
+    pub fn set_parameters(&mut self, parameters: Vec<Parameter>) -> Config {
+        self.parameters = parameters;
+
+        self.clone()
     }
 }
 
 pub fn load(args: Args) -> Result<Config> {
-    let mut azure_openai_api_key: Option<String> = None;
-    let mut azure_openai_deployment_id: Option<String> = None;
-    let mut azure_openai_enabled = false;
     let mut database_url: Option<String> = None;
-    let mut openai_api_key: Option<String> = None;
+    let parameters = vec![];
     let mut port = 8080;
-    let mut sendgrid_api_key: Option<String> = None;
     let mut test_mode = false;
-
-    if let Ok(val) = std::env::var("AZURE_OPENAI_API_KEY") {
-        azure_openai_api_key = Some(val);
-    }
-
-    if let Some(val) = args.azure_openai_api_key {
-        azure_openai_api_key = Some(val);
-    }
-
-    if let Ok(val) = std::env::var("AZURE_OPENAI_DEPLOYMENT_ID") {
-        azure_openai_deployment_id = Some(val);
-    }
-
-    if let Some(val) = args.azure_openai_deployment_id {
-        azure_openai_deployment_id = Some(val);
-    }
-
-    if let Ok(val) = std::env::var("AZURE_OPENAI_ENABLED")?.parse::<bool>() {
-        azure_openai_enabled = val;
-    }
-
-    if let Some(val) = args.azure_openai_enabled {
-        azure_openai_enabled = val;
-    }
 
     if let Ok(val) = std::env::var("DATABASE_URL") {
         database_url = Some(val);
@@ -83,14 +139,6 @@ pub fn load(args: Args) -> Result<Config> {
 
     if let Some(val) = args.database_url {
         database_url = Some(val);
-    }
-
-    if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-        openai_api_key = Some(val);
-    }
-
-    if let Some(val) = args.openai_api_key {
-        openai_api_key = Some(val);
     }
 
     let pepper = std::env::var("OCTOPUS_PEPPER")?;
@@ -104,39 +152,16 @@ pub fn load(args: Args) -> Result<Config> {
         port = val;
     }
 
-    if let Ok(val) = std::env::var("SENDGRID_API_KEY") {
-        sendgrid_api_key = Some(val);
-    }
-
-    if azure_openai_enabled
-        && (azure_openai_api_key.is_none() || azure_openai_deployment_id.is_none())
-    {
-        azure_openai_api_key
-            .clone()
-            .expect("Azure OpenAI API key not provided");
-        azure_openai_api_key
-            .clone()
-            .expect("Azure OpenAI deployment id not provided");
-    }
-
-    if !azure_openai_enabled && openai_api_key.is_none() {
-        openai_api_key.clone().expect("OpenAI API key not provided");
-    }
-
     if let Some(val) = args.test_mode {
         test_mode = val;
     }
 
     let config = Config::new(
-        azure_openai_api_key,
-        azure_openai_deployment_id,
-        azure_openai_enabled,
         database_url.expect("Unknown database url"),
-        openai_api_key,
+        parameters,
         pepper,
         pepper_id,
         port,
-        sendgrid_api_key.expect("SendGrid API key not provided"),
         test_mode,
     );
 
