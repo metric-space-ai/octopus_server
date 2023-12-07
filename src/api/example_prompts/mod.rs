@@ -272,6 +272,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -283,6 +284,56 @@ mod tests {
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn example_prompt_create(
+        router: Router,
+        session_id: Uuid,
+        example_prompt_category_id: Uuid,
+        is_visible: bool,
+        priority: i32,
+        prompt: &str,
+        title: &str,
+    ) -> ExamplePrompt {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/example-prompts")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "example_prompt_category_id": &example_prompt_category_id,
+                            "is_visible": &is_visible,
+                            "priority": &priority,
+                            "prompt": &prompt,
+                            "title": &title,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.example_prompt_category_id, example_prompt_category_id);
+        assert_eq!(body.is_visible, is_visible);
+        assert_eq!(body.priority, priority);
+        assert_eq!(body.prompt, prompt);
+        assert_eq!(body.title, title);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201() {
@@ -336,42 +387,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let mut transaction = app
             .context
@@ -606,42 +632,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -745,42 +746,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let email = format!(
             "{}{}{}",
@@ -994,42 +970,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -1146,42 +1097,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -1288,42 +1214,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -1442,42 +1343,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -1662,42 +1538,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -1816,42 +1667,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let response = fifth_router
             .oneshot(
@@ -2032,42 +1858,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let is_visible = false;
         let priority = 10;
@@ -2202,42 +2003,17 @@ mod tests {
         let prompt = "sample prompt";
         let title = "sample title";
 
-        let response = fourth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompts")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "example_prompt_category_id": &example_prompt_category_id,
-                            "is_visible": &is_visible,
-                            "priority": &priority,
-                            "prompt": &prompt,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePrompt = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.priority, priority);
-        assert_eq!(body.prompt, prompt);
-
-        let example_prompt_id = body.id;
+        let example_prompt = example_prompt_create(
+            fourth_router,
+            session_id,
+            example_prompt_category_id,
+            is_visible,
+            priority,
+            prompt,
+            title,
+        )
+        .await;
+        let example_prompt_id = example_prompt.id;
 
         let email = format!(
             "{}{}{}",
