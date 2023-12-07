@@ -129,6 +129,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -140,6 +141,40 @@ mod tests {
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn chat_activity_create(
+        router: Router,
+        session_id: Uuid,
+        chat_id: Uuid,
+        user_id: Uuid,
+    ) -> ChatActivity {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201() {
@@ -191,29 +226,7 @@ mod tests {
             api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        chat_activity_create(fifth_router, session_id, chat_id, user_id).await;
 
         let mut transaction = app
             .context
@@ -646,29 +659,7 @@ mod tests {
                 .await;
         let chat_id = chat.id;
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        chat_activity_create(seventh_router, admin_session_id, chat_id, user_id).await;
 
         let response = eighth_router
             .oneshot(
@@ -834,29 +825,7 @@ mod tests {
                 .await;
         let chat_id = chat.id;
 
-        let response = seventh_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        chat_activity_create(seventh_router, admin_session_id, chat_id, user_id).await;
 
         let response = eighth_router
             .oneshot(
@@ -988,29 +957,7 @@ mod tests {
                 .await;
         let chat_id = chat.id;
 
-        let response = fifth_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/chat-activities/{chat_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatActivity = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        chat_activity_create(fifth_router, admin_session_id, chat_id, user_id).await;
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(

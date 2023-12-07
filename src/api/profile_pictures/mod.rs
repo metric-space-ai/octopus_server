@@ -277,8 +277,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -408,8 +408,8 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -540,8 +540,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -650,8 +650,8 @@ mod tests {
             api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -800,8 +800,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1055,8 +1055,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1170,8 +1170,8 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1283,8 +1283,8 @@ mod tests {
 
         api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1389,8 +1389,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1511,8 +1511,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1631,8 +1631,8 @@ mod tests {
 
         let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",

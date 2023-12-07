@@ -443,8 +443,8 @@ mod tests {
         session_id: Uuid,
         chat_message_id: Uuid,
     ) -> ChatMessagePicture {
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -644,8 +644,8 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -787,8 +787,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -885,8 +885,8 @@ mod tests {
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2023,8 +2023,8 @@ mod tests {
             chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2161,8 +2161,8 @@ mod tests {
             chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2317,8 +2317,8 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2443,8 +2443,8 @@ mod tests {
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
         let chat_message_picture_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .unwrap();
+        let body =
+            multipart::tests::file_data("image/png", "test.png", "data/test/test.png").unwrap();
 
         let value = format!(
             "{}; boundary={}",
