@@ -206,6 +206,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -217,6 +218,45 @@ mod tests {
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn inspection_disabling_create(
+        router: Router,
+        session_id: Uuid,
+        user_id: Uuid,
+        minutes: i32,
+    ) -> InspectionDisabling {
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "minutes": &minutes,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201() {
@@ -251,34 +291,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let mut transaction = app
             .context
@@ -629,34 +642,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let response = fourth_router
             .oneshot(
@@ -733,34 +719,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let response = fourth_router
             .oneshot(
@@ -838,34 +797,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let email = format!(
             "{}{}{}",
@@ -1046,34 +978,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let response = fourth_router
             .oneshot(
@@ -1165,34 +1070,7 @@ mod tests {
 
         let minutes = 10;
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/inspection-disablings/{user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "minutes": &minutes,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: InspectionDisabling = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
+        inspection_disabling_create(third_router, session_id, user_id, minutes).await;
 
         let response = fourth_router
             .oneshot(

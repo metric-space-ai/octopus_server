@@ -71,7 +71,7 @@ pub async fn run() -> Result<()> {
 
     info!("listening on {}", listener.local_addr()?);
 
-    axum::serve(listener, app.router).await.unwrap();
+    axum::serve(listener, app.router).await?;
 
     Ok(())
 }
