@@ -268,11 +268,7 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        api, app,
-        entity::{ExamplePrompt, ExamplePromptCategory},
-        Args,
-    };
+    use crate::{api, app, entity::ExamplePrompt, Args};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -324,40 +320,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -477,40 +449,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let email = format!(
             "{}{}{}",
@@ -642,40 +590,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -805,40 +729,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -1078,40 +978,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -1254,40 +1130,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -1420,40 +1272,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -1598,40 +1426,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -1842,40 +1646,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -2020,40 +1800,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -2260,40 +2016,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -2454,40 +2186,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = true;
         let priority = 0;
@@ -2668,40 +2376,16 @@ mod tests {
         let is_visible = true;
         let title = "sample title";
 
-        let response = third_router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/example-prompt-categories")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "description": &description,
-                            "is_visible": &is_visible,
-                            "title": &title,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
+        let example_prompt_category =
+            api::example_prompt_categories::tests::example_prompt_category_create(
+                third_router,
+                session_id,
+                description,
+                is_visible,
+                title,
             )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ExamplePromptCategory = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.description, description);
-        assert_eq!(body.is_visible, is_visible);
-        assert_eq!(body.title, title);
-
-        let example_prompt_category_id = body.id;
+            .await;
+        let example_prompt_category_id = example_prompt_category.id;
 
         let is_visible = false;
         let priority = 10;
