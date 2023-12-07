@@ -63,7 +63,7 @@ pub async fn send_invitation_email(
             reqwest::Client::new()
                 .post(format!("{SENDGRID_API_URL}/mail/send"))
                 .json(&message)
-                .header(AUTHORIZATION, format!("Bearer {}", sendgrid_api_key))
+                .header(AUTHORIZATION, format!("Bearer {sendgrid_api_key}"))
                 .send()
                 .await?;
         } else {
@@ -107,7 +107,7 @@ pub async fn send_password_reset_request_email(
             reqwest::Client::new()
                 .post(format!("{SENDGRID_API_URL}/mail/send"))
                 .json(&message)
-                .header(AUTHORIZATION, format!("Bearer {}", sendgrid_api_key))
+                .header(AUTHORIZATION, format!("Bearer {sendgrid_api_key}"))
                 .send()
                 .await?;
         } else {

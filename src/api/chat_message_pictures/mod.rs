@@ -424,6 +424,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -435,6 +436,46 @@ mod tests {
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
+
+    pub async fn chat_message_picture_create(
+        router: Router,
+        session_id: Uuid,
+        chat_message_id: Uuid,
+    ) -> ChatMessagePicture {
+        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
+            .await
+            .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::CREATED);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.chat_message_id, chat_message_id);
+
+        body
+    }
 
     #[tokio::test]
     async fn create_201() {
@@ -499,38 +540,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let mut transaction = app
             .context
@@ -988,38 +1000,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let response = seventh_router
             .oneshot(
@@ -1134,38 +1117,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let response = seventh_router
             .oneshot(
@@ -1287,38 +1241,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
             "{}{}{}",
@@ -1579,38 +1504,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let response = seventh_router
             .oneshot(
@@ -1740,38 +1636,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let response = seventh_router
             .oneshot(
@@ -1893,38 +1760,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
             "{}{}{}",
@@ -2185,38 +2023,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
             .await
@@ -2353,38 +2162,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
             .await
@@ -2513,38 +2293,9 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let body = multipart::tests::file_data("image/png", "test.png", "data/test/test.png")
-            .await
-            .unwrap();
-
-        let value = format!(
-            "{}; boundary={}",
-            mime::MULTIPART_FORM_DATA,
-            multipart::tests::BOUNDARY
-        );
-
-        let request = Request::builder()
-            .method(http::Method::POST)
-            .uri(format!("/api/v1/chat-message-pictures/{chat_message_id}"))
-            .header(http::header::CONTENT_TYPE, value)
-            .header("X-Auth-Token".to_string(), session_id.to_string())
-            .body(body)
-            .unwrap();
-
-        let response = sixth_router.oneshot(request).await.unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: ChatMessagePicture = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.chat_message_id, chat_message_id);
-
-        let chat_message_picture_id = body.id;
+        let chat_message_picture =
+            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
             "{}{}{}",
