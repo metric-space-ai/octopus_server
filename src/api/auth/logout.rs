@@ -70,9 +70,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -83,15 +80,17 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
-        let response = third_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -106,7 +105,7 @@ mod tests {
 
         assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)

@@ -251,7 +251,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -262,11 +261,12 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -374,8 +374,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -386,11 +384,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -421,7 +421,7 @@ mod tests {
 
         let password_reset_token_id = body.id;
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -483,8 +483,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -495,11 +493,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -536,7 +536,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -598,8 +598,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -610,11 +608,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -653,7 +653,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -749,8 +749,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -761,11 +759,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -810,7 +810,7 @@ mod tests {
             .await
             .unwrap();
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -867,10 +867,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -881,11 +877,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -924,7 +922,8 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let response = third_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -950,7 +949,8 @@ mod tests {
 
         let new_password = "newpassword123";
 
-        let response = fourth_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -980,7 +980,7 @@ mod tests {
         assert_eq!(body.id, user_id);
         assert_eq!(body.email, email);
 
-        api::auth::login::tests::login_post(fifth_router, &email, new_password, user_id).await;
+        api::auth::login::tests::login_post(router, &email, new_password, user_id).await;
 
         let mut transaction = app
             .context
@@ -1025,9 +1025,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1038,11 +1035,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1081,7 +1080,8 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let response = third_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1107,7 +1107,7 @@ mod tests {
 
         let new_password = "newpassword123";
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -1206,9 +1206,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1219,11 +1216,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = second_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1262,7 +1261,8 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        let response = third_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1294,7 +1294,7 @@ mod tests {
 
         let new_password = "newpassword123";
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)

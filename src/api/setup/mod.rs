@@ -337,10 +337,9 @@ pub mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -372,11 +371,11 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = setup_post(second_router, &company_name, &email, password).await;
+        let user = setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -532,7 +531,6 @@ pub mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let cloned_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -543,11 +541,11 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = setup_post(router, &company_name, &email, password).await;
+        let user = setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = cloned_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)

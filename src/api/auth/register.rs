@@ -246,7 +246,6 @@ pub mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -257,7 +256,8 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -271,15 +271,9 @@ pub mod tests {
         let name = Name().fake::<String>();
         let password = "password123";
 
-        let user = register_with_company_id_post(
-            second_router,
-            company_id,
-            &email,
-            &job_title,
-            &name,
-            password,
-        )
-        .await;
+        let user =
+            register_with_company_id_post(router, company_id, &email, &job_title, &name, password)
+                .await;
         let second_user_id = user.id;
 
         let mut transaction = app
@@ -325,7 +319,6 @@ pub mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -336,7 +329,8 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -351,7 +345,7 @@ pub mod tests {
         let password = "password123";
         let repeat_password = "password1234";
 
-        let response = second_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -411,8 +405,6 @@ pub mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -423,7 +415,8 @@ pub mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -438,7 +431,7 @@ pub mod tests {
         let password = "password123";
 
         let user = register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -448,7 +441,7 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
-        let response = third_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)

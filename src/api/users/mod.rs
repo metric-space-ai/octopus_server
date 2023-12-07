@@ -529,9 +529,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -542,12 +539,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -561,7 +559,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -583,7 +581,7 @@ mod tests {
         let password = "password123";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -662,9 +660,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -675,12 +670,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -694,7 +690,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -716,7 +712,7 @@ mod tests {
         let password = "pass";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -785,9 +781,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -798,7 +791,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -813,7 +807,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -823,7 +817,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
         let email = format!(
             "{}{}{}",
@@ -837,7 +831,7 @@ mod tests {
         let password = "password123";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -905,9 +899,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -918,7 +909,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -933,7 +925,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -944,7 +936,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -960,7 +952,7 @@ mod tests {
         let password = "password123";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1029,10 +1021,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1043,12 +1031,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1062,7 +1051,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1084,7 +1073,8 @@ mod tests {
         let password = "password123";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1120,7 +1110,7 @@ mod tests {
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1189,9 +1179,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1202,12 +1189,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let email = format!(
@@ -1221,7 +1209,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1231,7 +1219,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1283,9 +1271,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1296,12 +1281,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1315,7 +1301,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1325,7 +1311,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1377,9 +1363,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1390,7 +1373,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -1405,7 +1389,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1415,9 +1399,9 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1474,9 +1458,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1487,7 +1468,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -1502,7 +1484,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1513,11 +1495,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1575,10 +1557,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1589,7 +1567,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -1604,7 +1583,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1624,16 +1603,16 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(third_router, &company_name, &email, password).await;
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let second_company_id = user.company_id;
         let third_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, third_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, third_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1703,9 +1682,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1716,12 +1692,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1735,7 +1712,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1747,7 +1724,7 @@ mod tests {
 
         let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1805,9 +1782,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1818,12 +1792,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1837,7 +1812,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1855,7 +1830,7 @@ mod tests {
         );
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -1928,9 +1903,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1941,12 +1913,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -1960,7 +1933,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1973,7 +1946,7 @@ mod tests {
         let email = "wrong email";
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -2037,9 +2010,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2050,7 +2020,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2065,7 +2036,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2075,7 +2046,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
         let email = format!(
             "{}{}{}",
@@ -2085,7 +2056,7 @@ mod tests {
         );
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -2148,9 +2119,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2161,7 +2129,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2176,7 +2145,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2187,7 +2156,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2199,7 +2168,7 @@ mod tests {
         );
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -2263,10 +2232,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2277,12 +2242,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -2296,7 +2262,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2314,7 +2280,8 @@ mod tests {
         );
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
+            .clone()
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -2344,7 +2311,7 @@ mod tests {
 
         assert_eq!(body.email, email);
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
@@ -2408,9 +2375,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2421,7 +2385,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2436,7 +2401,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2447,11 +2412,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -2518,9 +2483,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2531,7 +2493,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2546,7 +2509,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2556,9 +2519,9 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -2615,9 +2578,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2628,7 +2588,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2643,7 +2604,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2654,11 +2615,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -2726,9 +2687,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2739,12 +2697,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -2758,7 +2717,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2768,7 +2727,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -2836,9 +2795,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2849,7 +2805,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2864,7 +2821,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2874,9 +2831,9 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -2933,9 +2890,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2946,7 +2900,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -2961,7 +2916,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2972,11 +2927,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -3034,10 +2989,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3048,7 +2999,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3063,7 +3015,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3083,16 +3035,16 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(third_router, &company_name, &email, password).await;
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let second_company_id = user.company_id;
         let third_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, third_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, third_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -3162,9 +3114,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3175,12 +3124,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3194,7 +3144,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3206,7 +3156,7 @@ mod tests {
 
         let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -3264,9 +3214,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3277,7 +3224,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3292,7 +3240,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3303,11 +3251,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -3374,9 +3322,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3387,7 +3332,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3402,7 +3348,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3412,9 +3358,9 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -3471,9 +3417,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3484,7 +3427,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3499,7 +3443,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3510,7 +3454,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -3521,7 +3465,7 @@ mod tests {
             SafeEmail().fake::<String>()
         );
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -3594,9 +3538,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3607,12 +3548,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3626,7 +3568,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3645,7 +3587,7 @@ mod tests {
         let is_enabled = false;
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -3721,9 +3663,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3734,12 +3673,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -3753,7 +3693,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3771,7 +3711,7 @@ mod tests {
         );
         let is_enabled = false;
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -3835,9 +3775,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3848,7 +3785,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3863,7 +3801,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3873,7 +3811,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(third_router, &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
 
         let email = format!(
             "{}{}{}",
@@ -3882,7 +3820,7 @@ mod tests {
             SafeEmail().fake::<String>()
         );
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -3944,9 +3882,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -3957,7 +3892,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -3972,7 +3908,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -3983,7 +3919,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(third_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -3994,7 +3930,7 @@ mod tests {
             SafeEmail().fake::<String>()
         );
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -4057,10 +3993,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -4071,7 +4003,8 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -4086,7 +4019,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            second_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -4106,12 +4039,12 @@ mod tests {
         let password = "password123";
 
         let user =
-            api::setup::tests::setup_post(third_router, &company_name, &email, password).await;
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let second_company_id = user.company_id;
         let third_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(fourth_router, &email, password, third_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, third_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -4124,7 +4057,7 @@ mod tests {
         let is_enabled = false;
         let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
@@ -4201,9 +4134,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -4214,12 +4144,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let admin_session_id = session_response.id;
 
         let email = format!(
@@ -4233,7 +4164,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            third_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -4252,7 +4183,7 @@ mod tests {
             SafeEmail().fake::<String>()
         );
 
-        let response = fourth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)

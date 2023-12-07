@@ -487,11 +487,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -502,19 +497,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -524,13 +520,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -539,8 +535,8 @@ mod tests {
         .await;
         let chat_message_id = chat_message.id;
 
-        let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+        let chat_message_picture: ChatMessagePicture =
+            chat_message_picture_create(router, session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let mut transaction = app
@@ -592,11 +588,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -607,19 +598,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -629,13 +621,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -660,7 +652,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = sixth_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
@@ -707,13 +699,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
-        let eighth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -724,19 +709,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -746,13 +732,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -772,7 +758,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            sixth_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -783,7 +769,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(seventh_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -804,7 +790,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = eighth_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
@@ -863,8 +849,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -875,12 +859,13 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
@@ -902,7 +887,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = third_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
@@ -943,12 +928,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -959,19 +938,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -981,13 +961,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -997,10 +977,10 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let response = seventh_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1060,12 +1040,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1076,19 +1050,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1098,13 +1073,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -1114,10 +1089,10 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let response = seventh_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1182,14 +1157,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
-        let eighth_router = router.clone();
-        let ninth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1200,19 +1167,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1222,13 +1190,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -1238,7 +1206,7 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
@@ -1252,7 +1220,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            seventh_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1263,11 +1231,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = ninth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1345,10 +1313,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1359,19 +1323,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1381,13 +1346,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
         let chat_message_picture_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
@@ -1447,12 +1412,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1463,19 +1422,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1485,13 +1445,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -1501,10 +1461,10 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let response = seventh_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1579,12 +1539,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1595,19 +1549,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1617,13 +1572,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -1633,10 +1588,10 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let response = seventh_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1701,14 +1656,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
-        let eighth_router = router.clone();
-        let ninth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1719,19 +1666,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1741,13 +1689,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -1757,7 +1705,7 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
@@ -1771,7 +1719,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            seventh_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -1782,11 +1730,11 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let response = ninth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1864,10 +1812,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1878,19 +1822,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -1900,13 +1845,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
         let chat_message_picture_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let response = fifth_router
+        let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
@@ -1966,12 +1911,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -1982,19 +1921,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -2004,13 +1944,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -2020,7 +1960,7 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let body =
@@ -2042,7 +1982,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = seventh_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::OK);
 
@@ -2104,12 +2044,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2120,19 +2054,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -2142,13 +2077,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -2158,7 +2093,7 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let body =
@@ -2179,7 +2114,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = seventh_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
@@ -2232,14 +2167,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
-        let sixth_router = router.clone();
-        let seventh_router = router.clone();
-        let eighth_router = router.clone();
-        let ninth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2250,19 +2177,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -2272,13 +2200,13 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let message = "test message";
 
         let chat_message = api::chat_messages::tests::chat_message_create(
-            fifth_router,
+            router.clone(),
             session_id,
             chat_id,
             user_id,
@@ -2288,7 +2216,7 @@ mod tests {
         let chat_message_id = chat_message.id;
 
         let chat_message_picture =
-            chat_message_picture_create(sixth_router, session_id, chat_message_id).await;
+            chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
         let email = format!(
@@ -2302,7 +2230,7 @@ mod tests {
         let password = "password123";
 
         let user = api::auth::register::tests::register_with_company_id_post(
-            seventh_router,
+            router.clone(),
             company_id,
             &email,
             &job_title,
@@ -2313,7 +2241,7 @@ mod tests {
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(eighth_router, &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2336,7 +2264,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = ninth_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
@@ -2401,10 +2329,6 @@ mod tests {
         };
         let app = app::get_app(args).await.unwrap();
         let router = app.router;
-        let second_router = router.clone();
-        let third_router = router.clone();
-        let fourth_router = router.clone();
-        let fifth_router = router.clone();
 
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
@@ -2415,19 +2339,20 @@ mod tests {
         );
         let password = "password123";
 
-        let user = api::setup::tests::setup_post(router, &company_name, &email, password).await;
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(second_router, &email, password, user_id).await;
+            api::auth::login::tests::login_post(router.clone(), &email, password, user_id).await;
         let session_id = session_response.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";
 
         let workspace = api::workspaces::tests::workspace_create(
-            third_router,
+            router.clone(),
             session_id,
             user_id,
             &name,
@@ -2437,7 +2362,7 @@ mod tests {
         let workspace_id = workspace.id;
 
         let chat =
-            api::chats::tests::chat_create(fourth_router, session_id, user_id, workspace_id).await;
+            api::chats::tests::chat_create(router.clone(), session_id, user_id, workspace_id).await;
         let chat_id = chat.id;
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
@@ -2462,7 +2387,7 @@ mod tests {
             .body(body)
             .unwrap();
 
-        let response = fifth_router.oneshot(request).await.unwrap();
+        let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
