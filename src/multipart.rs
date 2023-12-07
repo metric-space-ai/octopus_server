@@ -5,7 +5,7 @@ pub mod tests {
 
     pub const BOUNDARY: &str = "------------------------0123456789abcdef";
 
-    pub async fn file_data(content_type: &str, name: &str, path: &str) -> Result<String> {
+    pub fn file_data(content_type: &str, name: &str, path: &str) -> Result<String> {
         let mut data = String::new();
         let mut file_data = vec![];
         data.push_str(&format!("--{BOUNDARY}\r\n"));

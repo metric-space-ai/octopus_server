@@ -730,7 +730,6 @@ pub mod tests {
     pub async fn ai_service_create(router: Router, session_id: Uuid) -> AiService {
         let body =
             multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .await
                 .unwrap();
 
         let value = format!(
@@ -1566,7 +1565,6 @@ pub mod tests {
 
         let body =
             multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .await
                 .unwrap();
 
         let value = format!(
@@ -3209,7 +3207,6 @@ pub mod tests {
 
         let body =
             multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .await
                 .unwrap();
 
         let value = format!(
@@ -3391,7 +3388,6 @@ pub mod tests {
 
         let body =
             multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .await
                 .unwrap();
 
         let value = format!(
@@ -3478,7 +3474,6 @@ pub mod tests {
 
         let body =
             multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .await
                 .unwrap();
 
         let value = format!(
