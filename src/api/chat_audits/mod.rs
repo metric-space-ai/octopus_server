@@ -75,7 +75,6 @@ mod tests {
         entity::{
             ChatAudit, ROLE_ADMIN, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER,
         },
-        Args,
     };
     use axum::{
         body::Body,
@@ -94,14 +93,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -237,14 +229,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_403() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -388,14 +373,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -541,14 +519,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_403() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -702,14 +673,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_404() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();

@@ -187,7 +187,7 @@ pub async fn read(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::ChatMessageFile, Args};
+    use crate::{api, app, entity::ChatMessageFile};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -205,14 +205,7 @@ mod tests {
 
     #[tokio::test]
     async fn delete_204() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -347,14 +340,7 @@ mod tests {
 
     #[tokio::test]
     async fn delete_401() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -488,14 +474,7 @@ mod tests {
 
     #[tokio::test]
     async fn delete_403() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -669,14 +648,7 @@ mod tests {
 
     #[tokio::test]
     async fn delete_403_different_company_admin() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -848,14 +820,7 @@ mod tests {
 
     #[tokio::test]
     async fn delete_404() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -970,14 +935,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1124,14 +1082,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_401() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1268,14 +1219,7 @@ mod tests {
 
     #[tokio::test]
     async fn list_403() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1447,14 +1391,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1604,14 +1541,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_401() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1751,14 +1681,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_403() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -1924,14 +1847,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_404() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();

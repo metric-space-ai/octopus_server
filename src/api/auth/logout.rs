@@ -45,7 +45,7 @@ pub async fn logout(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, Args};
+    use crate::{api, app};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -61,14 +61,7 @@ mod tests {
 
     #[tokio::test]
     async fn logout_204() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -148,14 +141,7 @@ mod tests {
 
     #[tokio::test]
     async fn logout_204_no_authentication() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let response = router

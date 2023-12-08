@@ -33,3 +33,21 @@ pub async fn get_context(args: Args) -> Result<Arc<Context>> {
 
     Ok(context)
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::{app, app::App, Args};
+
+    pub async fn get_test_app() -> App {
+        let args = Args {
+            database_url: Some(String::from(
+                "postgres://admin:admin@db/octopus_server_test",
+            )),
+            port: None,
+            test_mode: Some(true),
+        };
+        
+
+        app::get_app(args).await.unwrap()
+    }
+}

@@ -270,7 +270,7 @@ pub struct SetupPost {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{api::setup::SetupInfoResponse, app, entity::User, Args};
+    use crate::{api::setup::SetupInfoResponse, app, entity::User};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -328,14 +328,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn info_200() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let response = router
@@ -426,14 +419,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn register_201() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -477,14 +463,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn register_400() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
@@ -522,14 +501,7 @@ pub mod tests {
 
     #[tokio::test]
     async fn register_409() {
-        let args = Args {
-            database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
-            )),
-            port: None,
-            test_mode: Some(true),
-        };
-        let app = app::get_app(args).await.unwrap();
+        let app = app::tests::get_test_app().await;
         let router = app.router;
 
         let company_name = Paragraph(1..2).fake::<String>();
