@@ -698,13 +698,6 @@ pub mod tests {
         response::Response,
         Router,
     };
-    use fake::{
-        faker::{
-            internet::en::SafeEmail,
-            lorem::en::{Paragraph, Word},
-        },
-        Fake,
-    };
     use http_body_util::BodyExt;
     use tokio::time::{sleep, Duration};
     use tower::ServiceExt;
@@ -764,15 +757,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -855,15 +840,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -934,15 +911,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1007,15 +976,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1095,15 +1056,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1172,15 +1125,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1243,15 +1188,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1340,15 +1277,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1398,15 +1327,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1462,15 +1383,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1530,15 +1443,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1597,15 +1502,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1669,15 +1566,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1735,15 +1624,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1851,15 +1732,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -1956,15 +1829,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2022,15 +1887,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2095,15 +1952,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2177,15 +2026,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2249,15 +2090,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2331,15 +2164,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2403,15 +2228,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2469,15 +2286,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2560,15 +2369,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2639,15 +2440,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2712,15 +2505,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2795,15 +2580,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2867,15 +2644,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -2933,15 +2702,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -3023,15 +2784,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -3096,15 +2849,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
@@ -3175,15 +2920,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123".to_string();
-
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;

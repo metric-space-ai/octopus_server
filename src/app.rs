@@ -46,7 +46,6 @@ pub mod tests {
             port: None,
             test_mode: Some(true),
         };
-        
 
         app::get_app(args).await.unwrap()
     }

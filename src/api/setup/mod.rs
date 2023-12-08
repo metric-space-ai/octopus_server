@@ -286,6 +286,19 @@ pub mod tests {
     use http_body_util::BodyExt;
     use tower::ServiceExt;
 
+    pub fn get_setup_post_params() -> (String, String, String) {
+        let company_name = Paragraph(1..2).fake::<String>();
+        let email = format!(
+            "{}{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>(),
+            SafeEmail().fake::<String>()
+        );
+        let password = format!("password123{}", Word().fake::<String>());
+
+        (company_name, email, password)
+    }
+
     pub async fn setup_post(
         router: Router,
         company_name: &str,
@@ -422,16 +435,8 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let user = setup_post(router, &company_name, &email, password).await;
+        let (company_name, email, password) = get_setup_post_params();
+        let user = setup_post(router, &company_name, &email, &password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
@@ -466,14 +471,7 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
+        let (company_name, email, password) = get_setup_post_params();
         let repeat_password = "password1234";
 
         let response = router
@@ -504,16 +502,8 @@ pub mod tests {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let user = setup_post(router.clone(), &company_name, &email, password).await;
+        let (company_name, email, password) = get_setup_post_params();
+        let user = setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
