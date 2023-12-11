@@ -131,14 +131,7 @@ mod tests {
         http::{self, Request, StatusCode},
         Router,
     };
-    use fake::{
-        faker::{
-            internet::en::SafeEmail,
-            lorem::en::{Paragraph, Word},
-            name::en::Name,
-        },
-        Fake,
-    };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;
@@ -516,29 +509,23 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -664,28 +651,23 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let name = format!("workspace {}", Word().fake::<String>());
         let r#type = "Public";

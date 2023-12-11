@@ -4,16 +4,10 @@ use crate::{
     entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
 };
-use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    response::IntoResponse,
-    Json,
-};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
-use uuid::Uuid;
 use validator::Validate;
 
 #[axum_macros::debug_handler]
@@ -96,67 +90,6 @@ pub async fn register(
     }
 }
 
-pub async fn register_with_company_id(
-    State(context): State<Arc<Context>>,
-    Path(company_id): Path<Uuid>,
-    Json(input): Json<RegisterPost>,
-) -> Result<impl IntoResponse, AppError> {
-    input.validate()?;
-
-    let user_exists = context
-        .octopus_database
-        .try_get_user_by_email(&input.email)
-        .await?;
-
-    match user_exists {
-        None => {
-            if input.password != input.repeat_password {
-                return Err(AppError::PasswordDoesNotMatch);
-            }
-
-            let cloned_password = input.password.clone();
-            let config = context.get_config().await?;
-            let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
-                    .await??;
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let user = context
-                .octopus_database
-                .insert_user(
-                    &mut transaction,
-                    company_id,
-                    &input.email,
-                    true,
-                    false,
-                    context.get_config().await?.pepper_id,
-                    &pw_hash,
-                    &[ROLE_PUBLIC_USER.to_string()],
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .insert_profile(
-                    &mut transaction,
-                    user.id,
-                    Some(input.job_title),
-                    Some(input.name),
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            Ok((StatusCode::CREATED, Json(user)).into_response())
-        }
-        Some(_user_exists) => Err(AppError::UserAlreadyExists),
-    }
-}
-
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct RegisterPost {
     #[validate(email, length(max = 256))]
@@ -173,11 +106,10 @@ pub struct RegisterPost {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{api, app, entity::User};
+    use crate::{api, app};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use fake::{
         faker::{
@@ -187,53 +119,7 @@ pub mod tests {
         },
         Fake,
     };
-    use http_body_util::BodyExt;
     use tower::ServiceExt;
-    use uuid::Uuid;
-
-    pub async fn register_with_company_id_post(
-        router: Router,
-        company_id: Uuid,
-        email: &str,
-        job_title: &str,
-        name: &str,
-        password: &str,
-    ) -> User {
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: User = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.company_id, company_id);
-        assert_eq!(body.email, email);
-
-        body
-    }
 
     #[tokio::test]
     async fn register_201() {
@@ -246,19 +132,23 @@ pub mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user =
-            register_with_company_id_post(router, company_id, &email, &job_title, &name, password)
-                .await;
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
         let second_user_id = user.id;
 
         let mut transaction = app
@@ -319,7 +209,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
+                    .uri("/api/v1/auth/register".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
@@ -375,23 +265,21 @@ pub mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -400,7 +288,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/auth/register/{company_id}"))
+                    .uri("/api/v1/auth/register".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({

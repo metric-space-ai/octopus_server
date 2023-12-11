@@ -497,7 +497,7 @@ pub async fn update(
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use crate::{
         api, app,
         entity::{UserExtended, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
@@ -505,6 +505,7 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use fake::{
         faker::{
@@ -516,62 +517,42 @@ mod tests {
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
 
-    #[tokio::test]
-    async fn create_201() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
+    pub fn get_user_create_params() -> (String, bool, String, String, String, Vec<String>) {
         let email = format!(
             "{}{}{}",
             Word().fake::<String>(),
             Word().fake::<String>(),
             SafeEmail().fake::<String>()
         );
+        let is_enabled = true;
         let job_title = Paragraph(1..2).fake::<String>();
         let name = Name().fake::<String>();
-        let password = "password123";
+        let password = format!("password123{}", Word().fake::<String>());
+        let roles = vec![ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
 
-        let user = api::auth::register::tests::register_with_company_id_post(
-            router.clone(),
-            company_id,
-            &email,
-            &job_title,
-            &name,
-            password,
-        )
-        .await;
-        let second_user_id = user.id;
+        (email, is_enabled, job_title, name, password, roles)
+    }
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
+    #[allow(clippy::too_many_arguments)]
+    pub async fn user_create(
+        router: Router,
+        session_id: Uuid,
+        email: &str,
+        is_enabled: bool,
+        job_title: &str,
+        name: &str,
+        password: &str,
+        roles: &[String],
+    ) -> UserExtended {
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
                     .uri("/api/v1/users".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
                             "email": &email,
@@ -600,6 +581,53 @@ mod tests {
 
         assert_eq!(body.email, email);
         assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.roles, roles);
+
+        body
+    }
+
+    #[tokio::test]
+    async fn create_201() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
+            router,
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let third_user_id = user.id;
 
         let mut transaction = app
             .context
@@ -617,6 +645,12 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_user_by_id(&mut transaction, second_user_id)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_user_by_id(&mut transaction, third_user_id)
             .await
             .unwrap();
 
@@ -648,39 +682,22 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
+        let (email, is_enabled, job_title, name, _password, roles) = get_user_create_params();
         let password = "pass";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
         let response = router
             .oneshot(
                 Request::builder()
@@ -750,41 +767,28 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -853,44 +857,30 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -964,39 +954,21 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .clone()
             .oneshot(
@@ -1107,23 +1079,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1184,23 +1149,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1257,28 +1215,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let response = router
             .oneshot(
@@ -1337,29 +1293,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -1421,23 +1374,20 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1527,23 +1477,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1612,23 +1555,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1718,23 +1654,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -1806,28 +1735,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let email = format!(
             "{}{}{}",
@@ -1900,29 +1827,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2002,23 +1926,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -2126,29 +2043,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2219,28 +2133,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let response = router
             .oneshot(
@@ -2299,29 +2211,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2397,23 +2306,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -2486,28 +2388,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let response = router
             .oneshot(
@@ -2566,29 +2466,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2650,23 +2547,20 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -2756,23 +2650,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -2837,29 +2724,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -2930,28 +2814,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let response = router
             .oneshot(
@@ -3010,29 +2892,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -3120,23 +2999,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -3230,23 +3102,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -3323,28 +3188,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id).await;
+        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+            .await;
 
         let email = format!(
             "{}{}{}",
@@ -3415,29 +3278,26 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, password, second_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -3511,23 +3371,20 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
 
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;
@@ -3633,23 +3490,16 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
-
-        let user = api::auth::register::tests::register_with_company_id_post(
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
             router.clone(),
-            company_id,
+            admin_session_id,
             &email,
+            is_enabled,
             &job_title,
             &name,
-            password,
+            &password,
+            &roles,
         )
         .await;
         let second_user_id = user.id;

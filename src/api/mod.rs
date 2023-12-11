@@ -306,10 +306,6 @@ pub fn router(context: Arc<Context>) -> Router {
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route(
-            "/api/v1/auth/register/:company_id",
-            post(register::register_with_company_id),
-        )
-        .route(
             "/api/v1/auth/:user_id",
             put(change_password::change_password),
         )
