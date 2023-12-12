@@ -385,11 +385,10 @@ pub mod tests {
         transaction: &mut Transaction<'_, Postgres>,
         workspace_id: Uuid,
     ) {
-        context
+        let _ = context
             .octopus_database
             .try_delete_workspace_by_id(transaction, workspace_id)
-            .await
-            .unwrap();
+            .await;
     }
 
     pub async fn workspace_create(
