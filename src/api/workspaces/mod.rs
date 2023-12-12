@@ -343,6 +343,7 @@ pub async fn update(
 pub mod tests {
     use crate::{
         api, app,
+        context::Context,
         entity::{Workspace, ROLE_PUBLIC_USER},
     };
     use axum::{
@@ -352,8 +353,44 @@ pub mod tests {
     };
     use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub fn get_workspace_create_params_private() -> (String, String) {
+        let name = format!(
+            "workspace {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let r#type = "Private".to_string();
+
+        (name, r#type)
+    }
+
+    pub fn get_workspace_create_params_public() -> (String, String) {
+        let name = format!(
+            "workspace {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let r#type = "Public".to_string();
+
+        (name, r#type)
+    }
+
+    pub async fn workspace_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        workspace_id: Uuid,
+    ) {
+        context
+            .octopus_database
+            .try_delete_workspace_by_id(transaction, workspace_id)
+            .await
+            .unwrap();
+    }
 
     pub async fn workspace_create(
         router: Router,
@@ -411,10 +448,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router, session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router, session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let mut transaction = app
@@ -436,11 +471,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -484,10 +515,8 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
-        let workspace = workspace_create(router, session_id, second_user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_private();
+        let workspace = workspace_create(router, session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let mut transaction = app
@@ -515,11 +544,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -563,9 +588,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
+        let (name, r#type) = get_workspace_create_params_public();
         let response = router
             .oneshot(
                 Request::builder()
@@ -632,9 +655,7 @@ pub mod tests {
 
         api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
+        let (name, r#type) = get_workspace_create_params_public();
         let response = router
             .oneshot(
                 Request::builder()
@@ -717,9 +738,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_public();
         let response = router
             .oneshot(
                 Request::builder()
@@ -788,10 +807,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_private();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -870,11 +887,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -939,10 +954,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1000,10 +1013,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let session_response =
@@ -1070,11 +1081,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1118,11 +1125,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -1185,11 +1190,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1271,10 +1272,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1320,11 +1319,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1368,11 +1363,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1424,11 +1417,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1452,10 +1441,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1491,11 +1478,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1519,10 +1502,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1569,11 +1550,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1617,11 +1594,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1674,11 +1649,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1702,10 +1673,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let response = router
@@ -1741,11 +1710,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1769,10 +1734,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
@@ -1832,11 +1795,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -1880,11 +1839,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -1953,11 +1910,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2039,10 +1992,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2097,11 +2048,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2145,11 +2092,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2210,11 +2155,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2238,10 +2179,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2285,11 +2224,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2313,10 +2248,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Public";
-
-        let workspace = workspace_create(router.clone(), session_id, user_id, &name, r#type).await;
+        let (name, r#type) = get_workspace_create_params_public();
+        let workspace = workspace_create(router.clone(), session_id, user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let name = format!("workspace {}", Word().fake::<String>());
@@ -2384,11 +2317,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2432,11 +2361,9 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let workspace =
-            workspace_create(router.clone(), session_id, second_user_id, &name, r#type).await;
+            workspace_create(router.clone(), session_id, second_user_id, &name, &r#type).await;
         let workspace_id = workspace.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -2513,11 +2440,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_workspace_by_id(&mut transaction, workspace_id)
-            .await
-            .unwrap();
+        workspace_cleanup(app.context.clone(), &mut transaction, workspace_id).await;
 
         app.context
             .octopus_database
@@ -2543,9 +2466,7 @@ pub mod tests {
 
         let workspace_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let name = format!("workspace {}", Word().fake::<String>());
-        let r#type = "Private";
-
+        let (name, r#type) = get_workspace_create_params_private();
         let response = router
             .oneshot(
                 Request::builder()
