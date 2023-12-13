@@ -1,8 +1,8 @@
 use crate::{
     entity::{
         Parameter, PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
-        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_OPENAI_API_KEY,
-        PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_OCTOPUS_API_URL,
+        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -82,6 +82,10 @@ impl Config {
                 parse_result.unwrap_or(false)
             }
         }
+    }
+
+    pub fn get_parameter_octopus_api_url(&self) -> Option<String> {
+        self.get_parameter_value(PARAMETER_NAME_OCTOPUS_API_URL)
     }
 
     pub fn get_parameter_openai_api_key(&self) -> Option<String> {

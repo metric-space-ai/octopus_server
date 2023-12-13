@@ -22,7 +22,6 @@ mod session;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
-pub const DOMAIN: &str = "api.octopus-ai.app";
 pub const PUBLIC_DIR: &str = "public";
 pub const SERVICES_DIR: &str = "services";
 
