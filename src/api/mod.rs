@@ -538,3 +538,21 @@ pub fn router(context: Arc<Context>) -> Router {
         )
         .with_state(context)
 }
+
+#[cfg(test)]
+pub mod tests {
+    use crate::context::Context;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
+
+    pub async fn transaction_commit(
+        context: Arc<Context>,
+        transaction: Transaction<'_, Postgres>,
+    ) {
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await
+            .unwrap();
+    }
+}

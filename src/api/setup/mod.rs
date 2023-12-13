@@ -270,7 +270,7 @@ pub struct SetupPost {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{api::setup::SetupInfoResponse, app, context::Context, entity::User};
+    use crate::{api, api::setup::SetupInfoResponse, app, context::Context, entity::User};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -439,11 +439,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -471,11 +467,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -556,10 +548,6 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 }

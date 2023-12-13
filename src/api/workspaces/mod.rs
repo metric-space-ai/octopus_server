@@ -468,11 +468,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -531,11 +527,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -610,11 +602,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -666,11 +654,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -746,11 +730,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -802,11 +782,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -879,11 +855,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -936,11 +908,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1018,11 +986,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1117,11 +1081,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1171,11 +1131,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1238,11 +1194,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1326,11 +1278,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1383,11 +1331,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1451,11 +1395,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1540,11 +1480,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1597,11 +1533,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1666,11 +1598,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1765,11 +1693,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1819,11 +1743,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1895,11 +1815,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1992,11 +1908,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -2057,11 +1969,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -2134,11 +2042,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -2241,11 +2145,7 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -2302,10 +2202,6 @@ pub mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 }

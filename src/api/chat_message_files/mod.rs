@@ -247,11 +247,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -300,11 +296,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -359,11 +351,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -411,11 +399,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -490,11 +474,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -549,11 +529,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -608,11 +584,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -678,11 +650,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -770,11 +738,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -829,11 +793,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -894,11 +854,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -953,11 +909,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -1008,11 +960,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1067,11 +1015,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -1137,11 +1081,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1196,11 +1136,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -1264,11 +1200,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1323,11 +1255,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let response = router
             .oneshot(
@@ -1381,11 +1309,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1440,11 +1364,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -1510,11 +1430,7 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1602,10 +1518,6 @@ mod tests {
         )
         .await;
 
-        app.context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await
-            .unwrap();
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 }
