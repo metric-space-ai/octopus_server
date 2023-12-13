@@ -244,23 +244,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -332,23 +322,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -411,23 +391,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -493,23 +463,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -581,35 +541,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, third_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, second_company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id, second_company_id],
+            &[user_id, second_user_id, third_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -672,23 +610,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -780,23 +708,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -883,23 +801,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -975,23 +883,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -1070,23 +968,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -1171,35 +1059,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, third_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, second_company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id, second_company_id],
+            &[user_id, second_user_id, third_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -1275,23 +1141,13 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, second_user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
 
         app.context
             .octopus_database

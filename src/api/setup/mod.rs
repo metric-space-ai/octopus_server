@@ -270,7 +270,7 @@ pub struct SetupPost {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{api::setup::SetupInfoResponse, app, entity::User};
+    use crate::{api::setup::SetupInfoResponse, app, context::Context, entity::User};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -284,7 +284,10 @@ pub mod tests {
         Fake,
     };
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
+    use uuid::Uuid;
 
     pub fn get_setup_post_params() -> (String, String, String) {
         let company_name = Paragraph(1..2).fake::<String>();
@@ -297,6 +300,23 @@ pub mod tests {
         let password = format!("password123{}", Word().fake::<String>());
 
         (company_name, email, password)
+    }
+
+    pub async fn setup_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        company_ids: &[Uuid],
+        user_ids: &[Uuid],
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_user_by_ids(transaction, user_ids)
+            .await;
+
+        let _ = context
+            .octopus_database
+            .try_delete_company_by_ids(transaction, company_ids)
+            .await;
     }
 
     pub async fn setup_post(
@@ -411,17 +431,13 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -447,17 +463,13 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
 
         app.context
             .octopus_database
@@ -536,17 +548,13 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_user_by_id(&mut transaction, user_id)
-            .await
-            .unwrap();
-
-        app.context
-            .octopus_database
-            .try_delete_company_by_id(&mut transaction, company_id)
-            .await
-            .unwrap();
+        setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
 
         app.context
             .octopus_database

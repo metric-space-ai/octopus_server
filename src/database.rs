@@ -1342,23 +1342,23 @@ impl OctopusDatabase {
     }
 
     #[allow(dead_code)]
-    pub async fn try_delete_company_by_id(
+    pub async fn try_delete_company_by_ids(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
-        id: Uuid,
-    ) -> Result<Option<Uuid>> {
-        let company = sqlx::query_scalar::<_, Uuid>(
+        ids: &[Uuid],
+    ) -> Result<Vec<Uuid>> {
+        let companies = sqlx::query_scalar::<_, Uuid>(
             "UPDATE companies
                 SET deleted_at = current_timestamp(0)
-                WHERE id = $1
+                WHERE id = ANY($1)
                 AND deleted_at IS NULL
                 RETURNING id",
         )
-        .bind(id)
-        .fetch_optional(&mut **transaction)
+        .bind(ids)
+        .fetch_all(&mut **transaction)
         .await?;
 
-        Ok(company)
+        Ok(companies)
     }
 
     pub async fn try_delete_example_prompt_by_id(
@@ -1490,7 +1490,6 @@ impl OctopusDatabase {
         Ok(simple_app)
     }
 
-    #[allow(dead_code)]
     pub async fn try_delete_user_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -1508,6 +1507,26 @@ impl OctopusDatabase {
         .await?;
 
         Ok(user)
+    }
+
+    #[allow(dead_code)]
+    pub async fn try_delete_user_by_ids(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        ids: &[Uuid],
+    ) -> Result<Vec<Uuid>> {
+        let users = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE users
+            SET deleted_at = current_timestamp(0)
+            WHERE id = ANY($1)
+            AND deleted_at IS NULL
+            RETURNING id",
+        )
+        .bind(ids)
+        .fetch_all(&mut **transaction)
+        .await?;
+
+        Ok(users)
     }
 
     pub async fn try_delete_workspace_by_id(
