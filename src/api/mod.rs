@@ -545,10 +545,7 @@ pub mod tests {
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;
 
-    pub async fn transaction_commit(
-        context: Arc<Context>,
-        transaction: Transaction<'_, Postgres>,
-    ) {
+    pub async fn transaction_commit(context: Arc<Context>, transaction: Transaction<'_, Postgres>) {
         context
             .octopus_database
             .transaction_commit(transaction)

@@ -457,16 +457,8 @@ pub mod tests {
 
         assert!(!body.setup_required || body.setup_required);
 
-        let company_name = Paragraph(1..2).fake::<String>();
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let password = "password123";
-
-        let user = setup_post(router.clone(), &company_name, &email, password).await;
+        let (company_name, email, password) = get_setup_post_params();
+        let user = setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 

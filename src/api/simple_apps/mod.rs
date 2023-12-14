@@ -300,15 +300,28 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::SimpleApp, multipart};
+    use crate::{api, app, context::Context, entity::SimpleApp, multipart};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
         Router,
     };
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub async fn simple_apps_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        simple_app_id: Uuid,
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_simple_app_by_id(transaction, simple_app_id)
+            .await;
+    }
 
     pub async fn simple_apps_create(router: Router, session_id: Uuid) -> SimpleApp {
         let body =
@@ -369,11 +382,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -556,11 +565,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -612,11 +617,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -790,11 +791,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -906,11 +903,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -962,11 +955,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1028,11 +1017,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1084,11 +1069,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1206,11 +1187,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1263,11 +1240,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1346,11 +1319,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_simple_app_by_id(&mut transaction, simple_app_id)
-            .await
-            .unwrap();
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
