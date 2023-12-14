@@ -1065,6 +1065,7 @@ pub async fn update(
 pub mod tests {
     use crate::{
         api, app,
+        context::Context,
         entity::{ChatMessage, ChatMessageStatus},
     };
     use axum::{
@@ -1072,9 +1073,36 @@ pub mod tests {
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub async fn chat_message_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_message_id: Uuid,
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_chat_message_by_id(transaction, chat_message_id)
+            .await;
+    }
+
+    pub async fn chat_message_with_deps_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_id: Uuid,
+        chat_message_id: Uuid,
+        workspace_id: Uuid,
+    ) {
+        chat_message_cleanup(context.clone(), transaction, chat_message_id).await;
+
+        api::chats::tests::chat_with_deps_cleanup(context, transaction, chat_id, workspace_id)
+            .await;
+    }
 
     pub async fn chat_message_create(
         router: Router,
@@ -1117,6 +1145,38 @@ pub mod tests {
         body
     }
 
+    pub async fn chat_message_with_deps_create(
+        router: Router,
+        session_id: Uuid,
+        user_id: Uuid,
+        message: &str,
+        name: &str,
+        r#type: &str,
+    ) -> (Uuid, Uuid, Uuid) {
+        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            name,
+            r#type,
+        )
+        .await;
+
+        let chat_message = chat_message_create(router, session_id, chat_id, user_id, message).await;
+
+        (chat_id, chat_message.id, workspace_id)
+    }
+
+    pub fn get_chat_message_create_params() -> String {
+        let message = format!(
+            "test message {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        message
+    }
+
     #[tokio::test]
     async fn create_201() {
         let app = app::tests::get_test_app().await;
@@ -1133,19 +1193,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message = chat_message_create(router, session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let mut transaction = app
             .context
@@ -1160,10 +1217,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -1204,8 +1262,7 @@ pub mod tests {
         )
         .await;
 
-        let message = "test message";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1287,8 +1344,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let message = "test message";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1352,8 +1408,7 @@ pub mod tests {
 
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let message = "test message";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1408,20 +1463,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -1450,16 +1501,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -1491,20 +1537,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -1602,10 +1644,15 @@ pub mod tests {
         .await;
         let chat_id = chat.id;
 
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, second_user_id, message).await;
+        let message = get_chat_message_create_params();
+        let chat_message = chat_message_create(
+            router.clone(),
+            session_id,
+            chat_id,
+            second_user_id,
+            &message,
+        )
+        .await;
         let chat_message_id = chat_message.id;
 
         let response = router
@@ -1665,20 +1712,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -1756,20 +1799,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -1793,16 +1832,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -1834,20 +1868,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -1882,16 +1912,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -1991,20 +2016,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2037,16 +2058,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2078,20 +2094,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2114,16 +2126,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2155,20 +2162,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -2203,16 +2206,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2294,20 +2292,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message: ChatMessage =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2340,16 +2334,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2381,20 +2370,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2417,16 +2402,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2458,20 +2438,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -2506,16 +2482,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2597,20 +2568,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2643,16 +2610,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2684,20 +2646,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2720,16 +2678,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2761,20 +2714,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -2809,16 +2758,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -2919,20 +2863,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -2966,16 +2906,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3007,20 +2942,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -3043,16 +2974,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3104,20 +3030,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -3141,16 +3063,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3182,20 +3099,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -3230,16 +3143,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3339,23 +3247,18 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
 
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
-
-        let message = "test message updated";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -3393,16 +3296,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3434,22 +3332,18 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
 
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
-
-        let message = "test message updated";
+        let message = get_chat_message_create_params();
 
         let response = router
             .oneshot(
@@ -3477,16 +3371,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3538,23 +3427,18 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
 
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
-
-        let message = "test message updated";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -3582,16 +3466,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3623,20 +3502,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -3649,8 +3524,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let message = "test message updated";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -3678,16 +3552,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3730,8 +3599,7 @@ pub mod tests {
 
         let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let message = "test message updated";
-
+        let message = get_chat_message_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -3794,20 +3662,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -3842,16 +3706,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3883,20 +3742,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -3921,16 +3776,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -3982,20 +3832,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -4021,16 +3867,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4062,20 +3903,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -4112,16 +3949,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4223,20 +4055,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .clone()
@@ -4278,7 +4106,7 @@ pub mod tests {
                 &mut transaction,
                 chat_message_id,
                 true,
-                message,
+                &message,
                 ChatMessageStatus::Asked,
                 0,
             )
@@ -4311,16 +4139,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4352,20 +4175,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -4417,16 +4236,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4458,20 +4272,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -4509,16 +4319,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4570,20 +4375,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let bad_reply_comment = "bad reply comment";
         let bad_reply_is_harmful = true;
@@ -4622,16 +4423,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4663,20 +4459,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -4726,16 +4518,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4850,20 +4637,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -4898,16 +4681,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -4939,20 +4717,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -4977,16 +4751,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -5038,20 +4807,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             admin_session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), admin_session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .oneshot(
@@ -5077,16 +4842,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -5118,20 +4878,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
@@ -5168,16 +4924,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
@@ -5279,20 +5030,16 @@ pub mod tests {
         let session_id = session_response.id;
 
         let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
-        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
             router.clone(),
             session_id,
             user_id,
+            &message,
             &name,
             &r#type,
         )
         .await;
-
-        let message = "test message";
-
-        let chat_message =
-            chat_message_create(router.clone(), session_id, chat_id, user_id, message).await;
-        let chat_message_id = chat_message.id;
 
         let response = router
             .clone()
@@ -5345,16 +5092,11 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_chat_message_by_id(&mut transaction, chat_message_id)
-            .await
-            .unwrap();
-
-        api::chats::tests::chat_with_deps_cleanup(
+        chat_message_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
             chat_id,
+            chat_message_id,
             workspace_id,
         )
         .await;
