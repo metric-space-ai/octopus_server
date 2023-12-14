@@ -1938,6 +1938,21 @@ impl OctopusDatabase {
         Ok(parameter)
     }
 
+    pub async fn try_get_parameter_by_name(&self, name: &str) -> Result<Option<Parameter>> {
+        let parameter = sqlx::query_as!(
+            Parameter,
+            "SELECT id, name, value, created_at, deleted_at, updated_at
+            FROM parameters
+            WHERE name = $1
+            AND deleted_at IS NULL",
+            name
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(parameter)
+    }
+
     pub async fn try_get_parameter_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let parameter_id = sqlx::query_scalar::<_, Uuid>(
             "SELECT id

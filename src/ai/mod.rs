@@ -5,7 +5,7 @@ use crate::{
         ChatMessageStatus, User,
     },
     error::AppError,
-    Result, DOMAIN, PUBLIC_DIR,
+    Result, PUBLIC_DIR,
 };
 use async_openai::{
     config::{AzureConfig, OpenAIConfig},
@@ -346,8 +346,15 @@ pub async fn open_ai_request(
                 chat_audit_trails.push(chat_audit_trail);
             } else if !chat_message_tmp.chat_message_files.is_empty() {
                 let mut urls = String::new();
-                for chat_message_file in chat_message_tmp.chat_message_files {
-                    urls.push_str(&format!("https://{DOMAIN}/{}", chat_message_file.file_name));
+                let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
+
+                if let Some(octopus_api_url) = octopus_api_url {
+                    for chat_message_file in chat_message_tmp.chat_message_files {
+                        urls.push_str(&format!(
+                            "{octopus_api_url}/{}",
+                            chat_message_file.file_name
+                        ));
+                    }
                 }
 
                 if !urls.is_empty() {
