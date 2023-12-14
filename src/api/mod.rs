@@ -31,7 +31,7 @@ use crate::{
         AiServiceStatus, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt,
         ExamplePromptCategory, InspectionDisabling, Parameter, PasswordResetToken, Profile,
-        SimpleApp, User, UserExtended, Workspace, WorkspacesType,
+        SimpleApp, User, UserExtended, WaspApp, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -77,6 +77,7 @@ mod server_resources;
 mod setup;
 mod simple_apps;
 mod users;
+mod wasp_apps;
 mod workspaces;
 
 pub fn router(context: Arc<Context>) -> Router {
@@ -149,6 +150,7 @@ pub fn router(context: Arc<Context>) -> Router {
                 UserInvitationPost,
                 UserPost,
                 UserPut,
+                WaspApp,
                 Workspace,
                 WorkspacePost,
                 WorkspacePut,
@@ -251,6 +253,12 @@ pub fn router(context: Arc<Context>) -> Router {
             users::read,
             users::roles,
             users::update,
+            wasp_apps::code,
+            wasp_apps::create,
+            wasp_apps::delete,
+            wasp_apps::list,
+            wasp_apps::read,
+            wasp_apps::update,
             workspaces::create,
             workspaces::delete,
             workspaces::list,
@@ -282,6 +290,7 @@ pub fn router(context: Arc<Context>) -> Router {
             (name = "setup", description = "Setup API."),
             (name = "simple_apps", description = "Simple apps API."),
             (name = "users", description = "Users API."),
+            (name = "wasp_apps", description = "Wasp apps API."),
             (name = "workspaces", description = "Workspaces API."),
         )
     )]
@@ -494,6 +503,17 @@ pub fn router(context: Arc<Context>) -> Router {
         .route(
             "/api/v1/users/:user_id",
             delete(users::delete).get(users::read).put(users::update),
+        )
+        .route(
+            "/api/v1/wasp-apps",
+            get(wasp_apps::list).post(wasp_apps::create),
+        )
+        .route("/api/v1/wasp-apps/:id/code", get(wasp_apps::code))
+        .route(
+            "/api/v1/wasp-apps/:id",
+            delete(wasp_apps::delete)
+                .get(wasp_apps::read)
+                .put(wasp_apps::update),
         )
         .route(
             "/api/v1/workspaces",

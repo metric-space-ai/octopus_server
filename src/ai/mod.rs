@@ -11,8 +11,8 @@ use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
         ChatCompletionFunctionsArgs, ChatCompletionRequestAssistantMessageArgs,
-        ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionToolArgs,
-        ChatCompletionToolType, CreateChatCompletionRequestArgs,
+        ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs, ChatCompletionTool,
+        ChatCompletionToolArgs, ChatCompletionToolType, CreateChatCompletionRequestArgs,
     },
     Client,
 };
@@ -20,6 +20,7 @@ use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use sqlx::{Postgres, Transaction};
 use std::sync::Arc;
 use uuid::Uuid;
 
@@ -73,69 +74,11 @@ pub enum AiClient {
     OpenAI(Client<OpenAIConfig>),
 }
 
-pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
-    let azure_openai_enabled = context
-        .get_config()
-        .await?
-        .get_parameter_azure_openai_enabled();
-
-    let ai_client = if azure_openai_enabled {
-        let api_key = context
-            .get_config()
-            .await?
-            .get_parameter_azure_openai_api_key()
-            .ok_or(AppError::Config)?;
-        let deployment_id = context
-            .get_config()
-            .await?
-            .get_parameter_azure_openai_deployment_id()
-            .ok_or(AppError::Config)?;
-        let config = AzureConfig::new()
-            .with_api_base(AZURE_OPENAI_BASE_URL)
-            .with_api_key(api_key)
-            .with_deployment_id(deployment_id)
-            .with_api_version(AZURE_OPENAI_API_VERSION);
-
-        AiClient::Azure(Client::with_config(config))
-    } else {
-        let api_key = context
-            .get_config()
-            .await?
-            .get_parameter_openai_api_key()
-            .ok_or(AppError::Config)?;
-        let config = OpenAIConfig::new().with_api_key(api_key);
-
-        AiClient::OpenAI(Client::with_config(config))
-    };
-
-    Ok(ai_client)
-}
-
-pub async fn open_ai_request(
+pub async fn check_information_retrieval_service(
     context: Arc<Context>,
-    chat_message: ChatMessage,
-    user: User,
+    transaction: &mut Transaction<'_, Postgres>,
+    chat_message: &ChatMessage,
 ) -> Result<ChatMessage> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
-    let mut messages = vec![];
-
-    let mut transaction = context.octopus_database.transaction_begin().await?;
-
-    let chat = context
-        .octopus_database
-        .try_get_chat_by_id(chat_message.chat_id)
-        .await?;
-
-    if let Some(chat) = chat {
-        if chat.name.is_none() {
-            context
-                .octopus_database
-                .update_chat(&mut transaction, chat.id, &chat_message.message)
-                .await?;
-        }
-    }
-
     let ai_function = context
         .octopus_database
         .try_get_ai_function_for_direct_call("querycontent")
@@ -176,18 +119,13 @@ pub async fn open_ai_request(
                             let chat_message = context
                                 .octopus_database
                                 .update_chat_message_from_function(
-                                    &mut transaction,
+                                    transaction,
                                     chat_message.id,
                                     ai_function.id,
                                     ChatMessageStatus::Answered,
                                     100,
                                     Some(result),
                                 )
-                                .await?;
-
-                            context
-                                .octopus_database
-                                .transaction_commit(transaction)
                                 .await?;
 
                             return Ok(chat_message);
@@ -198,12 +136,21 @@ pub async fn open_ai_request(
         }
     }
 
+    Ok(chat_message.clone())
+}
+
+pub async fn check_sensitive_information_service(
+    context: Arc<Context>,
+    transaction: &mut Transaction<'_, Postgres>,
+    chat_message: &ChatMessage,
+    user_id: Uuid,
+) -> Result<ChatMessage> {
     let mut content_safety_enabled = true;
     let mut is_not_checked_by_system = false;
 
     let inspection_disabling = context
         .octopus_database
-        .try_get_inspection_disabling_by_user_id(user.id)
+        .try_get_inspection_disabling_by_user_id(user_id)
         .await?;
 
     if let Some(inspection_disabling) = inspection_disabling {
@@ -212,7 +159,7 @@ pub async fn open_ai_request(
         } else {
             context
                 .octopus_database
-                .try_delete_inspection_disabling_by_user_id(&mut transaction, user.id)
+                .try_delete_inspection_disabling_by_user_id(transaction, user_id)
                 .await?;
         }
     }
@@ -262,17 +209,12 @@ pub async fn open_ai_request(
                                 let chat_message = context
                                     .octopus_database
                                     .update_chat_message_is_sensitive(
-                                        &mut transaction,
+                                        transaction,
                                         chat_message.id,
                                         true,
                                         ChatMessageStatus::Answered,
                                         100,
                                     )
-                                    .await?;
-
-                                context
-                                    .octopus_database
-                                    .transaction_commit(transaction)
                                     .await?;
 
                                 return Ok(chat_message);
@@ -293,13 +235,22 @@ pub async fn open_ai_request(
     let chat_message = if is_not_checked_by_system {
         context
             .octopus_database
-            .update_chat_message_is_not_checked_by_system(&mut transaction, chat_message.id, true)
+            .update_chat_message_is_not_checked_by_system(transaction, chat_message.id, true)
             .await?
     } else {
-        chat_message
+        chat_message.clone()
     };
 
+    Ok(chat_message)
+}
+
+pub async fn get_messages(
+    context: Arc<Context>,
+    transaction: &mut Transaction<'_, Postgres>,
+    chat_message: &ChatMessage,
+) -> Result<Vec<ChatCompletionRequestMessage>> {
     let mut chat_audit_trails = vec![];
+    let mut messages = vec![];
 
     let chat_messages = context
         .octopus_database
@@ -349,11 +300,13 @@ pub async fn open_ai_request(
                 let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
                 if let Some(octopus_api_url) = octopus_api_url {
+                    let api_url = octopus_api_url
+                        .strip_suffix('/')
+                        .ok_or(AppError::Parsing)?
+                        .to_string();
+
                     for chat_message_file in chat_message_tmp.chat_message_files {
-                        urls.push_str(&format!(
-                            "{octopus_api_url}/{}",
-                            chat_message_file.file_name
-                        ));
+                        urls.push_str(&format!("{api_url}/{}", chat_message_file.file_name));
                     }
                 }
 
@@ -379,11 +332,31 @@ pub async fn open_ai_request(
         }
     }
 
-    let mut functions = vec![];
+    let trail = serde_json::to_value(&chat_audit_trails)?;
+
+    context
+        .octopus_database
+        .insert_chat_audit(
+            transaction,
+            chat_message.chat_id,
+            chat_message.id,
+            chat_message.user_id,
+            trail,
+        )
+        .await?;
+
+    Ok(messages)
+}
+
+pub async fn get_tools_ai_functions(
+    context: Arc<Context>,
+    user_id: Uuid,
+) -> Result<Vec<ChatCompletionTool>> {
+    let mut tools = vec![];
 
     let ai_functions = context
         .octopus_database
-        .get_ai_functions_for_request(user.id)
+        .get_ai_functions_for_request(user_id)
         .await?;
 
     for ai_function in ai_functions {
@@ -391,7 +364,7 @@ pub async fn open_ai_request(
             && ai_function.formatted_name != "querycontent"
             && ai_function.formatted_name != "sensitive_information"
         {
-            let function = ChatCompletionToolArgs::default()
+            let tool = ChatCompletionToolArgs::default()
                 .r#type(ChatCompletionToolType::Function)
                 .function(
                     ChatCompletionFunctionsArgs::default()
@@ -402,54 +375,30 @@ pub async fn open_ai_request(
                 )
                 .build()?;
 
-            functions.push(function);
+            tools.push(tool);
         }
     }
 
-    let simple_apps = context
-        .octopus_database
-        .get_simple_apps_for_request()
-        .await?;
+    Ok(tools)
+}
 
-    for simple_app in simple_apps {
-        let function = ChatCompletionToolArgs::default()
-            .r#type(ChatCompletionToolType::Function)
-            .function(
-                ChatCompletionFunctionsArgs::default()
-                    .name(simple_app.formatted_name)
-                    .description(simple_app.description)
-                    .parameters(json!({
-                        "type": "object",
-                        "properties": {
-                            "title": {
-                                "type": "string",
-                                "description": "Game title",
-                            },
-                        },
-                        "required": ["title"],
-                    }))
-                    .build()?,
-            )
-            .build()?;
+pub async fn get_tools_all(
+    context: Arc<Context>,
+    user_id: Uuid,
+) -> Result<Vec<ChatCompletionTool>> {
+    let mut tools = vec![];
 
-        functions.push(function);
-    }
+    let mut ai_functions_tools = get_tools_ai_functions(context.clone(), user_id).await?;
+    tools.append(&mut ai_functions_tools);
 
-    let trail = serde_json::to_value(&chat_audit_trails)?;
+    let mut simple_apps_tools = get_tools_simple_apps(context.clone()).await?;
+    tools.append(&mut simple_apps_tools);
 
-    context
-        .octopus_database
-        .insert_chat_audit(
-            &mut transaction,
-            chat_message.chat_id,
-            chat_message.id,
-            chat_message.user_id,
-            trail,
-        )
-        .await?;
+    let mut wasp_apps_tools = get_tools_wasp_apps(context.clone(), user_id).await?;
+    tools.append(&mut wasp_apps_tools);
 
-    if functions.is_empty() {
-        let function = ChatCompletionToolArgs::default()
+    if tools.is_empty() {
+        let tool = ChatCompletionToolArgs::default()
             .r#type(ChatCompletionToolType::Function)
             .function(
                 ChatCompletionFunctionsArgs::default()
@@ -477,8 +426,166 @@ pub async fn open_ai_request(
             )
             .build()?;
 
-        functions.push(function);
+        tools.push(tool);
     }
+
+    Ok(tools)
+}
+
+pub async fn get_tools_simple_apps(context: Arc<Context>) -> Result<Vec<ChatCompletionTool>> {
+    let mut tools = vec![];
+
+    let simple_apps = context
+        .octopus_database
+        .get_simple_apps_for_request()
+        .await?;
+
+    for simple_app in simple_apps {
+        let tool = ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name(simple_app.formatted_name)
+                    .description(simple_app.description)
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "description": "Simple app title",
+                            },
+                        },
+                        "required": ["title"],
+                    }))
+                    .build()?,
+            )
+            .build()?;
+
+        tools.push(tool);
+    }
+
+    Ok(tools)
+}
+
+pub async fn get_tools_wasp_apps(
+    context: Arc<Context>,
+    user_id: Uuid,
+) -> Result<Vec<ChatCompletionTool>> {
+    let mut tools = vec![];
+
+    let wasp_apps = context
+        .octopus_database
+        .get_wasp_apps_for_request(user_id)
+        .await?;
+
+    for wasp_app in wasp_apps {
+        let tool = ChatCompletionToolArgs::default()
+            .r#type(ChatCompletionToolType::Function)
+            .function(
+                ChatCompletionFunctionsArgs::default()
+                    .name(wasp_app.formatted_name)
+                    .description(wasp_app.description)
+                    .parameters(json!({
+                        "type": "object",
+                        "properties": {
+                            "title": {
+                                "type": "string",
+                                "description": "Wasp app title",
+                            },
+                        },
+                        "required": ["title"],
+                    }))
+                    .build()?,
+            )
+            .build()?;
+
+        tools.push(tool);
+    }
+
+    Ok(tools)
+}
+
+pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
+    let azure_openai_enabled = context
+        .get_config()
+        .await?
+        .get_parameter_azure_openai_enabled();
+
+    let ai_client = if azure_openai_enabled {
+        let api_key = context
+            .get_config()
+            .await?
+            .get_parameter_azure_openai_api_key()
+            .ok_or(AppError::Config)?;
+        let deployment_id = context
+            .get_config()
+            .await?
+            .get_parameter_azure_openai_deployment_id()
+            .ok_or(AppError::Config)?;
+        let config = AzureConfig::new()
+            .with_api_base(AZURE_OPENAI_BASE_URL)
+            .with_api_key(api_key)
+            .with_deployment_id(deployment_id)
+            .with_api_version(AZURE_OPENAI_API_VERSION);
+
+        AiClient::Azure(Client::with_config(config))
+    } else {
+        let api_key = context
+            .get_config()
+            .await?
+            .get_parameter_openai_api_key()
+            .ok_or(AppError::Config)?;
+        let config = OpenAIConfig::new().with_api_key(api_key);
+
+        AiClient::OpenAI(Client::with_config(config))
+    };
+
+    Ok(ai_client)
+}
+
+pub async fn open_ai_request(
+    context: Arc<Context>,
+    chat_message: ChatMessage,
+    user: User,
+) -> Result<ChatMessage> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
+
+    let chat_message =
+        check_information_retrieval_service(context.clone(), &mut transaction, &chat_message)
+            .await?;
+
+    if chat_message.status == ChatMessageStatus::Answered {
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        return Ok(chat_message);
+    }
+
+    let chat_message = check_sensitive_information_service(
+        context.clone(),
+        &mut transaction,
+        &chat_message,
+        user.id,
+    )
+    .await?;
+
+    if chat_message.status == ChatMessageStatus::Answered {
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        return Ok(chat_message);
+    }
+
+    let messages = get_messages(context.clone(), &mut transaction, &chat_message).await?;
+    let tools = get_tools_all(context.clone(), user.id).await?;
 
     if !context.get_config().await?.test_mode {
         let request = match &ai_client {
@@ -491,7 +598,7 @@ pub async fn open_ai_request(
                 .max_tokens(512u16)
                 .model(MODEL)
                 .messages(messages)
-                .tools(functions)
+                .tools(tools)
                 .build(),
         };
 
@@ -565,7 +672,7 @@ pub async fn open_ai_request(
                                     .transaction_commit(transaction)
                                     .await?;
 
-                                return Err(Box::new(AppError::BadResponse));
+                                return Ok(chat_message);
                             }
                             Some(response_message) => {
                                 let response_message = response_message.message.clone();
@@ -644,6 +751,31 @@ pub async fn open_ai_request(
 
                                             return Ok(chat_message);
                                         }
+
+                                        let wasp_app = context
+                                            .octopus_database
+                                            .try_get_wasp_app_by_formatted_name(&function_name)
+                                            .await?;
+
+                                        if let Some(wasp_app) = wasp_app {
+                                            let chat_message = context
+                                                .octopus_database
+                                                .update_chat_message_wasp_app_id(
+                                                    &mut transaction,
+                                                    chat_message.id,
+                                                    100,
+                                                    wasp_app.id,
+                                                    ChatMessageStatus::Answered,
+                                                )
+                                                .await?;
+
+                                            context
+                                                .octopus_database
+                                                .transaction_commit(transaction)
+                                                .await?;
+
+                                            return Ok(chat_message);
+                                        }
                                     }
                                 }
 
@@ -680,4 +812,26 @@ pub async fn open_ai_request(
         .await?;
 
     Ok(chat_message)
+}
+
+pub async fn update_chat_name(
+    context: Arc<Context>,
+    transaction: &mut Transaction<'_, Postgres>,
+    chat_message: &ChatMessage,
+) -> Result<()> {
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_message.chat_id)
+        .await?;
+
+    if let Some(chat) = chat {
+        if chat.name.is_none() {
+            context
+                .octopus_database
+                .update_chat(transaction, chat.id, &chat_message.message)
+                .await?;
+        }
+    }
+
+    Ok(())
 }

@@ -171,7 +171,7 @@ pub struct ChatAudit {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, ToSchema, Type)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "chat_message_statuses", rename_all = "snake_case")]
 pub enum ChatMessageStatus {
     Answered,
@@ -185,6 +185,7 @@ pub struct ChatMessage {
     pub chat_id: Uuid,
     pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
+    pub wasp_app_id: Option<Uuid>,
     pub ai_function_call: Option<serde_json::Value>,
     pub ai_function_error: Option<String>,
     pub bad_reply_comment: Option<String>,
@@ -214,6 +215,7 @@ pub struct ChatMessageExtended {
     pub chat_id: Uuid,
     pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
+    pub wasp_app_id: Option<Uuid>,
     pub ai_function_call: Option<serde_json::Value>,
     pub ai_function_error: Option<String>,
     pub bad_reply_comment: Option<String>,
@@ -413,6 +415,21 @@ pub struct UserExtended {
     pub is_invited: bool,
     pub profile: Option<Profile>,
     pub roles: Vec<String>,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct WaspApp {
+    pub id: Uuid,
+    pub allowed_user_ids: Option<Vec<Uuid>>,
+    #[serde(skip_serializing)]
+    pub code: Vec<u8>,
+    pub description: String,
+    pub formatted_name: String,
+    pub is_enabled: bool,
+    pub name: String,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,

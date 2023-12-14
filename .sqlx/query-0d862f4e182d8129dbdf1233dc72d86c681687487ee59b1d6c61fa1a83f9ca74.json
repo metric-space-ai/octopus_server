@@ -1,0 +1,77 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at\n            FROM wasp_apps\n            WHERE is_enabled = $1\n            AND deleted_at IS NULL\n            AND (allowed_user_ids IS NULL OR $2 = ANY(allowed_user_ids))",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "allowed_user_ids",
+        "type_info": "UuidArray"
+      },
+      {
+        "ordinal": 2,
+        "name": "code",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "formatted_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "is_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 6,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "0d862f4e182d8129dbdf1233dc72d86c681687487ee59b1d6c61fa1a83f9ca74"
+}

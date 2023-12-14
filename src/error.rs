@@ -16,7 +16,6 @@ use validator::ValidationErrors;
 
 #[derive(Debug, Display)]
 pub enum AppError {
-    BadResponse,
     BadRequest,
     CompanyNotFound,
     Concurrency(tokio::task::JoinError),
@@ -49,7 +48,6 @@ pub enum AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            AppError::BadResponse => (StatusCode::INTERNAL_SERVER_ERROR, "Response problem."),
             AppError::BadRequest => (StatusCode::BAD_REQUEST, "Bad request."),
             AppError::CompanyNotFound => {
                 (StatusCode::BAD_REQUEST, "Main company is not registered.")
