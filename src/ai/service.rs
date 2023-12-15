@@ -197,6 +197,11 @@ pub async fn service_setup(
                 )
                 .await?;
 
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
             return Ok(ai_service);
         }
     }
