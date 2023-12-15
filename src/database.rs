@@ -1944,7 +1944,9 @@ impl OctopusDatabase {
             "SELECT id, name, value, created_at, deleted_at, updated_at
             FROM parameters
             WHERE name = $1
-            AND deleted_at IS NULL",
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
             name
         )
         .fetch_optional(&*self.pool)
