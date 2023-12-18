@@ -10,43 +10,15 @@ use axum::{
     response::{Html, IntoResponse},
     Json,
 };
+use serde::Deserialize;
 use std::sync::Arc;
+use utoipa::IntoParams;
 use uuid::Uuid;
 
-#[axum_macros::debug_handler]
-#[utoipa::path(
-    get,
-    path = "/api/v1/wasp-apps/:id/code",
-    responses(
-        (status = 200, description = "Wasp app code.", body = String),
-        (status = 401, description = "Unauthorized request.", body = ResponseError),
-        (status = 404, description = "Wasp app not found.", body = ResponseError),
-    ),
-    params(
-        ("id" = String, Path, description = "Wasp app id")
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn code(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Path(id): Path<Uuid>,
-) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
-
-    let wasp_app = context
-        .octopus_database
-        .try_get_wasp_app_by_id(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if !wasp_app.is_enabled {
-        return Err(AppError::NotFound);
-    }
-
-    Ok((StatusCode::OK, Html(wasp_app.code)).into_response())
+#[derive(Deserialize, IntoParams)]
+pub struct Params {
+    id: Uuid,
+    chat_message_id: Uuid,
 }
 
 #[axum_macros::debug_handler]
@@ -177,6 +149,56 @@ pub async fn list(
     let wasp_apps = context.octopus_database.get_wasp_apps().await?;
 
     Ok((StatusCode::OK, Json(wasp_apps)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy",
+    responses(
+        (status = 200, description = "Wasp app proxy.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id"),
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn proxy(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(Params {
+        id,
+        chat_message_id,
+    }): Path<Params>,
+) -> Result<impl IntoResponse, AppError> {
+    require_authenticated_session(extracted_session).await?;
+
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !wasp_app.is_enabled {
+        return Err(AppError::NotFound);
+    }
+
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message.wasp_app_id != Some(wasp_app.id) {
+        return Err(AppError::NotFound);
+    }
+
+    Ok((StatusCode::OK, Html(wasp_app.code)).into_response())
 }
 
 #[axum_macros::debug_handler]

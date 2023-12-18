@@ -253,10 +253,10 @@ pub fn router(context: Arc<Context>) -> Router {
             users::read,
             users::roles,
             users::update,
-            wasp_apps::code,
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::list,
+            wasp_apps::proxy,
             wasp_apps::read,
             wasp_apps::update,
             workspaces::create,
@@ -508,7 +508,10 @@ pub fn router(context: Arc<Context>) -> Router {
             "/api/v1/wasp-apps",
             get(wasp_apps::list).post(wasp_apps::create),
         )
-        .route("/api/v1/wasp-apps/:id/code", get(wasp_apps::code))
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy",
+            get(wasp_apps::proxy),
+        )
         .route(
             "/api/v1/wasp-apps/:id",
             delete(wasp_apps::delete)

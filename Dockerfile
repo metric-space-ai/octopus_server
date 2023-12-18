@@ -289,25 +289,30 @@ ENV NVIDIA_DRIVER_CAPABILITIES all
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
+RUN conda init
+RUN conda config --add channels conda-forge
+RUN conda install -y -n base mamba
+RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./
 COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.d.ts /octopus_client/next.config.js /octopus_client/package.json /octopus_client/package-lock.json /octopus_client/postcss.config.js /octopus_client/tailwind.config.js /octopus_client/tsconfig.json /octopus_client/yarn.lock ./
 COPY /octopus_client/public public/
 COPY /octopus_client/src src/
-RUN conda init
-RUN conda config --add channels conda-forge
-RUN conda install -y -n base mamba
 WORKDIR /octopus_server
 COPY --from=backend_builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=backend_builder /usr/local/cargo/bin/sqlx ./
 COPY --from=backend_builder /octopus_server/target/release/octopus_server ./
 COPY --from=backend_builder /octopus_server/migrations ./migrations
-COPY --from=backend_builder /octopus_server/frontend-start.sh ./
 COPY --from=backend_builder /octopus_server/docker-entrypoint.sh ./
-RUN chmod +x frontend-start.sh && \
-    chmod +x docker-entrypoint.sh && \
+COPY --from=backend_builder /octopus_server/frontend-start.sh ./
+RUN chmod +x docker-entrypoint.sh && \
+    chmod +x frontend-start.sh && \
     mkdir ./public/ && \
-    mkdir ./services/
+    mkdir ./services/ && \
+    mkdir ./wasp_apps/
+VOLUME /octopus_server/public
+VOLUME /octopus_server/services
+VOLUME /octopus_server/wasp_apps
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]

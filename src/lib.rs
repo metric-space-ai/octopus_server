@@ -19,11 +19,13 @@ mod parser;
 mod process_manager;
 mod server_resources;
 mod session;
+mod wasp_process_manager;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
 pub const PUBLIC_DIR: &str = "public";
 pub const SERVICES_DIR: &str = "services";
+pub const WASP_APPS_DIR: &str = "wasp_apps";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
