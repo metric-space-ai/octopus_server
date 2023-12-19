@@ -259,9 +259,25 @@ mod tests {
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub fn get_parameter_create_params() -> (String, String) {
+        let name = format!(
+            "sample name {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let value = format!(
+            "sample value {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        (name, value)
+    }
 
     pub async fn parameter_create(
         router: Router,
@@ -318,10 +334,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router, session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router, session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let mut transaction = app
@@ -383,9 +397,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
+        let (name, value) = get_parameter_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -440,10 +452,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let response = router
@@ -494,10 +504,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -624,10 +632,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let response = router
@@ -693,10 +699,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let response = router
@@ -854,10 +858,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let response = router
@@ -924,10 +926,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let response = router
@@ -1033,15 +1033,11 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
-        let name = "sample name test";
-        let value = "sample value test";
-
+        let (name, value) = get_parameter_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1112,10 +1108,8 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let name = "sample name";
-        let value = "sample value";
-
-        let parameter = parameter_create(router.clone(), session_id, name, value).await;
+        let (name, value) = get_parameter_create_params();
+        let parameter = parameter_create(router.clone(), session_id, &name, &value).await;
         let parameter_id = parameter.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -1138,9 +1132,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = "sample name test";
-        let value = "sample value test";
-
+        let (name, value) = get_parameter_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1203,9 +1195,7 @@ mod tests {
 
         let parameter_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let name = "sample name test";
-        let value = "sample value test";
-
+        let (name, value) = get_parameter_create_params();
         let response = router
             .oneshot(
                 Request::builder()
