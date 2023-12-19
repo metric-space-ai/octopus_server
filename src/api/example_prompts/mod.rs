@@ -268,15 +268,46 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, entity::ExamplePrompt};
+    use crate::{api, app, context::Context, entity::ExamplePrompt};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub fn get_example_prompt_create_params() -> (bool, i32, String, String) {
+        let is_visible = true;
+        let priority = 0;
+        let prompt = format!(
+            "sample prompt {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let title = format!(
+            "sample title {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        (is_visible, priority, prompt, title)
+    }
+
+    pub async fn example_prompt_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        example_prompt_id: Uuid,
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_example_prompt_by_id(transaction, example_prompt_id)
+            .await;
+    }
 
     pub async fn example_prompt_create(
         router: Router,
@@ -355,19 +386,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router,
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -379,11 +406,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -451,11 +474,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -533,19 +552,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -618,19 +633,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -677,11 +688,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -779,19 +786,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -827,11 +830,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -879,19 +878,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -917,11 +912,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -969,19 +960,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -1019,11 +1006,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1071,19 +1054,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -1111,11 +1090,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1215,19 +1190,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -1265,11 +1236,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1317,19 +1284,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -1355,11 +1318,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1457,28 +1416,20 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1521,11 +1472,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1573,19 +1520,15 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = true;
-        let priority = 0;
-        let prompt = "sample prompt";
-        let title = "sample title";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let example_prompt = example_prompt_create(
             router.clone(),
             session_id,
             example_prompt_category_id,
             is_visible,
             priority,
-            prompt,
-            title,
+            &prompt,
+            &title,
         )
         .await;
         let example_prompt_id = example_prompt.id;
@@ -1610,11 +1553,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1646,11 +1585,7 @@ mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_by_id(&mut transaction, example_prompt_id)
-            .await
-            .unwrap();
+        example_prompt_cleanup(app.context.clone(), &mut transaction, example_prompt_id).await;
 
         api::example_prompt_categories::tests::example_prompt_category_cleanup(
             app.context.clone(),
@@ -1700,11 +1635,7 @@ mod tests {
             .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let is_visible = false;
-        let priority = 10;
-        let prompt = "sample prompt test";
-        let title = "sample title test";
-
+        let (is_visible, priority, prompt, title) = get_example_prompt_create_params();
         let response = router
             .oneshot(
                 Request::builder()

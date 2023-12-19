@@ -448,15 +448,6 @@ pub mod tests {
 
         assert_eq!(response.status(), StatusCode::OK);
 
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: SetupInfoResponse = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.setup_required || body.setup_required);
-
         let (company_name, email, password) = get_setup_post_params();
         let user = setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
