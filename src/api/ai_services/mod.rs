@@ -4,7 +4,7 @@ use crate::{
     entity::{AiServiceStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     get_pwd, parser, process_manager,
-    session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    session::{ensure_secured, require_authenticated, ExtractedSession},
     SERVICES_DIR,
 };
 use axum::{
@@ -352,7 +352,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let ai_services = context.octopus_database.get_ai_services().await?;
 
@@ -452,12 +452,7 @@ pub async fn operation(
                 return Err(AppError::Conflict);
             }
         }
-        AiServiceOperation::HealthCheck => {
-            if ai_service.status != AiServiceStatus::Running {
-                return Err(AppError::Conflict);
-            }
-        }
-        AiServiceOperation::Setup => {
+        AiServiceOperation::HealthCheck | AiServiceOperation::Setup => {
             if ai_service.status != AiServiceStatus::Running {
                 return Err(AppError::Conflict);
             }
@@ -524,8 +519,7 @@ pub async fn operation(
     });
 
     let execution_time = match input.operation {
-        AiServiceOperation::Disable => 1,
-        AiServiceOperation::Enable => 1,
+        AiServiceOperation::Disable | AiServiceOperation::Enable => 1,
         AiServiceOperation::HealthCheck => ai_service.health_check_execution_time,
         AiServiceOperation::Setup => ai_service.setup_execution_time,
     };
@@ -607,7 +601,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let ai_service = context
         .octopus_database

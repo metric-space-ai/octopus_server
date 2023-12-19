@@ -8,7 +8,7 @@ pub mod login;
 pub mod logout;
 pub mod register;
 
-pub fn hash_password(config: Config, password: String) -> Result<String, AppError> {
+pub fn hash_password(config: &Config, password: &str) -> Result<String, AppError> {
     let salt: SaltString = SaltString::generate(&mut OsRng);
     let peppered = format!("{}{}", config.pepper, password);
     let hash = Argon2::default()

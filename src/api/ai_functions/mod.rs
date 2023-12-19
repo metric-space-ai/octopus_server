@@ -5,7 +5,7 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ROLE_COMPANY_ADMIN_USER,
     },
     error::AppError,
-    session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    session::{ensure_secured, require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -109,7 +109,7 @@ pub async fn direct_call(
     extracted_session: ExtractedSession,
     Json(input): Json<AiFunctionDirectCallPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let ai_function = context
@@ -164,7 +164,7 @@ pub async fn list(
     extracted_session: ExtractedSession,
     Path(ai_service_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let ai_service = context
         .octopus_database
@@ -205,7 +205,7 @@ pub async fn read(
         ai_function_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let ai_function = context
         .octopus_database

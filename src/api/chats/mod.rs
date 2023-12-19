@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -48,7 +48,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -118,7 +118,7 @@ pub async fn delete(
         chat_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -210,7 +210,7 @@ pub async fn latest(
     extracted_session: ExtractedSession,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -269,7 +269,7 @@ pub async fn list(
     extracted_session: ExtractedSession,
     Path(workspace_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -332,7 +332,7 @@ pub async fn read(
         chat_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -412,7 +412,7 @@ pub async fn update(
     }): Path<Params>,
     Json(input): Json<ChatPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context

@@ -4,7 +4,7 @@ use crate::{
     email_service::send_invitation_email,
     entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -71,7 +71,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<UserPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context
@@ -101,7 +101,7 @@ pub async fn create(
             let cloned_password = input.password.clone();
             let config = context.get_config().await?;
             let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
                     .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -168,7 +168,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -227,7 +227,7 @@ pub async fn invitation(
     extracted_session: ExtractedSession,
     Json(input): Json<UserInvitationPost>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context
@@ -259,7 +259,7 @@ pub async fn invitation(
             let cloned_password = password.clone();
             let config = context.get_config().await?;
             let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
                     .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -318,7 +318,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -356,7 +356,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -404,7 +404,7 @@ pub async fn roles(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     context
         .octopus_database
@@ -442,7 +442,7 @@ pub async fn update(
     Path(user_id): Path<Uuid>,
     Json(input): Json<UserPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context

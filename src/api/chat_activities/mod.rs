@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -34,7 +34,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Path(chat_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -91,7 +91,7 @@ pub async fn list(
     extracted_session: ExtractedSession,
     Path(chat_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database

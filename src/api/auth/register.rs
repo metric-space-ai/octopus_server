@@ -10,6 +10,21 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use validator::Validate;
 
+#[allow(clippy::module_name_repetitions)]
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct RegisterPost {
+    #[validate(email, length(max = 256))]
+    email: String,
+    #[validate(length(max = 256, min = 1))]
+    job_title: String,
+    #[validate(length(max = 256, min = 1))]
+    name: String,
+    #[validate(length(min = 8))]
+    password: String,
+    #[validate(length(min = 8))]
+    repeat_password: String,
+}
+
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
@@ -44,7 +59,7 @@ pub async fn register(
             let cloned_password = input.password.clone();
             let config = context.get_config().await?;
             let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
                     .await??;
 
             let company = context
@@ -88,20 +103,6 @@ pub async fn register(
         }
         Some(_user_exists) => Err(AppError::UserAlreadyExists),
     }
-}
-
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct RegisterPost {
-    #[validate(email, length(max = 256))]
-    email: String,
-    #[validate(length(max = 256, min = 1))]
-    job_title: String,
-    #[validate(length(max = 256, min = 1))]
-    name: String,
-    #[validate(length(min = 8))]
-    password: String,
-    #[validate(length(min = 8))]
-    repeat_password: String,
 }
 
 #[cfg(test)]

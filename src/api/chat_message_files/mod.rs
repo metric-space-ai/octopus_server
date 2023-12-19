@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };
 use axum::{
@@ -47,7 +47,7 @@ pub async fn delete(
         chat_message_file_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let chat_message_file = context
         .octopus_database
@@ -103,7 +103,7 @@ pub async fn list(
     extracted_session: ExtractedSession,
     Path(chat_message_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let chat_message = context
         .octopus_database
@@ -158,7 +158,7 @@ pub async fn read(
         chat_message_file_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let mut chat_message_file = context
         .octopus_database

@@ -51,6 +51,7 @@ pub enum ResponseTextResponse {
     String(String),
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn handle_function_call(
     ai_function: &AiFunction,
     ai_service: &AiService,

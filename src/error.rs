@@ -14,6 +14,7 @@ use tracing::error;
 use utoipa::ToSchema;
 use validator::ValidationErrors;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Display)]
 pub enum AppError {
     BadRequest,
@@ -182,6 +183,7 @@ impl From<ValidationErrors> for AppError {
 
 impl serde::ser::StdError for AppError {}
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ResponseError {
     pub error: String,

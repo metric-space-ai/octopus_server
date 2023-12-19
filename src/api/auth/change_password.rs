@@ -3,7 +3,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -17,6 +17,7 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ChangePasswordPut {
     old_password: Option<String>,
@@ -48,7 +49,7 @@ pub async fn change_password(
     Path(user_id): Path<Uuid>,
     Json(input): Json<ChangePasswordPut>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     input.validate()?;
 
@@ -80,7 +81,8 @@ pub async fn change_password(
     let cloned_password = input.password.clone();
     let config = context.get_config().await?;
     let pw_hash =
-        tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password)).await??;
+        tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
+            .await??;
 
     if session_user.id == user_id {
         let hash = context

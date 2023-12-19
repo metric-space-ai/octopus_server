@@ -34,6 +34,7 @@ pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/"
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 pub const MODEL: &str = "gpt-4-1106-preview";
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Serialize)]
 pub struct AiFunctionCall {
     pub arguments: serde_json::Value,
@@ -69,6 +70,7 @@ pub struct InformationRetrievalResponse {
     pub result: Option<String>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub enum AiClient {
     Azure(Client<AzureConfig>),

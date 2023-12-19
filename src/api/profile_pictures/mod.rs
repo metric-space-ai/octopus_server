@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };
 use axum::{
@@ -40,7 +40,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(user_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -115,7 +115,7 @@ pub async fn update(
     Path(user_id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database

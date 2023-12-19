@@ -11,6 +11,7 @@ use std::sync::Arc;
 use utoipa::ToSchema;
 use validator::Validate;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct LoginPost {
     #[validate(email)]

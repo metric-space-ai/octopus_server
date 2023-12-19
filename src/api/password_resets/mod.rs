@@ -80,7 +80,8 @@ pub async fn change_password(
     let cloned_password = input.password.clone();
     let config = context.get_config().await?;
     let pw_hash =
-        tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password)).await??;
+        tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
+            .await??;
 
     let user = context
         .octopus_database

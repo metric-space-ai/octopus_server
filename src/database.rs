@@ -16,6 +16,7 @@ use sqlx::{PgPool, Postgres, Transaction};
 use std::sync::Arc;
 use uuid::Uuid;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub struct OctopusDatabase {
     pool: Arc<PgPool>,
@@ -280,7 +281,7 @@ impl OctopusDatabase {
                 chat_message_files.clone(),
                 chat_message_pictures.clone(),
                 profiles.clone(),
-            )?;
+            );
             chat_messages_extended.push(chat_message_extended);
         }
 
@@ -311,7 +312,7 @@ impl OctopusDatabase {
                     chat_message_files,
                     chat_message_pictures,
                     profiles,
-                )?;
+                );
 
                 Ok(Some(chat_message_extended))
             }
@@ -1158,7 +1159,7 @@ impl OctopusDatabase {
         chat_message_files: Vec<ChatMessageFile>,
         chat_message_pictures: Vec<ChatMessagePicture>,
         profiles: Vec<Profile>,
-    ) -> Result<ChatMessageExtended> {
+    ) -> ChatMessageExtended {
         let mut selected_chat_message_files = vec![];
         let mut selected_chat_message_pictures = vec![];
         let mut profile = None;
@@ -1187,7 +1188,7 @@ impl OctopusDatabase {
             }
         }
 
-        let chat_message_extended = ChatMessageExtended {
+        ChatMessageExtended {
             id: chat_message.id,
             ai_function_id: chat_message.ai_function_id,
             chat_id: chat_message.chat_id,
@@ -1217,9 +1218,7 @@ impl OctopusDatabase {
             created_at: chat_message.created_at,
             deleted_at: chat_message.deleted_at,
             updated_at: chat_message.updated_at,
-        };
-
-        Ok(chat_message_extended)
+        }
     }
 
     pub async fn map_to_user_extended(
@@ -1832,7 +1831,7 @@ impl OctopusDatabase {
                     chat_message_files,
                     chat_message_pictures,
                     profiles,
-                )?;
+                );
 
                 Ok(Some(chat_message_extended))
             }

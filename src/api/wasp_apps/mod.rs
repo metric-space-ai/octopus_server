@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{ensure_secured, require_authenticated_session, ExtractedSession},
+    session::{ensure_secured, require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Multipart, Path, State},
@@ -144,7 +144,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let wasp_apps = context.octopus_database.get_wasp_apps().await?;
 
@@ -176,7 +176,7 @@ pub async fn proxy(
         chat_message_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let wasp_app = context
         .octopus_database
@@ -222,7 +222,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated_session(extracted_session).await?;
+    require_authenticated(extracted_session).await?;
 
     let wasp_app = context
         .octopus_database

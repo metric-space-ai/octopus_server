@@ -18,11 +18,8 @@ pub enum AiFunctionRequestContentType {
 impl FromStr for AiFunctionRequestContentType {
     type Err = AppError;
 
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        match s {
-            "application_json" => Ok(AiFunctionRequestContentType::ApplicationJson),
-            _ => Ok(AiFunctionRequestContentType::ApplicationJson),
-        }
+    fn from_str(_s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(AiFunctionRequestContentType::ApplicationJson)
     }
 }
 
@@ -44,7 +41,6 @@ impl FromStr for AiFunctionResponseContentType {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
-            "application_json" => Ok(AiFunctionResponseContentType::ApplicationJson),
             "image_jpeg" => Ok(AiFunctionResponseContentType::ImageJpeg),
             "image_png" => Ok(AiFunctionResponseContentType::ImagePng),
             "text_plain" => Ok(AiFunctionResponseContentType::TextPlain),
@@ -178,6 +174,7 @@ pub enum ChatMessageStatus {
     Asked,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatMessage {
     pub id: Uuid,
@@ -208,6 +205,7 @@ pub struct ChatMessage {
     pub updated_at: DateTime<Utc>,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct ChatMessageExtended {
     pub id: Uuid,

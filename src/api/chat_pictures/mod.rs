@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };
 use axum::{
@@ -50,7 +50,7 @@ pub async fn create(
     Path(chat_id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let chat = context
         .octopus_database
@@ -148,7 +148,7 @@ pub async fn delete(
         chat_picture_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -232,7 +232,7 @@ pub async fn read(
         chat_picture_id,
     }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -298,7 +298,7 @@ pub async fn update(
     }): Path<Params>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database

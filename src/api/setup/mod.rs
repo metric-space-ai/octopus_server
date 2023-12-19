@@ -30,6 +30,7 @@ pub struct ExamplePromptCategory {
     pub prompts: Vec<ExamplePrompt>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct SetupPost {
     #[validate(length(max = 256, min = 1))]
@@ -42,6 +43,7 @@ pub struct SetupPost {
     repeat_password: String,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct SetupInfoResponse {
     setup_required: bool,
@@ -111,7 +113,7 @@ pub async fn setup(
             let cloned_password = input.password.clone();
             let config = context.get_config().await?;
             let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(config, cloned_password))
+                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
                     .await??;
 
             let mut transaction = context.octopus_database.transaction_begin().await?;

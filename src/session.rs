@@ -10,11 +10,13 @@ use std::{str::FromStr, sync::Arc};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ExtractedSession {
     pub session: Option<Session>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct SessionResponse {
     pub id: Uuid,
@@ -23,6 +25,7 @@ pub struct SessionResponse {
     pub expired_at: DateTime<Utc>,
 }
 
+#[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct SessionResponseData {
     pub roles: Vec<String>,
@@ -42,7 +45,7 @@ pub async fn ensure_secured(
     Err(AppError::Forbidden)
 }
 
-pub async fn require_authenticated_session(
+pub async fn require_authenticated(
     extracted_session: ExtractedSession,
 ) -> Result<Session, AppError> {
     match extracted_session.session {
@@ -63,7 +66,7 @@ pub async fn secured(
     extracted_session: ExtractedSession,
     role: &String,
 ) -> Result<bool, AppError> {
-    let session = require_authenticated_session(extracted_session).await;
+    let session = require_authenticated(extracted_session).await;
 
     if let Ok(session) = session {
         let user_roles = context
@@ -81,7 +84,7 @@ pub async fn secured(
     Err(AppError::Unauthorized)
 }
 
-pub fn session_id(headers: HeaderMap) -> Result<Option<Uuid>, AppError> {
+pub fn get_session_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     let token_header = headers.get("X-Auth-Token");
 
     match token_header {
@@ -104,7 +107,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let context = Arc::from_ref(state);
 
-        let session_id = session_id(parts.headers.clone())?;
+        let session_id = get_session_id(&parts.headers)?;
 
         let extracted_session;
 

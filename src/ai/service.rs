@@ -26,6 +26,7 @@ pub struct SetupResponse {
     pub setup: AiServiceSetupStatus,
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn service_health_check(
     ai_service_id: Uuid,
     context: Arc<Context>,
@@ -117,6 +118,7 @@ pub async fn service_health_check(
     Ok(ai_service)
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.is_enabled {
         let ai_service =
@@ -161,6 +163,7 @@ pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Re
     Ok(ai_service)
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn service_setup(
     ai_service_id: Uuid,
     context: Arc<Context>,

@@ -11,6 +11,7 @@ pub struct App {
     pub router: Router,
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub async fn get_app(args: Args) -> Result<App> {
     let context = get_context(args).await?;
 

@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
     error::AppError,
-    session::{require_authenticated_session, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -50,7 +50,7 @@ pub async fn create(
     extracted_session: ExtractedSession,
     Json(input): Json<WorkspacePost>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context
@@ -118,7 +118,7 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -184,7 +184,7 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -234,7 +234,7 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
 
     let session_user = context
         .octopus_database
@@ -290,7 +290,7 @@ pub async fn update(
     Path(id): Path<Uuid>,
     Json(input): Json<WorkspacePut>,
 ) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated_session(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
     let session_user = context
