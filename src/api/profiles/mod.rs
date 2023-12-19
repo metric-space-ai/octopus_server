@@ -174,10 +174,7 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use fake::{
-        faker::{
-            lorem::en::Paragraph,
-            name::en::Name,
-        },
+        faker::{lorem::en::Paragraph, name::en::Name},
         Fake,
     };
     use http_body_util::BodyExt;

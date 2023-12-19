@@ -223,15 +223,45 @@ pub async fn update(
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{api, app, entity::ExamplePromptCategory};
+    use crate::{api, app, context::Context, entity::ExamplePromptCategory};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    pub fn get_example_prompt_category_create_params() -> (String, bool, String) {
+        let description = format!(
+            "sample description {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let is_visible = true;
+        let title = format!(
+            "sample title {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        (description, is_visible, title)
+    }
+
+    pub async fn example_prompt_category_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        example_prompt_category_id: Uuid,
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_example_prompt_category_by_id(transaction, example_prompt_category_id)
+            .await;
+    }
 
     pub async fn example_prompt_category_create(
         router: Router,
@@ -291,12 +321,9 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category =
-            example_prompt_category_create(router, session_id, description, is_visible, title)
+            example_prompt_category_create(router, session_id, &description, is_visible, &title)
                 .await;
         let example_prompt_category_id = example_prompt_category.id;
 
@@ -307,11 +334,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -359,10 +387,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -418,16 +443,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -482,16 +504,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -540,11 +559,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -624,16 +644,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -669,11 +686,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -701,16 +719,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -736,11 +751,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -768,16 +784,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -817,11 +830,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -849,16 +863,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -886,11 +897,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -970,24 +982,18 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
 
-        let description = "sample description 2";
-        let is_visible = false;
-        let title = "sample title 2";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1030,11 +1036,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1062,16 +1069,13 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let example_prompt_category = example_prompt_category_create(
             router.clone(),
             session_id,
-            description,
+            &description,
             is_visible,
-            title,
+            &title,
         )
         .await;
         let example_prompt_category_id = example_prompt_category.id;
@@ -1096,10 +1100,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let description = "sample description 2";
-        let is_visible = false;
-        let title = "sample title 2";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1131,11 +1132,12 @@ pub mod tests {
             .await
             .unwrap();
 
-        app.context
-            .octopus_database
-            .try_delete_example_prompt_category_by_id(&mut transaction, example_prompt_category_id)
-            .await
-            .unwrap();
+        example_prompt_category_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            example_prompt_category_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1165,10 +1167,7 @@ pub mod tests {
 
         let example_prompt_category_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let description = "sample description";
-        let is_visible = true;
-        let title = "sample title";
-
+        let (description, is_visible, title) = get_example_prompt_category_create_params();
         let response = router
             .oneshot(
                 Request::builder()
