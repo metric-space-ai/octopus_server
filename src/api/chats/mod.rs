@@ -490,6 +490,7 @@ pub mod tests {
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;
@@ -516,6 +517,16 @@ pub mod tests {
         chat_cleanup(context.clone(), transaction, chat_id).await;
 
         api::workspaces::tests::workspace_cleanup(context, transaction, workspace_id).await;
+    }
+
+    pub fn get_chat_create_params() -> String {
+        let name = format!(
+            "updated name {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        name
     }
 
     pub async fn chat_create(
@@ -2132,8 +2143,7 @@ pub mod tests {
         let (chat_id, workspace_id) =
             chat_with_deps_create(router.clone(), session_id, user_id, &name, &r#type).await;
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -2232,8 +2242,7 @@ pub mod tests {
         let chat = chat_create(router.clone(), session_id, second_user_id, workspace_id).await;
         let chat_id = chat.id;
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -2302,8 +2311,7 @@ pub mod tests {
         let (chat_id, workspace_id) =
             chat_with_deps_create(router.clone(), session_id, user_id, &name, &r#type).await;
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -2382,8 +2390,7 @@ pub mod tests {
         let (chat_id, workspace_id) =
             chat_with_deps_create(router.clone(), admin_session_id, user_id, &name, &r#type).await;
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -2484,8 +2491,7 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -2554,8 +2560,7 @@ pub mod tests {
 
         let chat_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let name = "updated name";
-
+        let name = get_chat_create_params();
         let response = router
             .oneshot(
                 Request::builder()

@@ -111,14 +111,6 @@ pub mod tests {
         body::Body,
         http::{self, Request, StatusCode},
     };
-    use fake::{
-        faker::{
-            internet::en::SafeEmail,
-            lorem::en::{Paragraph, Word},
-            name::en::Name,
-        },
-        Fake,
-    };
     use tower::ServiceExt;
 
     #[tokio::test]
@@ -180,17 +172,9 @@ pub mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = "password123";
+        let (email, _is_enabled, job_title, name, password, _roles) =
+            api::users::tests::get_user_create_params();
         let repeat_password = "password1234";
-
         let response = router
             .oneshot(
                 Request::builder()
