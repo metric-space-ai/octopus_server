@@ -173,8 +173,24 @@ mod tests {
         body::Body,
         http::{self, Request, StatusCode},
     };
+    use fake::{
+        faker::{
+            lorem::en::Paragraph,
+            name::en::Name,
+        },
+        Fake,
+    };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+
+    pub fn get_profile_update_params() -> (String, String, String, i32) {
+        let job_title = Paragraph(1..2).fake::<String>();
+        let language = "en_US".to_string();
+        let name = Name().fake::<String>();
+        let text_size = 14;
+
+        (job_title, language, name, text_size)
+    }
 
     #[tokio::test]
     async fn read_200() {
@@ -636,11 +652,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -725,11 +737,7 @@ mod tests {
         .await;
         let second_user_id = user.id;
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -817,11 +825,7 @@ mod tests {
         api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
             .await;
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -897,11 +901,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -984,11 +984,7 @@ mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
@@ -1062,11 +1058,7 @@ mod tests {
 
         let third_user_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let job_title = "updated job title";
-        let language = "en_US";
-        let name = "updated name";
-        let text_size = 14;
-
+        let (job_title, language, name, text_size) = get_profile_update_params();
         let response = router
             .oneshot(
                 Request::builder()
