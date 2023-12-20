@@ -746,6 +746,43 @@ pub mod tests {
         }
     }
 
+    pub async fn ai_service_create_and_configure(router: Router, session_id: Uuid) -> AiService {
+        let ai_service = ai_service_create(router.clone(), session_id).await;
+        let ai_service_id = ai_service.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/ai-services/{ai_service_id}/configuration"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        "{\"device_map\": {
+                            \"cpu\": \"22.8GiB\"
+                        }}"
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: AiService = serde_json::from_slice(&body).unwrap();
+
+        assert!(!body.is_enabled);
+        assert_eq!(body.status, AiServiceStatus::ParsingStarted);
+
+        body
+    }
+
     #[tokio::test]
     async fn allowed_users_200() {
         let app = app::tests::get_test_app().await;
@@ -956,38 +993,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let ai_service = ai_service_create(router.clone(), session_id).await;
+        let ai_service = ai_service_create_and_configure(router.clone(), session_id).await;
         let ai_service_id = ai_service.id;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/ai-services/{ai_service_id}/configuration"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        "{\"device_map\": {
-                            \"cpu\": \"22.8GiB\"
-                        }}"
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: AiService = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.is_enabled);
-        assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         let mut transaction = app
             .context
@@ -1520,39 +1527,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let ai_service = ai_service_create(router.clone(), session_id).await;
+        let ai_service = ai_service_create_and_configure(router.clone(), session_id).await;
         let ai_service_id = ai_service.id;
-
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/ai-services/{ai_service_id}/configuration"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        "{\"device_map\": {
-                            \"cpu\": \"22.8GiB\"
-                        }}"
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: AiService = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.is_enabled);
-        assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
 
@@ -1620,39 +1596,8 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let ai_service = ai_service_create(router.clone(), session_id).await;
+        let ai_service = ai_service_create_and_configure(router.clone(), session_id).await;
         let ai_service_id = ai_service.id;
-
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/ai-services/{ai_service_id}/configuration"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        "{\"device_map\": {
-                            \"cpu\": \"22.8GiB\"
-                        }}"
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: AiService = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.is_enabled);
-        assert_eq!(body.status, AiServiceStatus::ParsingStarted);
 
         sleep(Duration::from_secs(4)).await;
 
