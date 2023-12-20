@@ -230,21 +230,17 @@ mod tests {
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
+        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;
+    use uuid::Uuid;
 
-    #[tokio::test]
-    async fn request_201() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
+    pub async fn password_reset_token_create(
+        router: Router,
+        user_id: Uuid,
+        email: &str,
+    ) -> PasswordResetToken {
         let response = router
             .oneshot(
                 Request::builder()
@@ -274,7 +270,22 @@ mod tests {
         assert_eq!(body.user_id, user_id);
         assert_eq!(body.email, email);
 
-        let password_reset_token_id = body.id;
+        body
+    }
+
+    #[tokio::test]
+    async fn request_201() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let password_reset_token = password_reset_token_create(router, user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let mut transaction = app
             .context
@@ -338,37 +349,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let response = router
             .oneshot(
@@ -424,37 +407,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         app.context
             .octopus_database
@@ -516,37 +471,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let token = app
             .context
@@ -637,37 +564,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let token = app
             .context
@@ -732,37 +631,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let token = app
             .context
@@ -867,37 +738,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let token = app
             .context
@@ -1018,37 +861,9 @@ mod tests {
         let company_id = user.company_id;
         let user_id = user.id;
 
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/password-resets")
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: PasswordResetToken = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.user_id, user_id);
-        assert_eq!(body.email, email);
-
-        let password_reset_token_id = body.id;
+        let password_reset_token =
+            password_reset_token_create(router.clone(), user_id, &email).await;
+        let password_reset_token_id = password_reset_token.id;
 
         let token = app
             .context
