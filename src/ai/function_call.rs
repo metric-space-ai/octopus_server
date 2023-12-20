@@ -69,17 +69,17 @@ pub async fn handle_function_call(
                 update_chat_message(ai_function, &response, context.clone(), chat_message).await?;
 
             return Ok(chat_message);
-        } else {
-            failed_connection_attempts += 1;
-
-            if failed_connection_attempts > 10 {
-                service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
-
-                break;
-            }
-
-            sleep(Duration::from_secs(2)).await;
         }
+
+        failed_connection_attempts += 1;
+
+        if failed_connection_attempts > 10 {
+            service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
+
+            break;
+        }
+
+        sleep(Duration::from_secs(2)).await;
     }
 
     Ok(chat_message.clone())
@@ -155,15 +155,15 @@ pub async fn function_call(
             };
 
             return Ok(Some(ai_function_response));
-        } else {
-            let response = response.text().await?;
-
-            let ai_function_error_response = AiFunctionErrorResponse {
-                error: Some(response),
-            };
-
-            return Ok(Some(AiFunctionResponse::Error(ai_function_error_response)));
         }
+
+        let response = response.text().await?;
+
+        let ai_function_error_response = AiFunctionErrorResponse {
+            error: Some(response),
+        };
+
+        return Ok(Some(AiFunctionResponse::Error(ai_function_error_response)));
     }
 
     Ok(None)

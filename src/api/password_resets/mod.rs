@@ -137,21 +137,22 @@ pub async fn request(
 
     if let Some(password_reset_token) = password_reset_token {
         let now = Utc::now();
+
         if password_reset_token.expires_at > now {
             return Err(AppError::Conflict);
-        } else {
-            context
-                .octopus_database
-                .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            return Err(AppError::Gone);
         }
+
+        context
+            .octopus_database
+            .try_delete_password_reset_token_by_id(&mut transaction, password_reset_token.id)
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        return Err(AppError::Gone);
     }
 
     let mut token: String = rand::thread_rng()

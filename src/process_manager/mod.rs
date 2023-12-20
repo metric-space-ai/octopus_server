@@ -556,15 +556,15 @@ pub async fn try_restart_ai_service(
 }
 
 pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
-    let pwd = get_pwd()?;
+    let working_dir = get_pwd()?;
 
     Command::new("/bin/bash")
         .arg(format!(
-            "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
+            "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
         ))
         .arg("&>>")
         .arg(format!(
-            "{pwd}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
+            "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
         ))
         .spawn()?;
 
@@ -576,15 +576,15 @@ pub async fn try_start_ai_service(ai_service_id: Uuid) -> Result<Option<i32>> {
 
         if let Some(pid_tmp) = pid_tmp {
             return Ok(Some(pid_tmp));
-        } else {
-            failed_pid_get_attempts += 1;
+        }
 
-            if failed_pid_get_attempts > 40 {
-                break;
-            }
+        failed_pid_get_attempts += 1;
 
-            sleep(Duration::from_secs(30)).await;
-        };
+        if failed_pid_get_attempts > 40 {
+            break;
+        }
+
+        sleep(Duration::from_secs(30)).await;
     }
 
     Ok(pid)

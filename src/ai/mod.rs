@@ -711,14 +711,14 @@ pub async fn open_ai_request(
 
         match request {
             Err(e) => {
-                let content = format!("OpenAIError: {e}");
+                let response = format!("OpenAIError: {e}");
                 let chat_message = context
                     .octopus_database
                     .update_chat_message(
                         &mut transaction,
                         chat_message.id,
                         100,
-                        &content,
+                        &response,
                         ChatMessageStatus::Answered,
                     )
                     .await?;
@@ -738,14 +738,14 @@ pub async fn open_ai_request(
 
                 match response_message {
                     Err(e) => {
-                        let content = format!("OpenAIError: {e}");
+                        let response = format!("OpenAIError: {e}");
                         let chat_message = context
                             .octopus_database
                             .update_chat_message(
                                 &mut transaction,
                                 chat_message.id,
                                 100,
-                                &content,
+                                &response,
                                 ChatMessageStatus::Answered,
                             )
                             .await?;
@@ -762,14 +762,14 @@ pub async fn open_ai_request(
 
                         match response_message {
                             None => {
-                                let content = "BadResponse";
+                                let response = "BadResponse";
                                 context
                                     .octopus_database
                                     .update_chat_message(
                                         &mut transaction,
                                         chat_message.id,
                                         100,
-                                        content,
+                                        response,
                                         ChatMessageStatus::Answered,
                                     )
                                     .await?;

@@ -47,7 +47,7 @@ pub async fn service_health_check(
 
         let end = Utc::now();
 
-        let health_check_execution_time = (end - start).num_seconds() as i32;
+        let health_check_execution_time = i32::try_from((end - start).num_seconds())?;
 
         let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -182,7 +182,7 @@ pub async fn service_setup(
         .await;
 
     let end = Utc::now();
-    let setup_execution_time = (end - start).num_seconds() as i32;
+    let setup_execution_time = i32::try_from((end - start).num_seconds())?;
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 

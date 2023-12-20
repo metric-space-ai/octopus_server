@@ -26,7 +26,7 @@ pub struct ServerResources {
 }
 
 pub fn get() -> Result<ServerResources> {
-    let cpus = num_cpus::get();
+    let logical_cpus = num_cpus::get();
     let mut gpus = vec![];
     let mut memory_free = String::new();
     let mut memory_total = String::new();
@@ -133,7 +133,7 @@ pub fn get() -> Result<ServerResources> {
     device_map.insert("cpu".to_string(), memory_free.clone());
 
     let server_resources = ServerResources {
-        cpus,
+        cpus: logical_cpus,
         device_map,
         gpus,
         memory_free,

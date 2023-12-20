@@ -276,13 +276,13 @@ impl OctopusDatabase {
         let mut chat_messages_extended = vec![];
 
         for chat_message in chat_messages {
-            let chat_message_extended = Self::map_to_chat_message_extended(
+            let mapped_chat_message_extended = Self::map_to_chat_message_extended(
                 &chat_message,
                 chat_message_files.clone(),
                 chat_message_pictures.clone(),
                 profiles.clone(),
             );
-            chat_messages_extended.push(chat_message_extended);
+            chat_messages_extended.push(mapped_chat_message_extended);
         }
 
         Ok(chat_messages_extended)
@@ -562,8 +562,8 @@ impl OctopusDatabase {
                 .collect::<Vec<Profile>>()
                 .first()
                 .cloned();
-            let user_extended = self.map_to_user_extended(&user, profile).await?;
-            users_extended.push(user_extended);
+            let mapped_user_extended = self.map_to_user_extended(&user, profile).await?;
+            users_extended.push(mapped_user_extended);
         }
 
         Ok(users_extended)

@@ -80,6 +80,7 @@ mod users;
 mod wasp_apps;
 mod workspaces;
 
+#[allow(clippy::too_many_lines)]
 pub fn router(context: Arc<Context>) -> Router {
     #[derive(OpenApi)]
     #[openapi(
