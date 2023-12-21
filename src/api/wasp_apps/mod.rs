@@ -2,6 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
+    process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
 };
 use axum::{
@@ -198,7 +199,10 @@ pub async fn proxy(
         return Err(AppError::NotFound);
     }
 
-    Ok((StatusCode::OK, Html(wasp_app.code)).into_response())
+    let wasp_app =
+        process_manager::wasp_app::install_and_run(context, chat_message, wasp_app).await?;
+
+    Ok((StatusCode::OK, Html(wasp_app.name)).into_response())
 }
 
 #[axum_macros::debug_handler]

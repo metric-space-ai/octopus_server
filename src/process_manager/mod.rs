@@ -9,6 +9,7 @@ use tracing::error;
 use uuid::Uuid;
 
 pub mod ai_service;
+pub mod wasp_app;
 
 #[derive(Clone, Debug)]
 pub struct Process {
@@ -102,6 +103,15 @@ impl ProcessManager {
         }
 
         Ok(processes_list)
+    }
+
+    pub fn list_reserved_ports(&self) -> Result<Vec<i32>> {
+        let reserved_ports = self
+            .reserved_ports
+            .read()
+            .map_err(|_| AppError::ProcessManagerLock)?;
+
+        Ok(reserved_ports.clone())
     }
 
     pub fn remove_process(&self, id: Uuid) -> Result<bool> {
