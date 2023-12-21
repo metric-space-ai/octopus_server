@@ -266,7 +266,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     let ai_service =
-        process_manager::stop_and_remove_ai_service(ai_service, context.clone()).await?;
+        process_manager::ai_service::stop_and_remove(ai_service, context.clone()).await?;
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -326,7 +326,7 @@ pub async fn installation(
     let cloned_ai_service = ai_service.clone();
     tokio::spawn(async move {
         let ai_service =
-            process_manager::install_and_run_ai_service(cloned_ai_service, cloned_context).await;
+            process_manager::ai_service::install_and_run(cloned_ai_service, cloned_context).await;
 
         if let Err(e) = ai_service {
             debug!("Error: {:?}", e);
@@ -466,7 +466,7 @@ pub async fn operation(
         let ai_service = match cloned_input.operation {
             AiServiceOperation::Disable => {
                 let mut ai_service =
-                    process_manager::stop_ai_service(cloned_ai_service, cloned_context).await;
+                    process_manager::ai_service::stop(cloned_ai_service, cloned_context).await;
 
                 if let Ok(ref ai_service_ok) = ai_service {
                     let transaction = context.octopus_database.transaction_begin().await;
@@ -493,7 +493,7 @@ pub async fn operation(
                 ai_service
             }
             AiServiceOperation::Enable => {
-                process_manager::try_restart_ai_service(cloned_ai_service, cloned_context).await
+                process_manager::ai_service::try_restart(cloned_ai_service, cloned_context).await
             }
             AiServiceOperation::HealthCheck => {
                 ai::service::service_health_check(
