@@ -50,7 +50,7 @@ impl ProcessManager {
         }
     }
 
-    pub fn insert_process(&self, process: Process) -> Result<Option<Process>> {
+    pub fn insert_process(&self, process: &Process) -> Result<Option<Process>> {
         let mut processes = self
             .processes
             .write()

@@ -199,8 +199,12 @@ pub async fn proxy(
         return Err(AppError::NotFound);
     }
 
-    let wasp_app =
-        process_manager::wasp_app::install_and_run(context, chat_message, wasp_app).await?;
+    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message.id))?;
+    let process = context.process_manager.get_process(chat_message.id)?;
+
+    if pid.is_none() || process.is_none() {
+        process_manager::wasp_app::install_and_run(context, chat_message, wasp_app.clone()).await?;
+    }
 
     Ok((StatusCode::OK, Html(wasp_app.name)).into_response())
 }

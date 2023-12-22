@@ -3,12 +3,12 @@ use crate::{
     entity::{ChatMessage, WaspApp},
     error::AppError,
     get_pwd,
-    process_manager::{try_get_pid, Process, ProcessState, ProcessType},
+    process_manager::{try_get_pid, try_kill_process, Process, ProcessState, ProcessType},
     Result, WASP_APPS_DIR,
 };
 use port_selector::{select_free_port, Selector};
 use std::{
-    fs::{create_dir, File},
+    fs::{create_dir, remove_dir_all, File},
     io::Write,
     path::Path,
     process::Command,
@@ -18,7 +18,7 @@ use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 pub fn create_environment(
-    context: Arc<Context>,
+    context: &Arc<Context>,
     chat_message: &ChatMessage,
     mut process: Process,
     wasp_app: &WaspApp,
@@ -167,8 +167,19 @@ pub fn create_environment(
     Ok(process)
 }
 
-pub async fn install(
-    context: Arc<Context>,
+pub fn delete_environment(chat_message: &ChatMessage) -> Result<bool> {
+    let pwd = get_pwd()?;
+    let path = format!("{pwd}/{WASP_APPS_DIR}/{}", chat_message.id);
+    let dir_exists = Path::new(&path).is_dir();
+    if dir_exists {
+        remove_dir_all(path)?;
+    }
+
+    Ok(true)
+}
+
+pub fn install(
+    context: &Arc<Context>,
     chat_message: &ChatMessage,
     wasp_app: WaspApp,
 ) -> Result<WaspApp> {
@@ -182,13 +193,13 @@ pub async fn install(
         r#type: ProcessType::WaspApp,
     };
 
-    let process = context.process_manager.insert_process(process)?;
+    let process = context.process_manager.insert_process(&process)?;
 
     if let Some(process) = process {
-        let process = create_environment(context.clone(), chat_message, process, &wasp_app)?;
+        let process = create_environment(context, chat_message, process, &wasp_app)?;
 
         if process.state == ProcessState::EnvironmentPrepared {
-            context.process_manager.insert_process(process)?;
+            context.process_manager.insert_process(&process)?;
         }
     }
 
@@ -201,7 +212,8 @@ pub async fn install_and_run(
     wasp_app: WaspApp,
 ) -> Result<WaspApp> {
     if !context.get_config().await?.test_mode {
-        let wasp_app = install(context.clone(), &chat_message, wasp_app).await?;
+        let chat_message = stop_and_remove(context.clone(), chat_message).await?;
+        let wasp_app = install(&context.clone(), &chat_message, wasp_app)?;
         let wasp_app = run(context, &chat_message, wasp_app).await?;
 
         return Ok(wasp_app);
@@ -225,7 +237,7 @@ pub async fn run(
                 process.pid = pid;
                 process.state = ProcessState::Running;
 
-                let process = context.process_manager.insert_process(process)?;
+                let process = context.process_manager.insert_process(&process)?;
 
                 if let Some(_process) = process {
                     return Ok(wasp_app);
@@ -235,6 +247,29 @@ pub async fn run(
     }
 
     Ok(wasp_app)
+}
+
+pub async fn stop(context: Arc<Context>, chat_message: ChatMessage) -> Result<ChatMessage> {
+    let pid = try_get_pid(&format!("{}.sh", chat_message.id))?;
+
+    if let Some(pid) = pid {
+        try_kill_process(pid).await?;
+    }
+
+    context.process_manager.remove_process(chat_message.id)?;
+
+    Ok(chat_message)
+}
+
+pub async fn stop_and_remove(
+    context: Arc<Context>,
+    chat_message: ChatMessage,
+) -> Result<ChatMessage> {
+    let chat_message = stop(context, chat_message).await?;
+
+    delete_environment(&chat_message)?;
+
+    Ok(chat_message)
 }
 
 pub async fn try_start(chat_message_id: Uuid) -> Result<Option<i32>> {

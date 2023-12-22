@@ -65,7 +65,8 @@ pub fn create_environment(ai_service: &AiService) -> Result<bool> {
 }
 
 pub fn delete_environment(ai_service: &AiService) -> Result<bool> {
-    let path = format!("{SERVICES_DIR}/{}", ai_service.id);
+    let pwd = get_pwd()?;
+    let path = format!("{pwd}/{SERVICES_DIR}/{}", ai_service.id);
     let dir_exists = Path::new(&path).is_dir();
     if dir_exists {
         remove_dir_all(path)?;
@@ -102,7 +103,7 @@ pub async fn install(ai_service: AiService, context: Arc<Context>) -> Result<AiS
         r#type: ProcessType::AiService,
     };
 
-    let process = context.process_manager.insert_process(process)?;
+    let process = context.process_manager.insert_process(&process)?;
 
     if let Some(mut process) = process {
         let environment_created = create_environment(&ai_service)?;
@@ -110,7 +111,7 @@ pub async fn install(ai_service: AiService, context: Arc<Context>) -> Result<AiS
         if environment_created {
             process.state = ProcessState::EnvironmentPrepared;
 
-            let process = context.process_manager.insert_process(process)?;
+            let process = context.process_manager.insert_process(&process)?;
 
             if let Some(_process) = process {
                 let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -173,7 +174,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
                             r#type: process.r#type,
                         };
 
-                        context.process_manager.insert_process(process)?;
+                        context.process_manager.insert_process(&process)?;
                     }
                 } else {
                     let process = Process {
@@ -186,7 +187,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
                         r#type: process.r#type,
                     };
 
-                    context.process_manager.insert_process(process)?;
+                    context.process_manager.insert_process(&process)?;
                 }
 
                 if process.failed_connection_attempts > 30 {
@@ -202,7 +203,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
 
                 if ai_service.health_check_status != AiServiceHealthCheckStatus::Ok {
                     process.state = ProcessState::HealthCheckProblem;
-                    context.process_manager.insert_process(process)?;
+                    context.process_manager.insert_process(&process)?;
                 }
             }
         }
@@ -228,7 +229,7 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
                 r#type: ProcessType::AiService,
             };
 
-            context.process_manager.insert_process(process)?;
+            context.process_manager.insert_process(&process)?;
         }
     }
     if ai_service.status == AiServiceStatus::InstallationFinished
@@ -245,7 +246,7 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
                 if let Some(_pid) = pid {
                     process.pid = pid;
 
-                    let process = context.process_manager.insert_process(process)?;
+                    let process = context.process_manager.insert_process(&process)?;
 
                     if let Some(mut process) = process {
                         let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -269,7 +270,7 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
                         {
                             process.state = ProcessState::Running;
 
-                            let process = context.process_manager.insert_process(process)?;
+                            let process = context.process_manager.insert_process(&process)?;
 
                             if let Some(_process) = process {
                                 let mut transaction =
@@ -339,7 +340,7 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
                             r#type: ProcessType::AiService,
                         };
 
-                        let process = context.process_manager.insert_process(process)?;
+                        let process = context.process_manager.insert_process(&process)?;
 
                         if let Some(_process) = process {
                             run(ai_service, context.clone()).await?;
@@ -357,7 +358,7 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
                         r#type: ProcessType::AiService,
                     };
 
-                    context.process_manager.insert_process(process)?;
+                    context.process_manager.insert_process(&process)?;
                 }
             }
         }
@@ -399,7 +400,7 @@ pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result
         r#type: ProcessType::AiService,
     };
 
-    let process = context.process_manager.insert_process(process)?;
+    let process = context.process_manager.insert_process(&process)?;
 
     if let Some(_process) = process {
         let ai_service = run(ai_service, context.clone()).await?;
