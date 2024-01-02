@@ -15,6 +15,7 @@ pub struct Config {
     pub pepper_id: i32,
     pub port: u16,
     pub test_mode: bool,
+    pub wasp_database_url: String,
 }
 
 impl Config {
@@ -25,6 +26,7 @@ impl Config {
         pepper_id: i32,
         port: u16,
         test_mode: bool,
+        wasp_database_url: String,
     ) -> Self {
         Self {
             database_url,
@@ -33,6 +35,7 @@ impl Config {
             pepper_id,
             port,
             test_mode,
+            wasp_database_url,
         }
     }
 
@@ -136,6 +139,7 @@ pub fn load(args: Args) -> Result<Config> {
     let parameters = vec![];
     let mut port = 8080;
     let mut test_mode = false;
+    let mut wasp_database_url: Option<String> = None;
 
     if let Ok(val) = std::env::var("DATABASE_URL") {
         database_url = Some(val);
@@ -160,6 +164,14 @@ pub fn load(args: Args) -> Result<Config> {
         test_mode = val;
     }
 
+    if let Ok(val) = std::env::var("WASP_DATABASE_URL") {
+        wasp_database_url = Some(val);
+    }
+
+    if let Some(val) = args.wasp_database_url {
+        wasp_database_url = Some(val);
+    }
+
     let config = Config::new(
         database_url.expect("Unknown database url"),
         parameters,
@@ -167,6 +179,7 @@ pub fn load(args: Args) -> Result<Config> {
         pepper_id,
         port,
         test_mode,
+        wasp_database_url.expect("Unknown wasp database url"),
     );
 
     Ok(config)

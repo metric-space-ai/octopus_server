@@ -46,6 +46,7 @@ pub mod tests {
             )),
             port: None,
             test_mode: Some(true),
+            wasp_database_url: Some(String::from("postgres://admin:admin@db")),
         };
 
         app::get_app(args).await.unwrap()

@@ -203,8 +203,15 @@ pub async fn proxy(
     let process = context.process_manager.get_process(chat_message.id)?;
 
     if pid.is_none() || process.is_none() {
-        process_manager::wasp_app::install_and_run(context, chat_message, wasp_app.clone()).await?;
+        process_manager::wasp_app::install_and_run(
+            context.clone(),
+            chat_message.clone(),
+            wasp_app.clone(),
+        )
+        .await?;
     }
+
+    process_manager::try_update_last_used_at(context, chat_message.id).await?;
 
     Ok((StatusCode::OK, Html(wasp_app.name)).into_response())
 }

@@ -40,6 +40,10 @@ pub struct Args {
     /// Test mode
     #[arg(short, long)]
     pub test_mode: Option<bool>,
+
+    /// WASP database url
+    #[arg(short, long)]
+    pub wasp_database_url: Option<String>,
 }
 
 pub async fn run() -> Result<()> {

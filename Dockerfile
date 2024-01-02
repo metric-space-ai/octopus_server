@@ -130,6 +130,7 @@ FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS prod
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
+        cgroup-tools \
         curl \
         g++ \
         git \

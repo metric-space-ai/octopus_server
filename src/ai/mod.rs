@@ -758,7 +758,7 @@ pub async fn open_ai_request(
                         return Ok(chat_message);
                     }
                     Ok(response_message) => {
-                        let response_message = response_message.choices.get(0);
+                        let response_message = response_message.choices.first();
 
                         match response_message {
                             None => {

@@ -6,9 +6,10 @@ use crate::{
     process_manager::{try_get_pid, try_kill_process, Process, ProcessState, ProcessType},
     Result, WASP_APPS_DIR,
 };
+use chrono::Utc;
 use port_selector::{select_free_port, Selector};
 use std::{
-    fs::{create_dir, remove_dir_all, File},
+    fs::{create_dir, remove_dir_all, remove_file, File},
     io::Write,
     path::Path,
     process::Command,
@@ -17,7 +18,7 @@ use std::{
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
-pub fn create_environment(
+pub async fn create_environment(
     context: &Arc<Context>,
     chat_message: &ChatMessage,
     mut process: Process,
@@ -47,7 +48,7 @@ pub fn create_environment(
         let port = select_free_port(selector);
 
         if let Some(port) = port {
-            let selected_port = i32::try_from(port)?;
+            let selected_port = port.into();
 
             if !reserved_ports.contains(&selected_port) {
                 wasp_app_client_port = Some(selected_port);
@@ -65,7 +66,7 @@ pub fn create_environment(
         let port = select_free_port(selector);
 
         if let Some(port) = port {
-            let selected_port = i32::try_from(port)?;
+            let selected_port = port.into();
 
             if !reserved_ports.contains(&selected_port) {
                 wasp_app_server_port = Some(selected_port);
@@ -143,21 +144,28 @@ pub fn create_environment(
                 .ok_or(AppError::Parsing)?
                 .to_string();
             let path = format!("{full_wasp_app_dir_path}/{path}");
-            let mut outfile = std::fs::File::create(&path).unwrap();
-            std::io::copy(&mut file, &mut outfile).unwrap();
+            let mut outfile = std::fs::File::create(&path)?;
+            std::io::copy(&mut file, &mut outfile)?;
         }
     }
+
+    let name = format!("wasp_{chat_message_id}");
+    let name = name.replace('-', "_");
+    context.octopus_database.create_database(&name).await?;
+    let wasp_database_url = format!("{}/{name}", context.get_config().await?.wasp_database_url);
 
     let path = format!("{full_wasp_app_dir_path}/{chat_message_id}.sh");
     let mut file = File::create(path)?;
     file.write_fmt(format_args!("#!/bin/bash\n"))?;
     file.write_fmt(format_args!("cd {full_wasp_app_dir_path}\n"))?;
-    file.write_fmt(format_args!("wasp db migrate-dev\n"))?;
+    file.write_fmt(format_args!(
+        "DATABASE_URL={wasp_database_url} wasp db migrate-dev --name \"initial\"\n"
+    ))?;
     if let Some(wasp_app_client_port) = wasp_app_client_port {
         file.write_fmt(format_args!("sed -i \"s/    port: 3000,/    port: {wasp_app_client_port},/g\" {full_wasp_app_dir_path}/.wasp/out/web-app/vite.config.ts\n"))?;
     }
     if let Some(wasp_app_server_port) = wasp_app_server_port {
-        file.write_fmt(format_args!("PORT={wasp_app_server_port} wasp start\n"))?;
+        file.write_fmt(format_args!("PORT={wasp_app_server_port} DATABASE_URL={wasp_database_url} REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
     }
 
     process.client_port = wasp_app_client_port;
@@ -172,13 +180,73 @@ pub fn delete_environment(chat_message: &ChatMessage) -> Result<bool> {
     let path = format!("{pwd}/{WASP_APPS_DIR}/{}", chat_message.id);
     let dir_exists = Path::new(&path).is_dir();
     if dir_exists {
-        remove_dir_all(path)?;
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/.wasp", chat_message.id);
+        let dir_exists = Path::new(&path).is_dir();
+
+        if dir_exists {
+            remove_dir_all(path)?;
+        }
+
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/src", chat_message.id);
+        let dir_exists = Path::new(&path).is_dir();
+
+        if dir_exists {
+            remove_dir_all(path)?;
+        }
+
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/.gitignore", chat_message.id);
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
+
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/.wasproot", chat_message.id);
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
+
+        let path = format!(
+            "{pwd}/{WASP_APPS_DIR}/{}/{}.sh",
+            chat_message.id, chat_message.id
+        );
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
+
+        let path = format!(
+            "{pwd}/{WASP_APPS_DIR}/{}/{}.zip",
+            chat_message.id, chat_message.id
+        );
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
+
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/README.md", chat_message.id);
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
+
+        let path = format!("{pwd}/{WASP_APPS_DIR}/{}/main.wasp", chat_message.id);
+        let file_exists = Path::new(&path).is_file();
+
+        if file_exists {
+            remove_file(path)?;
+        }
     }
 
     Ok(true)
 }
 
-pub fn install(
+pub async fn install(
     context: &Arc<Context>,
     chat_message: &ChatMessage,
     wasp_app: WaspApp,
@@ -187,6 +255,7 @@ pub fn install(
         id: chat_message.id,
         client_port: None,
         failed_connection_attempts: 0,
+        last_used_at: None,
         pid: None,
         server_port: None,
         state: ProcessState::Initial,
@@ -196,7 +265,7 @@ pub fn install(
     let process = context.process_manager.insert_process(&process)?;
 
     if let Some(process) = process {
-        let process = create_environment(context, chat_message, process, &wasp_app)?;
+        let process = create_environment(context, chat_message, process, &wasp_app).await?;
 
         if process.state == ProcessState::EnvironmentPrepared {
             context.process_manager.insert_process(&process)?;
@@ -213,13 +282,35 @@ pub async fn install_and_run(
 ) -> Result<WaspApp> {
     if !context.get_config().await?.test_mode {
         let chat_message = stop_and_remove(context.clone(), chat_message).await?;
-        let wasp_app = install(&context.clone(), &chat_message, wasp_app)?;
+        let wasp_app = install(&context.clone(), &chat_message, wasp_app).await?;
         let wasp_app = run(context, &chat_message, wasp_app).await?;
 
         return Ok(wasp_app);
     }
 
     Ok(wasp_app)
+}
+
+pub async fn manage_running(context: Arc<Context>, process: Process) -> Result<()> {
+    if process.state == ProcessState::Running {
+        if let Some(last_used_at) = process.last_used_at {
+            let now = Utc::now();
+            let duration = now - last_used_at;
+
+            if duration.num_hours() >= 12 {
+                let chat_message = context
+                    .octopus_database
+                    .try_get_chat_message_by_id(process.id)
+                    .await?;
+
+                if let Some(chat_message) = chat_message {
+                    stop(context, chat_message).await?;
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 pub async fn run(

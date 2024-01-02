@@ -48,7 +48,7 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
                         tracing::error!("OpenAIError: {e}");
                     }
                     Ok(response_message) => {
-                        let response_message = response_message.choices.get(0);
+                        let response_message = response_message.choices.first();
 
                         match response_message {
                             None => {
@@ -141,7 +141,7 @@ pub async fn open_ai_post_parsing_code_check(
                     tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                    let response_message = response_message.choices.first();
 
                     match response_message {
                         None => {
@@ -241,7 +241,7 @@ pub async fn open_ai_pre_parsing_code_check(
                     tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                    let response_message = response_message.choices.first();
 
                     match response_message {
                         None => {
@@ -344,7 +344,7 @@ pub async fn open_ai_simple_app_meta_extraction(
                     tracing::error!("OpenAIError: {e}");
                 }
                 Ok(response_message) => {
-                    let response_message = response_message.choices.get(0);
+                    let response_message = response_message.choices.first();
 
                     match response_message {
                         None => {

@@ -45,6 +45,13 @@ impl OctopusDatabase {
         Ok(())
     }
 
+    pub async fn create_database(&self, name: &str) -> Result<()> {
+        let query = format!("CREATE DATABASE {name}");
+        let _ = sqlx::query(&query).execute(&*self.pool).await;
+
+        Ok(())
+    }
+
     #[allow(dead_code)]
     pub async fn expire_password_reset_token(&self, id: Uuid) -> Result<PasswordResetToken> {
         let password_reset_token = sqlx::query_as!(

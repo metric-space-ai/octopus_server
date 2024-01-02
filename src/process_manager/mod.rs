@@ -1,4 +1,5 @@
 use crate::{context::Context, error::AppError, Result};
+use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
     process::Command,
@@ -16,6 +17,7 @@ pub struct Process {
     pub id: Uuid,
     pub client_port: Option<i32>,
     pub failed_connection_attempts: i32,
+    pub last_used_at: Option<DateTime<Utc>>,
     pub pid: Option<i32>,
     pub server_port: Option<i32>,
     pub state: ProcessState,
@@ -184,7 +186,9 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                         ProcessType::AiService => {
                             ai_service::manage_running(context.clone(), process).await?;
                         }
-                        ProcessType::WaspApp => {}
+                        ProcessType::WaspApp => {
+                            wasp_app::manage_running(context.clone(), process).await?;
+                        }
                     }
                 }
             }
@@ -252,6 +256,18 @@ pub async fn try_kill_process(pid: i32) -> Result<()> {
         .output()?;
 
     sleep(Duration::from_secs(2)).await;
+
+    Ok(())
+}
+
+pub async fn try_update_last_used_at(context: Arc<Context>, process_id: Uuid) -> Result<()> {
+    let process = context.process_manager.get_process(process_id)?;
+
+    if let Some(mut process) = process {
+        process.last_used_at = Some(Utc::now());
+
+        context.process_manager.insert_process(&process)?;
+    }
 
     Ok(())
 }
