@@ -19,6 +19,7 @@ mod parser;
 mod process_manager;
 mod server_resources;
 mod session;
+mod wasp_app;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 

@@ -36,6 +36,7 @@ use crate::{
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
     session::{SessionResponse, SessionResponseData},
+    Result,
 };
 use axum::{
     error_handling::HandleErrorLayer,
@@ -81,7 +82,7 @@ mod wasp_apps;
 mod workspaces;
 
 #[allow(clippy::too_many_lines)]
-pub fn router(context: Arc<Context>) -> Router {
+pub fn router(context: Arc<Context>) -> Result<Router> {
     #[derive(OpenApi)]
     #[openapi(
         components(
@@ -310,7 +311,7 @@ pub fn router(context: Arc<Context>) -> Router {
         }
     }
 
-    Router::new()
+    let router = Router::new()
         .nest_service("/public", ServeDir::new("public"))
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
@@ -511,7 +512,17 @@ pub fn router(context: Arc<Context>) -> Router {
         )
         .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy",
-            get(wasp_apps::proxy),
+            delete(wasp_apps::proxy)
+                .get(wasp_apps::proxy)
+                .post(wasp_apps::proxy)
+                .put(wasp_apps::proxy),
+        )
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy/*pass",
+            delete(wasp_apps::proxy)
+                .get(wasp_apps::proxy)
+                .post(wasp_apps::proxy)
+                .put(wasp_apps::proxy),
         )
         .route(
             "/api/v1/wasp-apps/:id",
@@ -541,7 +552,7 @@ pub fn router(context: Arc<Context>) -> Router {
                 ])
                 .allow_headers(vec![
                     header::CONTENT_TYPE,
-                    header::HeaderName::from_lowercase(b"x-auth-token").unwrap(),
+                    header::HeaderName::from_lowercase(b"x-auth-token")?,
                 ]),
         )
         .layer(
@@ -560,7 +571,9 @@ pub fn router(context: Arc<Context>) -> Router {
                 .layer(TraceLayer::new_for_http())
                 .into_inner(),
         )
-        .with_state(context)
+        .with_state(context);
+
+    Ok(router)
 }
 
 #[cfg(test)]

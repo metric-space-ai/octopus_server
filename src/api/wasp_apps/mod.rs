@@ -4,15 +4,18 @@ use crate::{
     error::AppError,
     process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
+    wasp_app,
+    wasp_app::{JavaScript, BASE_WASP_APP_URL},
 };
 use axum::{
-    extract::{Multipart, Path, State},
-    http::StatusCode,
+    body::Body,
+    extract::{Multipart, Path, Request, State},
+    http::{Method, StatusCode},
     response::{Html, IntoResponse},
     Json,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 use utoipa::IntoParams;
 use uuid::Uuid;
 
@@ -20,6 +23,7 @@ use uuid::Uuid;
 pub struct Params {
     id: Uuid,
     chat_message_id: Uuid,
+    pass: Option<String>,
 }
 
 #[axum_macros::debug_handler]
@@ -155,7 +159,7 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy",
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy/:pass",
     responses(
         (status = 200, description = "Wasp app proxy.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
@@ -164,6 +168,7 @@ pub async fn list(
     params(
         ("id" = String, Path, description = "Wasp app id"),
         ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("pass" = String, Path, description = "Parameters that are passed to proxified service"),
     ),
     security(
         ("api_key" = [])
@@ -171,14 +176,13 @@ pub async fn list(
 )]
 pub async fn proxy(
     State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
     Path(Params {
         id,
         chat_message_id,
+        pass,
     }): Path<Params>,
+    request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
-
     let wasp_app = context
         .octopus_database
         .try_get_wasp_app_by_id(id)
@@ -210,8 +214,63 @@ pub async fn proxy(
         )
         .await?;
     }
-
+    tracing::info!("pass = {:?}", pass);
+    tracing::info!("request {:?}", request);
     process_manager::try_update_last_used_at(context, chat_message.id).await?;
+
+    if let Some(process) = process {
+        if let Some(client_port) = process.client_port {
+            let url = match pass {
+                None => format!("{BASE_WASP_APP_URL}:{}", client_port),
+                Some(ref pass) => format!("{BASE_WASP_APP_URL}:{}/{pass}", client_port),
+            };
+
+            let client = reqwest::Client::new();
+
+            let request_builder = match *request.method() {
+                Method::DELETE => client.delete(url),
+                Method::GET => client.get(url),
+                Method::POST => client.post(url),
+                Method::PUT => client.put(url),
+                _ => client.get(url),
+            };
+
+            let response = request_builder.send().await?;
+
+            let status_code = format!("{}", response.status().as_u16());
+            let status_code = StatusCode::from_str(&status_code)?;
+
+            let content_type = response
+                .headers()
+                .get("Content-Type")
+                .ok_or(AppError::Conflict)?
+                .to_str()?;
+            tracing::info!("content_type = {:?}", content_type);
+
+            let url_prefix = match pass {
+                None => format!("/api/v1/wasp-apps/{id}/{chat_message_id}/proxy"),
+                Some(pass) => format!("/api/v1/wasp-apps/{id}/{chat_message_id}/proxy/:{pass}"),
+            };
+
+            match content_type {
+                "application/javascript" => {
+                    let text = response.text().await?;
+                    let text = wasp_app::update_urls_in_javascript(&text, &url_prefix);
+                    tracing::info!("text = {:?}", text);
+
+                    return Ok((status_code, JavaScript(text)).into_response());
+                }
+                "text/html" => {
+                    let text = response.text().await?;
+                    let text = wasp_app::update_urls_in_html(&text, &url_prefix);
+                    tracing::info!("text = {:?}", text);
+
+                    return Ok((status_code, Html(text)).into_response());
+                }
+                &_ => {}
+            }
+        };
+    }
 
     Ok((StatusCode::OK, Html(wasp_app.name)).into_response())
 }
