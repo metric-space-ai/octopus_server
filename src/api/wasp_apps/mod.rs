@@ -5,17 +5,16 @@ use crate::{
     process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
     wasp_app,
-    wasp_app::{JavaScript, BASE_WASP_APP_URL},
 };
 use axum::{
     body::Body,
     extract::{Multipart, Path, Request, State},
-    http::{Method, StatusCode},
-    response::{Html, IntoResponse},
+    http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::Deserialize;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 use utoipa::IntoParams;
 use uuid::Uuid;
 
@@ -183,30 +182,30 @@ pub async fn proxy(
     }): Path<Params>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    let wasp_app = context
-        .octopus_database
-        .try_get_wasp_app_by_id(id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if !wasp_app.is_enabled {
-        return Err(AppError::NotFound);
-    }
-
-    let chat_message = context
-        .octopus_database
-        .try_get_chat_message_by_id(chat_message_id)
-        .await?
-        .ok_or(AppError::NotFound)?;
-
-    if chat_message.wasp_app_id != Some(wasp_app.id) {
-        return Err(AppError::NotFound);
-    }
-
-    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message.id))?;
-    let process = context.process_manager.get_process(chat_message.id)?;
+    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message_id))?;
+    let process = context.process_manager.get_process(chat_message_id)?;
 
     if pid.is_none() || process.is_none() {
+        let wasp_app = context
+            .octopus_database
+            .try_get_wasp_app_by_id(id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if !wasp_app.is_enabled {
+            return Err(AppError::NotFound);
+        }
+
+        let chat_message = context
+            .octopus_database
+            .try_get_chat_message_by_id(chat_message_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if chat_message.wasp_app_id != Some(wasp_app.id) {
+            return Err(AppError::NotFound);
+        }
+
         process_manager::wasp_app::install_and_run(
             context.clone(),
             chat_message.clone(),
@@ -214,65 +213,19 @@ pub async fn proxy(
         )
         .await?;
     }
-    tracing::info!("pass = {:?}", pass);
-    tracing::info!("request {:?}", request);
-    process_manager::try_update_last_used_at(context, chat_message.id).await?;
 
     if let Some(process) = process {
         if let Some(client_port) = process.client_port {
-            let url = match pass {
-                None => format!("{BASE_WASP_APP_URL}:{}", client_port),
-                Some(ref pass) => format!("{BASE_WASP_APP_URL}:{}/{pass}", client_port),
-            };
+            let response =
+                wasp_app::wasp_app_request(chat_message_id, pass, client_port, request, id).await?;
 
-            let client = reqwest::Client::new();
+            process_manager::try_update_last_used_at(context, chat_message_id).await?;
 
-            let request_builder = match *request.method() {
-                Method::DELETE => client.delete(url),
-                Method::GET => client.get(url),
-                Method::POST => client.post(url),
-                Method::PUT => client.put(url),
-                _ => client.get(url),
-            };
-
-            let response = request_builder.send().await?;
-
-            let status_code = format!("{}", response.status().as_u16());
-            let status_code = StatusCode::from_str(&status_code)?;
-
-            let content_type = response
-                .headers()
-                .get("Content-Type")
-                .ok_or(AppError::Conflict)?
-                .to_str()?;
-            tracing::info!("content_type = {:?}", content_type);
-
-            let url_prefix = match pass {
-                None => format!("/api/v1/wasp-apps/{id}/{chat_message_id}/proxy"),
-                Some(pass) => format!("/api/v1/wasp-apps/{id}/{chat_message_id}/proxy/:{pass}"),
-            };
-
-            match content_type {
-                "application/javascript" => {
-                    let text = response.text().await?;
-                    let text = wasp_app::update_urls_in_javascript(&text, &url_prefix);
-                    tracing::info!("text = {:?}", text);
-
-                    return Ok((status_code, JavaScript(text)).into_response());
-                }
-                "text/html" => {
-                    let text = response.text().await?;
-                    let text = wasp_app::update_urls_in_html(&text, &url_prefix);
-                    tracing::info!("text = {:?}", text);
-
-                    return Ok((status_code, Html(text)).into_response());
-                }
-                &_ => {}
-            }
-        };
+            return Ok(response);
+        }
     }
 
-    Ok((StatusCode::OK, Html(wasp_app.name)).into_response())
+    Ok((StatusCode::OK, Json("{}")).into_response())
 }
 
 #[axum_macros::debug_handler]

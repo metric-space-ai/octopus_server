@@ -158,6 +158,14 @@ pub async fn create_environment(
     let mut file = File::create(path)?;
     file.write_fmt(format_args!("#!/bin/bash\n"))?;
     file.write_fmt(format_args!("cd {full_wasp_app_dir_path}\n"))?;
+
+    if let Some(wasp_app_client_port) = wasp_app_client_port {
+        file.write_fmt(format_args!("sed -i \"s/    port: 3000,/    port: {wasp_app_client_port},/g\" {full_wasp_app_dir_path}/src/client/vite.config.ts\n"))?;
+    }
+    /*
+        file.write_fmt(format_args!("wasp build\n"))?;
+        file.write_fmt(format_args!("cd .wasp/build/\n"))?;
+    */
     file.write_fmt(format_args!(
         "DATABASE_URL={wasp_database_url} wasp db migrate-dev --name \"initial\"\n"
     ))?;
