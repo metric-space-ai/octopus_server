@@ -6,6 +6,7 @@ use axum::{
     response::{Html, IntoResponse, Json, Response},
 };
 use std::str::FromStr;
+use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 pub const BASE_WASP_APP_URL: &str = "http://127.0.0.1";
@@ -78,7 +79,9 @@ pub async fn wasp_app_request(
     chat_message_id: Uuid,
     pass: Option<String>,
     port: i32,
+    proxy_url: &str,
     request: Request<Body>,
+    warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
     let url = match pass {
@@ -86,7 +89,24 @@ pub async fn wasp_app_request(
         Some(ref pass) => format!("{BASE_WASP_APP_URL}:{}/{pass}", port),
     };
 
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(30))
+        .timeout(Duration::from_secs(30))
+        .build()?;
+
+    if !warmed_up {
+        loop {
+            let response = client.get(url.clone()).send().await;
+
+            if let Ok(_response) = response {
+                sleep(Duration::from_secs(5)).await;
+
+                break;
+            }
+
+            sleep(Duration::from_secs(1)).await;
+        }
+    }
 
     let request_builder = match *request.method() {
         Method::DELETE => client.delete(url.clone()),
@@ -109,8 +129,10 @@ pub async fn wasp_app_request(
     tracing::info!("content_type = {:?}", content_type);
 
     let url_prefix = match pass {
-        None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy"),
-        Some(pass) => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy/:{pass}"),
+        None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
+        Some(pass) => {
+            format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
+        }
     };
 
     match content_type {

@@ -258,7 +258,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::list,
-            wasp_apps::proxy,
+            wasp_apps::proxy_backend,
+            wasp_apps::proxy_frontend,
             wasp_apps::read,
             wasp_apps::update,
             workspaces::create,
@@ -511,18 +512,32 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(wasp_apps::list).post(wasp_apps::create),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy",
-            delete(wasp_apps::proxy)
-                .get(wasp_apps::proxy)
-                .post(wasp_apps::proxy)
-                .put(wasp_apps::proxy),
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+            delete(wasp_apps::proxy_backend)
+                .get(wasp_apps::proxy_backend)
+                .post(wasp_apps::proxy_backend)
+                .put(wasp_apps::proxy_backend),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy/*pass",
-            delete(wasp_apps::proxy)
-                .get(wasp_apps::proxy)
-                .post(wasp_apps::proxy)
-                .put(wasp_apps::proxy),
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/*pass",
+            delete(wasp_apps::proxy_backend)
+                .get(wasp_apps::proxy_backend)
+                .post(wasp_apps::proxy_backend)
+                .put(wasp_apps::proxy_backend),
+        )
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend",
+            delete(wasp_apps::proxy_frontend)
+                .get(wasp_apps::proxy_frontend)
+                .post(wasp_apps::proxy_frontend)
+                .put(wasp_apps::proxy_frontend),
+        )
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/*pass",
+            delete(wasp_apps::proxy_frontend)
+                .get(wasp_apps::proxy_frontend)
+                .post(wasp_apps::proxy_frontend)
+                .put(wasp_apps::proxy_frontend),
         )
         .route(
             "/api/v1/wasp-apps/:id",

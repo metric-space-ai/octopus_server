@@ -158,9 +158,9 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy/:pass",
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/:pass",
     responses(
-        (status = 200, description = "Wasp app proxy.", body = String),
+        (status = 200, description = "Wasp app backend proxy.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Wasp app not found.", body = ResponseError),
     ),
@@ -173,7 +173,7 @@ pub async fn list(
         ("api_key" = [])
     )
 )]
-pub async fn proxy(
+pub async fn proxy_backend(
     State(context): State<Arc<Context>>,
     Path(Params {
         id,
@@ -212,12 +212,139 @@ pub async fn proxy(
             wasp_app.clone(),
         )
         .await?;
+
+        let process = context.process_manager.get_process(chat_message_id)?;
+
+        if let Some(process) = process {
+            if let Some(server_port) = process.server_port {
+                let response = wasp_app::wasp_app_request(
+                    chat_message_id,
+                    pass,
+                    server_port,
+                    "proxy-backend",
+                    request,
+                    false,
+                    id,
+                )
+                .await?;
+
+                process_manager::try_update_last_used_at(context, chat_message_id).await?;
+
+                return Ok(response);
+            }
+        }
+    } else if let Some(process) = process {
+        if let Some(server_port) = process.server_port {
+            let response = wasp_app::wasp_app_request(
+                chat_message_id,
+                pass,
+                server_port,
+                "proxy-backend",
+                request,
+                true,
+                id,
+            )
+            .await?;
+
+            process_manager::try_update_last_used_at(context, chat_message_id).await?;
+
+            return Ok(response);
+        }
     }
 
-    if let Some(process) = process {
+    Ok((StatusCode::OK, Json("{}")).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/:pass",
+    responses(
+        (status = 200, description = "Wasp app frontend proxy.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id"),
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("pass" = String, Path, description = "Parameters that are passed to proxified service"),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn proxy_frontend(
+    State(context): State<Arc<Context>>,
+    Path(Params {
+        id,
+        chat_message_id,
+        pass,
+    }): Path<Params>,
+    request: Request<Body>,
+) -> Result<impl IntoResponse, AppError> {
+    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message_id))?;
+    let process = context.process_manager.get_process(chat_message_id)?;
+
+    if pid.is_none() || process.is_none() {
+        let wasp_app = context
+            .octopus_database
+            .try_get_wasp_app_by_id(id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if !wasp_app.is_enabled {
+            return Err(AppError::NotFound);
+        }
+
+        let chat_message = context
+            .octopus_database
+            .try_get_chat_message_by_id(chat_message_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if chat_message.wasp_app_id != Some(wasp_app.id) {
+            return Err(AppError::NotFound);
+        }
+
+        process_manager::wasp_app::install_and_run(
+            context.clone(),
+            chat_message.clone(),
+            wasp_app.clone(),
+        )
+        .await?;
+
+        let process = context.process_manager.get_process(chat_message_id)?;
+
+        if let Some(process) = process {
+            if let Some(client_port) = process.client_port {
+                let response = wasp_app::wasp_app_request(
+                    chat_message_id,
+                    pass,
+                    client_port,
+                    "proxy-frontend",
+                    request,
+                    false,
+                    id,
+                )
+                .await?;
+
+                process_manager::try_update_last_used_at(context, chat_message_id).await?;
+
+                return Ok(response);
+            }
+        }
+    } else if let Some(process) = process {
         if let Some(client_port) = process.client_port {
-            let response =
-                wasp_app::wasp_app_request(chat_message_id, pass, client_port, request, id).await?;
+            let response = wasp_app::wasp_app_request(
+                chat_message_id,
+                pass,
+                client_port,
+                "proxy-frontend",
+                request,
+                true,
+                id,
+            )
+            .await?;
 
             process_manager::try_update_last_used_at(context, chat_message_id).await?;
 
