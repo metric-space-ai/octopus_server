@@ -182,7 +182,7 @@ pub async fn proxy_backend(
     }): Path<Params>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message_id))?;
+    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
 
     if pid.is_none() || process.is_none() {
@@ -217,36 +217,40 @@ pub async fn proxy_backend(
 
         if let Some(process) = process {
             if let Some(server_port) = process.server_port {
-                let response = wasp_app::wasp_app_request(
+                let response = wasp_app::request(
+                    context.clone(),
                     chat_message_id,
                     pass,
                     server_port,
                     "proxy-backend",
                     request,
+                    server_port,
                     false,
                     id,
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(context, chat_message_id).await?;
+                process_manager::try_update_last_used_at(&context, chat_message_id)?;
 
                 return Ok(response);
             }
         }
     } else if let Some(process) = process {
         if let Some(server_port) = process.server_port {
-            let response = wasp_app::wasp_app_request(
+            let response = wasp_app::request(
+                context.clone(),
                 chat_message_id,
                 pass,
                 server_port,
                 "proxy-backend",
                 request,
+                server_port,
                 true,
                 id,
             )
             .await?;
 
-            process_manager::try_update_last_used_at(context, chat_message_id).await?;
+            process_manager::try_update_last_used_at(&context, chat_message_id)?;
 
             return Ok(response);
         }
@@ -282,7 +286,7 @@ pub async fn proxy_frontend(
     }): Path<Params>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    let pid = process_manager::try_get_pid(&format!("{}.sh", chat_message_id))?;
+    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
 
     if pid.is_none() || process.is_none() {
@@ -316,37 +320,43 @@ pub async fn proxy_frontend(
         let process = context.process_manager.get_process(chat_message_id)?;
 
         if let Some(process) = process {
-            if let Some(client_port) = process.client_port {
-                let response = wasp_app::wasp_app_request(
+            if let (Some(client_port), Some(server_port)) =
+                (process.client_port, process.server_port)
+            {
+                let response = wasp_app::request(
+                    context.clone(),
                     chat_message_id,
                     pass,
                     client_port,
                     "proxy-frontend",
                     request,
+                    client_port,
                     false,
                     id,
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(context, chat_message_id).await?;
+                process_manager::try_update_last_used_at(&context, chat_message_id)?;
 
                 return Ok(response);
             }
         }
     } else if let Some(process) = process {
-        if let Some(client_port) = process.client_port {
-            let response = wasp_app::wasp_app_request(
+        if let (Some(client_port), Some(server_port)) = (process.client_port, process.server_port) {
+            let response = wasp_app::request(
+                context.clone(),
                 chat_message_id,
                 pass,
                 client_port,
                 "proxy-frontend",
                 request,
+                client_port,
                 true,
                 id,
             )
             .await?;
 
-            process_manager::try_update_last_used_at(context, chat_message_id).await?;
+            process_manager::try_update_last_used_at(&context, chat_message_id)?;
 
             return Ok(response);
         }

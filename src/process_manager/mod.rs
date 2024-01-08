@@ -260,7 +260,7 @@ pub async fn try_kill_process(pid: i32) -> Result<()> {
     Ok(())
 }
 
-pub async fn try_update_last_used_at(context: Arc<Context>, process_id: Uuid) -> Result<()> {
+pub fn try_update_last_used_at(context: &Arc<Context>, process_id: Uuid) -> Result<()> {
     let process = context.process_manager.get_process(process_id)?;
 
     if let Some(mut process) = process {

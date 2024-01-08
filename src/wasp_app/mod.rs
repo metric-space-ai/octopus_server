@@ -1,15 +1,16 @@
-use crate::{error::AppError, Result};
+use crate::{error::AppError, context::Context, Result};
 use axum::{
     body::Body,
     extract::Request,
     http::{header, HeaderValue, Method, StatusCode},
     response::{Html, IntoResponse, Json, Response},
 };
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 pub const BASE_WASP_APP_URL: &str = "http://127.0.0.1";
+pub const BASE_WASP_APP_SERVER_URL: &str = "127.0.0.1";
 
 pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     let mut code = code.to_string();
@@ -33,7 +34,13 @@ pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     code
 }
 
-pub fn update_urls_in_javascript(code: &str, url: &str, url_prefix: &str) -> String {
+pub fn update_urls_in_javascript(
+    code: &str,
+    server_url: &str,
+    server_url_to_replace: &str,
+    url: &str,
+    url_prefix: &str,
+) -> String {
     let mut code = code.to_string();
     let url = url.to_string();
 
@@ -41,6 +48,11 @@ pub fn update_urls_in_javascript(code: &str, url: &str, url_prefix: &str) -> Str
     code = code.replace("import \"/", &to);
     let to: String = format!("from \"{url_prefix}/");
     code = code.replace("from \"/", &to);
+
+    if code.contains(server_url_to_replace) {
+tracing::info!("CONTAINS!");
+        code = code.replace(server_url_to_replace, server_url);
+    }
 
     if url.contains("src/router.tsx") {
         let to: String = format!("        to: \"{url_prefix}/\",");
@@ -75,20 +87,47 @@ pub fn update_urls_in_javascript(code: &str, url: &str, url_prefix: &str) -> Str
     code
 }
 
-pub async fn wasp_app_request(
+#[allow(clippy::too_many_arguments)]
+pub async fn request(
+    context: Arc<Context>,
     chat_message_id: Uuid,
     pass: Option<String>,
     port: i32,
     proxy_url: &str,
     request: Request<Body>,
+    server_port: i32,
     warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
+tracing::info!("warmed_up = {warmed_up}");
     let url = match pass {
-        None => format!("{BASE_WASP_APP_URL}:{}", port),
-        Some(ref pass) => format!("{BASE_WASP_APP_URL}:{}/{pass}", port),
+        None => format!("{BASE_WASP_APP_URL}:{port}"),
+        Some(ref pass) => format!("{BASE_WASP_APP_URL}:{port}/{pass}"),
     };
 
+    let server_url_to_replace = format!("localhost:{server_port}/");
+    let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
+    let server_url = match octopus_api_url {
+        None => String::new(),
+        Some(server_url) => {
+            let server_url = if server_url.contains("http://") {
+                server_url
+                    .strip_prefix("http://")
+                    .ok_or(AppError::Parsing)?
+                    .to_string()
+            } else {
+                server_url
+                    .strip_prefix("https://")
+                    .ok_or(AppError::Parsing)?
+                    .to_string()
+            };
+
+            format!("{server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend")
+        }
+    };
+
+    tracing::info!("server_url_to_replace = {server_url_to_replace}");
+tracing::info!("server_url = {server_url}");
     let client = reqwest::Client::builder()
         .connect_timeout(Duration::from_secs(30))
         .timeout(Duration::from_secs(30))
@@ -99,7 +138,7 @@ pub async fn wasp_app_request(
             let response = client.get(url.clone()).send().await;
 
             if let Ok(_response) = response {
-                sleep(Duration::from_secs(5)).await;
+                sleep(Duration::from_secs(10)).await;
 
                 break;
             }
@@ -110,7 +149,6 @@ pub async fn wasp_app_request(
 
     let request_builder = match *request.method() {
         Method::DELETE => client.delete(url.clone()),
-        Method::GET => client.get(url.clone()),
         Method::POST => client.post(url.clone()),
         Method::PUT => client.put(url.clone()),
         _ => client.get(url.clone()),
@@ -138,15 +176,19 @@ pub async fn wasp_app_request(
     match content_type {
         "application/javascript" => {
             let text = response.text().await?;
-            let text = update_urls_in_javascript(&text, &url, &url_prefix);
-            tracing::info!("text = {:?}", text);
+            let text = update_urls_in_javascript(
+                &text,
+                &server_url,
+                &server_url_to_replace,
+                &url,
+                &url_prefix,
+            );
 
             Ok((status_code, JavaScript(text)).into_response())
         }
         "text/html" => {
             let text = response.text().await?;
             let text = update_urls_in_html(&text, &url_prefix);
-            tracing::info!("text = {:?}", text);
 
             Ok((status_code, Html(text)).into_response())
         }
