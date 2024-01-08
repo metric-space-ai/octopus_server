@@ -258,7 +258,6 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::list,
-            wasp_apps::proxy_backend,
             wasp_apps::proxy_frontend,
             wasp_apps::read,
             wasp_apps::update,
@@ -512,20 +511,6 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(wasp_apps::list).post(wasp_apps::create),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
-            delete(wasp_apps::proxy_backend)
-                .get(wasp_apps::proxy_backend)
-                .post(wasp_apps::proxy_backend)
-                .put(wasp_apps::proxy_backend),
-        )
-        .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/*pass",
-            delete(wasp_apps::proxy_backend)
-                .get(wasp_apps::proxy_backend)
-                .post(wasp_apps::proxy_backend)
-                .put(wasp_apps::proxy_backend),
-        )
-        .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)
@@ -554,6 +539,77 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(workspaces::delete)
                 .get(workspaces::read)
                 .put(workspaces::update),
+        )
+        .layer(
+            CorsLayer::new()
+                .allow_origin(Any)
+                .allow_methods(vec![
+                    Method::DELETE,
+                    Method::GET,
+                    Method::OPTIONS,
+                    Method::POST,
+                    Method::PUT,
+                ])
+                .allow_headers(vec![
+                    header::CONTENT_TYPE,
+                    header::HeaderName::from_lowercase(b"x-auth-token")?,
+                ]),
+        )
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(|error: BoxError| async move {
+                    if error.is::<tower::timeout::error::Elapsed>() {
+                        Ok(StatusCode::REQUEST_TIMEOUT)
+                    } else {
+                        Err((
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                            format!("Unhandled internal error: {error}"),
+                        ))
+                    }
+                }))
+                .timeout(Duration::from_secs(120))
+                .layer(TraceLayer::new_for_http())
+                .into_inner(),
+        )
+        .with_state(context);
+
+    Ok(router)
+}
+
+pub fn ws_router(context: Arc<Context>) -> Result<Router> {
+    #[derive(OpenApi)]
+    #[openapi(
+        modifiers(&SecurityAddon),
+        paths(
+            wasp_apps::proxy_backend,
+        ),
+        tags(
+            (name = "wasp_apps", description = "Wasp apps API."),
+        )
+    )]
+    struct ApiDoc;
+
+    struct SecurityAddon;
+
+    impl Modify for SecurityAddon {
+        fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+            if let Some(components) = openapi.components.as_mut() {
+                components.add_security_scheme(
+                    "api_key",
+                    SecurityScheme::ApiKey(ApiKey::Header(ApiKeyValue::new("X-Auth-Token"))),
+                );
+            }
+        }
+    }
+
+    let router = Router::new()
+        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/",
+            delete(wasp_apps::proxy_backend)
+                .get(wasp_apps::proxy_backend)
+                .post(wasp_apps::proxy_backend)
+                .put(wasp_apps::proxy_backend),
         )
         .layer(
             CorsLayer::new()

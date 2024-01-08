@@ -8,13 +8,16 @@ edition = "2021"
 [dependencies]
 argon2 = "0.5"
 async-openai = "0.17"
-axum = { version = "0.7", features = ["multipart"] }
+axum = { version = "0.7", features = ["multipart", "ws"] }
+axum-extra = { version = "0.9", features = ["typed-header"] }
 axum-macros = "0.4"
 base64 = "0.21"
 bytesize = "1.3"
 clap = { version = "4.4", features = ["derive", "env"] }
 chrono = { version = "0.4", features = ["serde"] }
 fake = "2.9"
+futures = "0.3"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 http = "1.0"
 http-body = "1.0"
 http-body-util = "0.1"
@@ -43,8 +46,8 @@ tower = { version = "0.4", features = ["timeout", "util"] }
 tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-utoipa = { version = "4.1", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "5.0", features = ["axum"] }
+utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
+utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 uuid = { version = "1.6", features = ["serde", "v4"] }
 validator = { version = "0.16", features = ["derive"] }
 zip = "0.6"

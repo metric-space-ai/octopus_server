@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use clap::Parser;
-use std::{error::Error, process::Command};
+use std::{error::Error, net::SocketAddr, process::Command};
 use tokio::task;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -43,8 +43,12 @@ pub struct Args {
     pub test_mode: Option<bool>,
 
     /// WASP database url
-    #[arg(short, long)]
+    #[arg(long)]
     pub wasp_database_url: Option<String>,
+
+    /// WebSocket port
+    #[arg(long)]
+    pub ws_port: Option<u16>,
 }
 
 pub async fn run() -> Result<()> {
@@ -73,9 +77,26 @@ pub async fn run() -> Result<()> {
     let listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.context.get_config().await?.port))
             .await?;
+    let ws_listener = tokio::net::TcpListener::bind(format!(
+        "0.0.0.0:{}",
+        app.context.get_config().await?.ws_port
+    ))
+    .await?;
 
     info!("listening on {}", listener.local_addr()?);
+    info!("listening on {}", ws_listener.local_addr()?);
 
+    tokio::spawn(async move {
+        let result = axum::serve(
+            ws_listener,
+            app.ws_router
+                .into_make_service_with_connect_info::<SocketAddr>(),
+        );
+
+        if let Err(e) = result.await {
+            error!("Error: {:?}", e);
+        }
+    });
     axum::serve(listener, app.router).await?;
 
     Ok(())

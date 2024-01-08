@@ -1,16 +1,24 @@
-use crate::{error::AppError, context::Context, Result};
+use crate::{context::Context, error::AppError, Result};
 use axum::{
     body::Body,
-    extract::Request,
+    extract::{
+        ws::{Message as AxumMessage, WebSocket},
+        Request,
+    },
     http::{header, HeaderValue, Method, StatusCode},
     response::{Html, IntoResponse, Json, Response},
 };
+use futures::{sink::SinkExt, stream::StreamExt};
 use std::{str::FromStr, sync::Arc};
 use tokio::time::{sleep, Duration};
+use tokio_tungstenite::{
+    connect_async,
+    tungstenite::protocol::{frame::coding::CloseCode, CloseFrame, Message},
+};
 use uuid::Uuid;
 
 pub const BASE_WASP_APP_URL: &str = "http://127.0.0.1";
-pub const BASE_WASP_APP_SERVER_URL: &str = "127.0.0.1";
+pub const BASE_WASP_APP_WS_URL: &str = "ws://127.0.0.1";
 
 pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     let mut code = code.to_string();
@@ -36,6 +44,7 @@ pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
 
 pub fn update_urls_in_javascript(
     code: &str,
+    server_path: &str,
     server_url: &str,
     server_url_to_replace: &str,
     url: &str,
@@ -50,8 +59,13 @@ pub fn update_urls_in_javascript(
     code = code.replace("from \"/", &to);
 
     if code.contains(server_url_to_replace) {
-tracing::info!("CONTAINS!");
         code = code.replace(server_url_to_replace, server_url);
+    }
+
+    let find = "importMetaUrl.port}${\"/\"}";
+    if code.contains(find) {
+        let to = format!("importMetaUrl.port}}${{\"{server_path}\"}}");
+        code = code.replace(find, &to);
     }
 
     if url.contains("src/router.tsx") {
@@ -95,43 +109,25 @@ pub async fn request(
     port: i32,
     proxy_url: &str,
     request: Request<Body>,
-    server_port: i32,
     warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
-tracing::info!("warmed_up = {warmed_up}");
     let url = match pass {
         None => format!("{BASE_WASP_APP_URL}:{port}"),
         Some(ref pass) => format!("{BASE_WASP_APP_URL}:{port}/{pass}"),
     };
 
-    let server_url_to_replace = format!("localhost:{server_port}/");
-    let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
-    let server_url = match octopus_api_url {
+    let server_url_to_replace = format!("localhost:{port}/");
+    let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
+    let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
+    let server_url = match octopus_ws_url {
         None => String::new(),
         Some(server_url) => {
-            let server_url = if server_url.contains("http://") {
-                server_url
-                    .strip_prefix("http://")
-                    .ok_or(AppError::Parsing)?
-                    .to_string()
-            } else {
-                server_url
-                    .strip_prefix("https://")
-                    .ok_or(AppError::Parsing)?
-                    .to_string()
-            };
-
-            format!("{server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend")
+            format!("{server_url}{server_path}")
         }
     };
 
-    tracing::info!("server_url_to_replace = {server_url_to_replace}");
-tracing::info!("server_url = {server_url}");
-    let client = reqwest::Client::builder()
-        .connect_timeout(Duration::from_secs(30))
-        .timeout(Duration::from_secs(30))
-        .build()?;
+    let client = reqwest::Client::new();
 
     if !warmed_up {
         loop {
@@ -178,6 +174,7 @@ tracing::info!("server_url = {server_url}");
             let text = response.text().await?;
             let text = update_urls_in_javascript(
                 &text,
+                &server_path,
                 &server_url,
                 &server_url_to_replace,
                 &url,
@@ -193,6 +190,57 @@ tracing::info!("server_url = {server_url}");
             Ok((status_code, Html(text)).into_response())
         }
         &_ => Ok((StatusCode::OK, Json("{}")).into_response()),
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn request_ws(port: i32, mut web_socket: WebSocket) {
+    let url = format!("{BASE_WASP_APP_WS_URL}:{port}");
+
+    if let Some(msg) = web_socket.recv().await {
+        if let Ok(msg) = msg {
+            let message = match msg {
+                AxumMessage::Binary(bin) => Message::Binary(bin),
+                AxumMessage::Close(close) => {
+                    let close_frame = if let Some(close) = close {
+                        let close_frame = CloseFrame {
+                            code: CloseCode::from(close.code),
+                            reason: close.reason,
+                        };
+
+                        Some(close_frame)
+                    } else {
+                        None
+                    };
+
+                    Message::Close(close_frame)
+                }
+                AxumMessage::Ping(ping) => Message::Ping(ping),
+                AxumMessage::Pong(pong) => Message::Pong(pong),
+                AxumMessage::Text(text) => Message::Text(text),
+            };
+
+            let ws_stream = match connect_async(url).await {
+                Ok((stream, response)) => {
+                    tracing::info!("Handshake for client has been completed");
+                    // This will be the HTTP response, same as with server this is the last moment we
+                    // can still access HTTP stuff.
+                    tracing::info!("Server response was {response:?}");
+                    stream
+                }
+                Err(e) => {
+                    tracing::info!("WebSocket handshake for client failed with {e}!");
+
+                    return;
+                }
+            };
+
+            let (mut sender, _receiver) = ws_stream.split();
+
+            sender.send(message).await.expect("Can not send!");
+        } else {
+            println!("client abruptly disconnected");
+        }
     }
 }
 

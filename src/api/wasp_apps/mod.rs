@@ -8,7 +8,7 @@ use crate::{
 };
 use axum::{
     body::Body,
-    extract::{Multipart, Path, Request, State},
+    extract::{Multipart, Path, Request, State, WebSocketUpgrade},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -19,7 +19,13 @@ use utoipa::IntoParams;
 use uuid::Uuid;
 
 #[derive(Deserialize, IntoParams)]
-pub struct Params {
+pub struct BackendProxyParams {
+    id: Uuid,
+    chat_message_id: Uuid,
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct FrontendProxyParams {
     id: Uuid,
     chat_message_id: Uuid,
     pass: Option<String>,
@@ -158,7 +164,7 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/:pass",
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
     responses(
         (status = 200, description = "Wasp app backend proxy.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
@@ -167,7 +173,6 @@ pub async fn list(
     params(
         ("id" = String, Path, description = "Wasp app id"),
         ("chat_message_id" = String, Path, description = "Chat message id"),
-        ("pass" = String, Path, description = "Parameters that are passed to proxified service"),
     ),
     security(
         ("api_key" = [])
@@ -175,12 +180,11 @@ pub async fn list(
 )]
 pub async fn proxy_backend(
     State(context): State<Arc<Context>>,
-    Path(Params {
+    Path(BackendProxyParams {
         id,
         chat_message_id,
-        pass,
-    }): Path<Params>,
-    request: Request<Body>,
+    }): Path<BackendProxyParams>,
+    web_socket_upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
@@ -217,42 +221,18 @@ pub async fn proxy_backend(
 
         if let Some(process) = process {
             if let Some(server_port) = process.server_port {
-                let response = wasp_app::request(
-                    context.clone(),
-                    chat_message_id,
-                    pass,
-                    server_port,
-                    "proxy-backend",
-                    request,
-                    server_port,
-                    false,
-                    id,
-                )
-                .await?;
+                let result = web_socket_upgrade
+                    .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
 
-                process_manager::try_update_last_used_at(&context, chat_message_id)?;
-
-                return Ok(response);
+                return Ok((StatusCode::OK, result).into_response());
             }
         }
     } else if let Some(process) = process {
         if let Some(server_port) = process.server_port {
-            let response = wasp_app::request(
-                context.clone(),
-                chat_message_id,
-                pass,
-                server_port,
-                "proxy-backend",
-                request,
-                server_port,
-                true,
-                id,
-            )
-            .await?;
+            let result = web_socket_upgrade
+                .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
 
-            process_manager::try_update_last_used_at(&context, chat_message_id)?;
-
-            return Ok(response);
+            return Ok((StatusCode::OK, result).into_response());
         }
     }
 
@@ -279,11 +259,11 @@ pub async fn proxy_backend(
 )]
 pub async fn proxy_frontend(
     State(context): State<Arc<Context>>,
-    Path(Params {
+    Path(FrontendProxyParams {
         id,
         chat_message_id,
         pass,
-    }): Path<Params>,
+    }): Path<FrontendProxyParams>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
@@ -320,9 +300,7 @@ pub async fn proxy_frontend(
         let process = context.process_manager.get_process(chat_message_id)?;
 
         if let Some(process) = process {
-            if let (Some(client_port), Some(server_port)) =
-                (process.client_port, process.server_port)
-            {
+            if let Some(client_port) = process.client_port {
                 let response = wasp_app::request(
                     context.clone(),
                     chat_message_id,
@@ -330,7 +308,6 @@ pub async fn proxy_frontend(
                     client_port,
                     "proxy-frontend",
                     request,
-                    client_port,
                     false,
                     id,
                 )
@@ -342,7 +319,7 @@ pub async fn proxy_frontend(
             }
         }
     } else if let Some(process) = process {
-        if let (Some(client_port), Some(server_port)) = (process.client_port, process.server_port) {
+        if let Some(client_port) = process.client_port {
             let response = wasp_app::request(
                 context.clone(),
                 chat_message_id,
@@ -350,7 +327,6 @@ pub async fn proxy_frontend(
                 client_port,
                 "proxy-frontend",
                 request,
-                client_port,
                 true,
                 id,
             )

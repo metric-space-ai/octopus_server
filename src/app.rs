@@ -9,6 +9,7 @@ use std::sync::Arc;
 pub struct App {
     pub context: Arc<Context>,
     pub router: Router,
+    pub ws_router: Router,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -17,7 +18,8 @@ pub async fn get_app(args: Args) -> Result<App> {
 
     let app = App {
         context: context.clone(),
-        router: api::router(context)?,
+        router: api::router(context.clone())?,
+        ws_router: api::ws_router(context)?,
     };
 
     Ok(app)
@@ -47,6 +49,7 @@ pub mod tests {
             port: None,
             test_mode: Some(true),
             wasp_database_url: Some(String::from("postgres://admin:admin@db")),
+            ws_port: None,
         };
 
         app::get_app(args).await.unwrap()
