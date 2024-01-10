@@ -186,6 +186,7 @@ pub async fn proxy_backend(
     }): Path<BackendProxyParams>,
     web_socket_upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
+    tracing::info!("BACKEND!!!!!");
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
 
@@ -220,7 +221,7 @@ pub async fn proxy_backend(
         let process = context.process_manager.get_process(chat_message_id)?;
 
         if let Some(process) = process {
-            if let Some(server_port) = process.server_port {
+            if let Some(server_port) = process.client_port {
                 let result = web_socket_upgrade
                     .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
 
@@ -228,7 +229,7 @@ pub async fn proxy_backend(
             }
         }
     } else if let Some(process) = process {
-        if let Some(server_port) = process.server_port {
+        if let Some(server_port) = process.client_port {
             let result = web_socket_upgrade
                 .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
 
