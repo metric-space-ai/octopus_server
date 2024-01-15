@@ -221,19 +221,19 @@ pub async fn proxy_backend(
         let process = context.process_manager.get_process(chat_message_id)?;
 
         if let Some(process) = process {
-            if let Some(server_port) = process.client_port {
+            if let Some(client_port) = process.client_port {
                 let result = web_socket_upgrade
-                    .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
+                    .on_upgrade(move |web_socket| wasp_app::request_ws(client_port, web_socket));
 
-                return Ok((StatusCode::OK, result).into_response());
+                return Ok((StatusCode::SWITCHING_PROTOCOLS, result).into_response());
             }
         }
     } else if let Some(process) = process {
-        if let Some(server_port) = process.client_port {
+        if let Some(client_port) = process.client_port {
             let result = web_socket_upgrade
-                .on_upgrade(move |web_socket| wasp_app::request_ws(server_port, web_socket));
+                .on_upgrade(move |web_socket| wasp_app::request_ws(client_port, web_socket));
 
-            return Ok((StatusCode::OK, result).into_response());
+            return Ok((StatusCode::SWITCHING_PROTOCOLS, result).into_response());
         }
     }
 
@@ -269,6 +269,13 @@ pub async fn proxy_frontend(
 ) -> Result<impl IntoResponse, AppError> {
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
+    let uri = request.uri().to_string();
+    tracing::info!("URI = {:?}", uri);
+    let uri_append = if uri.contains('?') {
+        uri.split('?').last()
+    } else {
+        None
+    };
 
     if pid.is_none() || process.is_none() {
         let wasp_app = context
@@ -309,6 +316,7 @@ pub async fn proxy_frontend(
                     client_port,
                     "proxy-frontend",
                     request,
+                    uri_append,
                     false,
                     id,
                 )
@@ -328,6 +336,7 @@ pub async fn proxy_frontend(
                 client_port,
                 "proxy-frontend",
                 request,
+                uri_append,
                 true,
                 id,
             )

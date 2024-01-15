@@ -11,10 +11,7 @@ use axum::{
 use futures::{sink::SinkExt, stream::StreamExt};
 use std::{str::FromStr, sync::Arc};
 use tokio::time::{sleep, Duration};
-use tokio_tungstenite::{
-    connect_async,
-    tungstenite::protocol::Message,
-};
+use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use uuid::Uuid;
 
 pub const BASE_WASP_APP_URL: &str = "http://127.0.0.1";
@@ -28,13 +25,29 @@ pub async fn request(
     port: i32,
     proxy_url: &str,
     request: Request<Body>,
+    uri_append: Option<&str>,
     warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
+    //tracing::info!("URI_APPEND = {:?}", uri_append);
     let url = match pass {
-        None => format!("{BASE_WASP_APP_URL}:{port}"),
-        Some(ref pass) => format!("{BASE_WASP_APP_URL}:{port}/{pass}"),
+        None => match uri_append {
+            None => format!("{BASE_WASP_APP_URL}:{port}"),
+            Some(uri_append) => format!("{BASE_WASP_APP_URL}:{port}?{uri_append}"),
+        },
+        Some(ref pass) => match uri_append {
+            None => format!("{BASE_WASP_APP_URL}:{port}/{pass}"),
+            Some(uri_append) => format!("{BASE_WASP_APP_URL}:{port}/{pass}?{uri_append}"),
+        },
     };
+    //tracing::info!("URL = {:?}", url);
+    /*
+    let url = if url.contains(".vite/deps/chunk-") && !url.contains("?v=") {
+        format!("{url}?v=1234567890")
+    } else {
+        url
+    };
+    */
 
     let server_url_to_replace = format!("localhost:{port}/");
     let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
@@ -79,7 +92,7 @@ pub async fn request(
         .get("Content-Type")
         .ok_or(AppError::Conflict)?
         .to_str()?;
-    tracing::info!("content_type = {:?}", content_type);
+    tracing::info!("CONTENT_TYPE = {:?}", content_type);
 
     let url_prefix = match pass {
         None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
@@ -87,6 +100,31 @@ pub async fn request(
             format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
         }
     };
+
+    /*
+    let url_prefix = match pass {
+        None => match uri_append {
+            None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
+            Some(uri_append) => {
+                if uri_append.contains("v=") {
+                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}?{uri_append}")
+                } else {
+                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}")
+                }
+            },
+        },
+        Some(pass) => match uri_append {
+            None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}"),
+            Some(uri_append) => {
+                if uri_append.contains("v=") {
+                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}?{uri_append}")
+                } else {
+                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
+                }
+            },
+        },
+    };
+    */
 
     match content_type {
         "application/javascript" => {
@@ -98,9 +136,15 @@ pub async fn request(
                 &server_url_to_replace,
                 &url,
                 &url_prefix,
+                context.get_config().await?.ws_port,
             );
 
             Ok((status_code, JavaScript(text)).into_response())
+        }
+        "image/png" => {
+            let bytes = response.bytes().await?;
+
+            Ok((status_code, Png(bytes)).into_response())
         }
         "text/html" => {
             let text = response.text().await?;
@@ -120,9 +164,8 @@ pub async fn request_ws(port: i32, web_socket: WebSocket) {
     let ws_stream = match connect_async(url).await {
         Ok((stream, response)) => {
             tracing::info!("Handshake for client has been completed");
-            // This will be the HTTP response, same as with server this is the last moment we
-            // can still access HTTP stuff.
             tracing::info!("Server response was {response:?}");
+
             stream
         }
         Err(e) => {
@@ -137,63 +180,33 @@ pub async fn request_ws(port: i32, web_socket: WebSocket) {
     let mut send_task = tokio::spawn(async move {
         if let Some(msg) = server_receiver.next().await {
             if let Ok(msg) = msg {
-                let text = msg.to_text().unwrap();
-                tracing::info!("SERVER RECEIVER TEXT = {}", text);
-                let message = Message::from(text);
-                /*
-                                let message = match msg {
-                                    AxumMessage::Binary(binary) => Message::Binary(binary),
-                                    AxumMessage::Close(close) => {
-                                        let close_frame = if let Some(close) = close {
-                                            let close_frame = CloseFrame {
-                                                code: CloseCode::from(close.code),
-                                                reason: close.reason,
-                                            };
+                let text = msg.to_text();
 
-                                            Some(close_frame)
-                                        } else {
-                                            None
-                                        };
+                if let Ok(text) = text {
+                    tracing::info!("SERVER RECEIVER TEXT = {}", text);
+                    let message = Message::from(text);
 
-                                        Message::Close(close_frame)
-                                    }
-                                    AxumMessage::Ping(ping) => Message::Ping(ping),
-                                    AxumMessage::Pong(pong) => Message::Pong(pong),
-                                    AxumMessage::Text(text) => Message::Text(text),
-                                };
-                */
-                client_sender.send(message).await.expect("Can not send!");
+                    client_sender.send(message).await.expect("Can not send!");
+                }
             } else {
                 tracing::info!("client abruptly disconnected");
             }
         }
     });
 
-    //receiver just prints whatever it gets
     let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = client_receiver.next().await {
-            // print message and break if instructed to do so
-            let text = msg.to_text().unwrap();
-            tracing::info!("CLIENT RECEIVER TEXT = {}", text);
-            let message = AxumMessage::from(text);
+            let text = msg.to_text();
 
-            let _ = server_sender.send(message).await;
-            /*
-                        let message = match msg {
-                            Message::Binary(binary) => AxumMessage::Binary(binary),
-                            Message::Close(close) => {
+            if let Ok(text) = text {
+                tracing::info!("CLIENT RECEIVER TEXT = {}", text);
+                let message = AxumMessage::from(text);
 
-                            }
-                            Message::Frame(frame) =>,
-                            Message::Ping(ping) => AxumMessage::Ping(ping),
-                            Message::Pong(pong) => AxumMessage::Pong(pong),
-                            Message::Text(text) => AxumMessage::Text(text),
-                        };
-            */
+                let _ = server_sender.send(message).await;
+            }
         }
     });
 
-    //wait for either task to finish and kill the other task
     tokio::select! {
         _ = (&mut send_task) => {
             recv_task.abort();
@@ -206,15 +219,6 @@ pub async fn request_ws(port: i32, web_socket: WebSocket) {
 
 pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     let mut code = code.to_string();
-
-    /*
-        let to: String = format!("href=\"");
-        code = code.replace("href=\"/", &to);
-        let to: String = format!("src=\"");
-        code = code.replace("src=\"/", &to);
-        let to: String = format!("from \"");
-        code = code.replace("from \"/", &to);
-    */
 
     let to: String = format!("href=\"{url_prefix}/");
     code = code.replace("href=\"/", &to);
@@ -233,6 +237,7 @@ pub fn update_urls_in_javascript(
     server_url_to_replace: &str,
     url: &str,
     url_prefix: &str,
+    ws_port: u16,
 ) -> String {
     let mut code = code.to_string();
     let url = url.to_string();
@@ -246,9 +251,9 @@ pub fn update_urls_in_javascript(
         code = code.replace(server_url_to_replace, server_url);
     }
 
-    let find = "importMetaUrl.port}${\"/\"}";
+    let find = "${hmrPort || importMetaUrl.port}${\"/\"}";
     if code.contains(find) {
-        let to = format!("importMetaUrl.port}}${{\"{server_path}\"}}");
+        let to = format!("{ws_port}${{\"{server_path}\"}}");
         code = code.replace(find, &to);
     }
 
@@ -257,7 +262,7 @@ pub fn update_urls_in_javascript(
         code = code.replace("        to: \"/\",", &to);
 
         let to: String = format!("        build: (options)=>interpolatePath(\"{url_prefix}/\",");
-        code = code.replace("        build: (options)=>interpolatePath(\"/", &to);
+        code = code.replace("        build: (options)=>interpolatePath(\"/\",", &to);
 
         let to: String = format!("    basename: \"{url_prefix}/\",");
         code = code.replace("    basename: \"/\",", &to);
@@ -306,6 +311,32 @@ where
 }
 
 impl<T> From<T> for JavaScript<T> {
+    fn from(inner: T) -> Self {
+        Self(inner)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[must_use]
+pub struct Png<T>(pub T);
+
+impl<T> IntoResponse for Png<T>
+where
+    T: Into<Body>,
+{
+    fn into_response(self) -> Response {
+        (
+            [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static(mime::IMAGE_PNG.as_ref()),
+            )],
+            self.0.into(),
+        )
+            .into_response()
+    }
+}
+
+impl<T> From<T> for Png<T> {
     fn from(inner: T) -> Self {
         Self(inner)
     }
