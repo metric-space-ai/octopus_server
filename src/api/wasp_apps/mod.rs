@@ -186,7 +186,6 @@ pub async fn proxy_backend(
     }): Path<BackendProxyParams>,
     web_socket_upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
-    tracing::info!("BACKEND!!!!!");
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
 
@@ -270,7 +269,7 @@ pub async fn proxy_frontend(
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
     let process = context.process_manager.get_process(chat_message_id)?;
     let uri = request.uri().to_string();
-    tracing::info!("URI = {:?}", uri);
+
     let uri_append = if uri.contains('?') {
         uri.split('?').last()
     } else {

@@ -29,7 +29,6 @@ pub async fn request(
     warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
-    //tracing::info!("URI_APPEND = {:?}", uri_append);
     let url = match pass {
         None => match uri_append {
             None => format!("{BASE_WASP_APP_URL}:{port}"),
@@ -40,14 +39,6 @@ pub async fn request(
             Some(uri_append) => format!("{BASE_WASP_APP_URL}:{port}/{pass}?{uri_append}"),
         },
     };
-    //tracing::info!("URL = {:?}", url);
-    /*
-    let url = if url.contains(".vite/deps/chunk-") && !url.contains("?v=") {
-        format!("{url}?v=1234567890")
-    } else {
-        url
-    };
-    */
 
     let server_url_to_replace = format!("localhost:{port}/");
     let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
@@ -101,31 +92,6 @@ pub async fn request(
         }
     };
 
-    /*
-    let url_prefix = match pass {
-        None => match uri_append {
-            None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
-            Some(uri_append) => {
-                if uri_append.contains("v=") {
-                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}?{uri_append}")
-                } else {
-                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}")
-                }
-            },
-        },
-        Some(pass) => match uri_append {
-            None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}"),
-            Some(uri_append) => {
-                if uri_append.contains("v=") {
-                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}?{uri_append}")
-                } else {
-                    format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
-                }
-            },
-        },
-    };
-    */
-
     match content_type {
         "application/javascript" => {
             let text = response.text().await?;
@@ -146,6 +112,11 @@ pub async fn request(
 
             Ok((status_code, Png(bytes)).into_response())
         }
+        "image/x-icon" => {
+            let bytes = response.bytes().await?;
+
+            Ok((status_code, Xicon(bytes)).into_response())
+        }
         "text/html" => {
             let text = response.text().await?;
             let text = update_urls_in_html(&text, &url_prefix);
@@ -157,39 +128,29 @@ pub async fn request(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn request_ws(port: i32, web_socket: WebSocket) {
-    let (mut server_sender, mut server_receiver) = web_socket.split();
+pub async fn request_ws(port: i32, server_web_socket: WebSocket) {
     let url = format!("{BASE_WASP_APP_WS_URL}:{port}/");
-    tracing::info!("url = {:?}", url);
-    let ws_stream = match connect_async(url).await {
-        Ok((stream, response)) => {
-            tracing::info!("Handshake for client has been completed");
-            tracing::info!("Server response was {response:?}");
 
-            stream
-        }
+    let client_web_socket_stream = match connect_async(url).await {
+        Ok((stream, _response)) => stream,
         Err(e) => {
-            tracing::info!("WebSocket handshake for client failed with {e}!");
+            tracing::error!("WebSocket handshake for client failed with {e}!");
 
             return;
         }
     };
-    tracing::info!("AFTER HANDSHAKE!");
-    let (mut client_sender, mut client_receiver) = ws_stream.split();
+
+    let (mut client_sender, mut client_receiver) = client_web_socket_stream.split();
+    let (mut server_sender, mut server_receiver) = server_web_socket.split();
 
     let mut send_task = tokio::spawn(async move {
-        if let Some(msg) = server_receiver.next().await {
-            if let Ok(msg) = msg {
-                let text = msg.to_text();
+        if let Some(Ok(msg)) = server_receiver.next().await {
+            let text = msg.to_text();
 
-                if let Ok(text) = text {
-                    tracing::info!("SERVER RECEIVER TEXT = {}", text);
-                    let message = Message::from(text);
+            if let Ok(text) = text {
+                let message = Message::from(text);
 
-                    client_sender.send(message).await.expect("Can not send!");
-                }
-            } else {
-                tracing::info!("client abruptly disconnected");
+                let _ = client_sender.send(message).await;
             }
         }
     });
@@ -199,7 +160,6 @@ pub async fn request_ws(port: i32, web_socket: WebSocket) {
             let text = msg.to_text();
 
             if let Ok(text) = text {
-                tracing::info!("CLIENT RECEIVER TEXT = {}", text);
                 let message = AxumMessage::from(text);
 
                 let _ = server_sender.send(message).await;
@@ -258,14 +218,34 @@ pub fn update_urls_in_javascript(
     }
 
     if url.contains("src/router.tsx") {
-        let to: String = format!("        to: \"{url_prefix}/\",");
-        code = code.replace("        to: \"/\",", &to);
-
-        let to: String = format!("        build: (options)=>interpolatePath(\"{url_prefix}/\",");
-        code = code.replace("        build: (options)=>interpolatePath(\"/\",", &to);
-
         let to: String = format!("    basename: \"{url_prefix}/\",");
         code = code.replace("    basename: \"/\",", &to);
+    }
+
+    let from = "{
+        // A fetch on a websocket URL will return a successful promise with status 400,
+        // but will reject a networking error.
+        // When running on middleware mode, it returns status 426, and an cors error happens if mode is not no-cors
+        try {
+            await fetch(`${pingHostProtocol}://${hostAndPath}`, {
+                mode: 'no-cors',
+                headers: {
+                    // Custom headers won't be included in a request with no-cors so (ab)use one of the
+                    // safelisted headers to identify the ping request
+                    Accept: 'text/x-vite-ping',
+                },
+            });
+            return true;
+        }
+        catch { }
+        return false;
+    };";
+    let to = "{{ return true; }};";
+    code = code.replace(from, to);
+
+    if url.contains("?import") {
+        let to: String = format!("export default \"{url_prefix}/");
+        code = code.replace("export default \"/", &to);
     }
 
     code = code.replace(":src/index.tsx/", "");
@@ -286,6 +266,7 @@ pub fn update_urls_in_javascript(
     code = code.replace(":@react-refresh/", "");
 
     code = code.replace(".vite/deps/chunk-MMW4JUSU.js/", "");
+    code = code.replace(":src/ext-src/waspLogo.png/", "");
 
     code
 }
@@ -337,6 +318,32 @@ where
 }
 
 impl<T> From<T> for Png<T> {
+    fn from(inner: T) -> Self {
+        Self(inner)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[must_use]
+pub struct Xicon<T>(pub T);
+
+impl<T> IntoResponse for Xicon<T>
+where
+    T: Into<Body>,
+{
+    fn into_response(self) -> Response {
+        (
+            [(
+                header::CONTENT_TYPE,
+                HeaderValue::from_static("image/x-icon"),
+            )],
+            self.0.into(),
+        )
+            .into_response()
+    }
+}
+
+impl<T> From<T> for Xicon<T> {
     fn from(inner: T) -> Self {
         Self(inner)
     }
