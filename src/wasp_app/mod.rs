@@ -9,6 +9,7 @@ use axum::{
     response::{Html, IntoResponse, Json, Response},
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use regex::Regex;
 use std::{str::FromStr, sync::Arc};
 use tokio::time::{sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
@@ -103,7 +104,7 @@ pub async fn request(
                 &url,
                 &url_prefix,
                 context.get_config().await?.ws_port,
-            );
+            )?;
 
             Ok((status_code, JavaScript(text)).into_response())
         }
@@ -198,7 +199,7 @@ pub fn update_urls_in_javascript(
     url: &str,
     url_prefix: &str,
     ws_port: u16,
-) -> String {
+) -> Result<String> {
     let mut code = code.to_string();
     let url = url.to_string();
 
@@ -211,18 +212,19 @@ pub fn update_urls_in_javascript(
         code = code.replace(server_url_to_replace, server_url);
     }
 
-    let find = "${hmrPort || importMetaUrl.port}${\"/\"}";
-    if code.contains(find) {
-        let to = format!("{ws_port}${{\"{server_path}\"}}");
-        code = code.replace(find, &to);
-    }
-
     if url.contains("src/router.tsx") {
         let to: String = format!("    basename: \"{url_prefix}/\",");
         code = code.replace("    basename: \"/\",", &to);
     }
 
-    let from = "{
+    if url.contains("@vite/client") {
+        let from = "${hmrPort || importMetaUrl.port}${\"/\"}";
+        if code.contains(from) {
+            let to = format!("{ws_port}${{\"{server_path}\"}}");
+            code = code.replace(from, &to);
+        }
+
+        let from = "{
         // A fetch on a websocket URL will return a successful promise with status 400,
         // but will reject a networking error.
         // When running on middleware mode, it returns status 426, and an cors error happens if mode is not no-cors
@@ -240,35 +242,41 @@ pub fn update_urls_in_javascript(
         catch { }
         return false;
     };";
-    let to = "{{ return true; }};";
-    code = code.replace(from, to);
+        let to = "{ return true; };";
+        code = code.replace(from, to);
+    }
 
     if url.contains("?import") {
         let to: String = format!("export default \"{url_prefix}/");
         code = code.replace("export default \"/", &to);
     }
 
-    code = code.replace(":src/index.tsx/", "");
-    code = code.replace(":@vite/client/", "");
-    code = code.replace(":node_modules/.vite/deps/react.js/", "");
-    code = code.replace(":node_modules/.vite/deps/react_jsx-dev-runtime.js/", "");
-    code = code.replace(":node_modules/.vite/deps/react-dom_client.js/", "");
-    code = code.replace(":node_modules/.vite/deps/@tanstack_react-query.js/", "");
-    code = code.replace(":src/queryClient.js/", "");
-    code = code.replace(":src/router.tsx/", "");
-    code = code.replace(":src/router/Link.tsx/", "");
-    code = code.replace(":src/ext-src/MainPage.jsx/", "");
-    code = code.replace(":node_modules/.vite/deps/react-router-dom.js/", "");
+    let re = Regex::new(r":node_modules\/[^\s]+.js\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.css\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.js\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.jsx\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.png\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.ts\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":src\/[^\s]+.tsx\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r".vite\/[^\s]+.js\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":@vite\/client\/")?;
+    code = re.replace_all(&code, "").to_string();
+    let re = Regex::new(r":@react-refresh\/")?;
+    code = re.replace_all(&code, "").to_string();
 
-    code = code.replace(":src/ext-src/Main.css/", "");
+    //code = code.replace(":@vite/client/", "");
+    //code = code.replace(":node_modules/", "");
+    //code = code.replace(":@react-refresh/", "");
 
-    code = code.replace(":node_modules/", "");
-    code = code.replace(":@react-refresh/", "");
-
-    code = code.replace(".vite/deps/chunk-MMW4JUSU.js/", "");
-    code = code.replace(":src/ext-src/waspLogo.png/", "");
-
-    code
+    Ok(code)
 }
 
 #[derive(Clone, Copy, Debug)]
