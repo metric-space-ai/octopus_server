@@ -511,6 +511,20 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(wasp_apps::list).post(wasp_apps::create),
         )
         .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+            delete(wasp_apps::proxy_backend)
+                .get(wasp_apps::proxy_backend)
+                .post(wasp_apps::proxy_backend)
+                .put(wasp_apps::proxy_backend),
+        )
+        .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/*pass",
+            delete(wasp_apps::proxy_backend)
+                .get(wasp_apps::proxy_backend)
+                .post(wasp_apps::proxy_backend)
+                .put(wasp_apps::proxy_backend),
+        )
+        .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)
@@ -581,7 +595,7 @@ pub fn ws_router(context: Arc<Context>) -> Result<Router> {
     #[openapi(
         modifiers(&SecurityAddon),
         paths(
-            wasp_apps::proxy_backend,
+            wasp_apps::proxy_backend_web_socket,
         ),
         tags(
             (name = "wasp_apps", description = "Wasp apps API."),
@@ -606,10 +620,10 @@ pub fn ws_router(context: Arc<Context>) -> Result<Router> {
         .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
         .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/",
-            delete(wasp_apps::proxy_backend)
-                .get(wasp_apps::proxy_backend)
-                .post(wasp_apps::proxy_backend)
-                .put(wasp_apps::proxy_backend),
+            delete(wasp_apps::proxy_backend_web_socket)
+                .get(wasp_apps::proxy_backend_web_socket)
+                .post(wasp_apps::proxy_backend_web_socket)
+                .put(wasp_apps::proxy_backend_web_socket),
         )
         .layer(
             CorsLayer::new()

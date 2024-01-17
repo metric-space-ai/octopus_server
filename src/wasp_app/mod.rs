@@ -9,6 +9,7 @@ use axum::{
     response::{Html, IntoResponse, Json, Response},
 };
 use futures::{sink::SinkExt, stream::StreamExt};
+use http_body_util::BodyExt;
 use regex::Regex;
 use std::{str::FromStr, sync::Arc};
 use tokio::time::{sleep, Duration};
@@ -26,6 +27,7 @@ pub async fn request(
     port: i32,
     proxy_url: &str,
     request: Request<Body>,
+    server_port: i32,
     uri_append: Option<&str>,
     warmed_up: bool,
     wasp_app_id: Uuid,
@@ -41,13 +43,23 @@ pub async fn request(
         },
     };
 
-    let server_url_to_replace = format!("localhost:{port}/");
-    let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
+    let server_url_to_replace = format!("http://127.0.0.1:{server_port}");
+    let octopus_url = context.get_config().await?.get_parameter_octopus_api_url();
     let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
-    let server_url = match octopus_ws_url {
+    let server_url = match octopus_url {
         None => String::new(),
         Some(server_url) => {
             format!("{server_url}{server_path}")
+        }
+    };
+
+    let server_ws_url_to_replace = format!("localhost:{port}/");
+    let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
+    let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
+    let server_ws_url = match octopus_ws_url {
+        None => String::new(),
+        Some(server_ws_url) => {
+            format!("{server_ws_url}{server_path}")
         }
     };
 
@@ -67,24 +79,41 @@ pub async fn request(
         }
     }
 
-    let request_builder = match *request.method() {
+    let method = request.method().clone();
+
+    let request_builder = match method {
         Method::DELETE => client.delete(url.clone()),
         Method::POST => client.post(url.clone()),
         Method::PUT => client.put(url.clone()),
         _ => client.get(url.clone()),
     };
 
+    tracing::error!("REQUEST = {:?}", request);
+    let body = BodyExt::collect(request.into_body())
+        .await?
+        .to_bytes()
+        .to_vec();
+    let body = String::from_utf8(body.clone())?;
+    tracing::error!("BODY = {:?}", body);
+
+    let request_builder = match method {
+        Method::POST | Method::PUT => request_builder
+            .header(reqwest::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .body(body),
+        _ => request_builder,
+    };
+
     let response = request_builder.send().await?;
 
     let status_code = format!("{}", response.status().as_u16());
     let status_code = StatusCode::from_str(&status_code)?;
-
+    tracing::error!("STATUS_CODE = {:?}", status_code);
     let content_type = response
         .headers()
         .get("Content-Type")
         .ok_or(AppError::Conflict)?
         .to_str()?;
-    tracing::info!("CONTENT_TYPE = {:?}", content_type);
+    tracing::error!("CONTENT_TYPE = {:?}", content_type);
 
     let url_prefix = match pass {
         None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
@@ -101,12 +130,21 @@ pub async fn request(
                 &server_path,
                 &server_url,
                 &server_url_to_replace,
+                &server_ws_url,
+                &server_ws_url_to_replace,
                 &url,
                 &url_prefix,
                 context.get_config().await?.ws_port,
             )?;
 
             Ok((status_code, JavaScript(text)).into_response())
+        }
+        "application/json; charset=utf-8" => {
+            let bytes = response.bytes().await?.to_vec();
+            let body: serde_json::Value = serde_json::from_slice(&bytes)?;
+            tracing::error!("TEXT = {:?}", body);
+
+            Ok((status_code, Json(body)).into_response())
         }
         "image/png" => {
             let bytes = response.bytes().await?;
@@ -191,11 +229,14 @@ pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     code
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn update_urls_in_javascript(
     code: &str,
     server_path: &str,
     server_url: &str,
     server_url_to_replace: &str,
+    server_ws_url: &str,
+    server_ws_url_to_replace: &str,
     url: &str,
     url_prefix: &str,
     ws_port: u16,
@@ -210,6 +251,10 @@ pub fn update_urls_in_javascript(
 
     if code.contains(server_url_to_replace) {
         code = code.replace(server_url_to_replace, server_url);
+    }
+
+    if code.contains(server_ws_url_to_replace) {
+        code = code.replace(server_ws_url_to_replace, server_ws_url);
     }
 
     if url.contains("src/router.tsx") {
@@ -271,10 +316,6 @@ pub fn update_urls_in_javascript(
     code = re.replace_all(&code, "").to_string();
     let re = Regex::new(r":@react-refresh\/")?;
     code = re.replace_all(&code, "").to_string();
-
-    //code = code.replace(":@vite/client/", "");
-    //code = code.replace(":node_modules/", "");
-    //code = code.replace(":@react-refresh/", "");
 
     Ok(code)
 }

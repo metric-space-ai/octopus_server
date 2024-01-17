@@ -22,6 +22,13 @@ use uuid::Uuid;
 pub struct BackendProxyParams {
     id: Uuid,
     chat_message_id: Uuid,
+    pass: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct BackendWebSocketProxyParams {
+    id: Uuid,
+    chat_message_id: Uuid,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -164,9 +171,122 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/:pass",
     responses(
         (status = 200, description = "Wasp app backend proxy.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id"),
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("pass" = String, Path, description = "Parameters that are passed to proxified service"),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn proxy_backend(
+    State(context): State<Arc<Context>>,
+    Path(BackendProxyParams {
+        id,
+        chat_message_id,
+        pass,
+    }): Path<BackendProxyParams>,
+    request: Request<Body>,
+) -> Result<impl IntoResponse, AppError> {
+    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
+    let process = context.process_manager.get_process(chat_message_id)?;
+    let uri = request.uri().to_string();
+
+    let uri_append = if uri.contains('?') {
+        uri.split('?').last()
+    } else {
+        None
+    };
+
+    if pid.is_none() || process.is_none() {
+        let wasp_app = context
+            .octopus_database
+            .try_get_wasp_app_by_id(id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if !wasp_app.is_enabled {
+            return Err(AppError::NotFound);
+        }
+
+        let chat_message = context
+            .octopus_database
+            .try_get_chat_message_by_id(chat_message_id)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if chat_message.wasp_app_id != Some(wasp_app.id) {
+            return Err(AppError::NotFound);
+        }
+
+        process_manager::wasp_app::install_and_run(
+            context.clone(),
+            chat_message.clone(),
+            wasp_app.clone(),
+        )
+        .await?;
+
+        let process = context.process_manager.get_process(chat_message_id)?;
+
+        if let Some(process) = process {
+            if let Some(server_port) = process.server_port {
+                let response = wasp_app::request(
+                    context.clone(),
+                    chat_message_id,
+                    pass,
+                    server_port,
+                    "proxy-backend",
+                    request,
+                    server_port,
+                    uri_append,
+                    false,
+                    id,
+                )
+                .await?;
+
+                process_manager::try_update_last_used_at(&context, chat_message_id)?;
+
+                return Ok(response);
+            }
+        }
+    } else if let Some(process) = process {
+        if let Some(server_port) = process.server_port {
+            let response = wasp_app::request(
+                context.clone(),
+                chat_message_id,
+                pass,
+                server_port,
+                "proxy-backend",
+                request,
+                server_port,
+                uri_append,
+                true,
+                id,
+            )
+            .await?;
+
+            process_manager::try_update_last_used_at(&context, chat_message_id)?;
+
+            return Ok(response);
+        }
+    }
+
+    Ok((StatusCode::OK, Json("{}")).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+    responses(
+        (status = 200, description = "Wasp app backend WebSocket proxy.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Wasp app not found.", body = ResponseError),
     ),
@@ -178,12 +298,12 @@ pub async fn list(
         ("api_key" = [])
     )
 )]
-pub async fn proxy_backend(
+pub async fn proxy_backend_web_socket(
     State(context): State<Arc<Context>>,
-    Path(BackendProxyParams {
+    Path(BackendWebSocketProxyParams {
         id,
         chat_message_id,
-    }): Path<BackendProxyParams>,
+    }): Path<BackendWebSocketProxyParams>,
     web_socket_upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
     let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
@@ -307,7 +427,9 @@ pub async fn proxy_frontend(
         let process = context.process_manager.get_process(chat_message_id)?;
 
         if let Some(process) = process {
-            if let Some(client_port) = process.client_port {
+            if let (Some(client_port), Some(server_port)) =
+                (process.client_port, process.server_port)
+            {
                 let response = wasp_app::request(
                     context.clone(),
                     chat_message_id,
@@ -315,6 +437,7 @@ pub async fn proxy_frontend(
                     client_port,
                     "proxy-frontend",
                     request,
+                    server_port,
                     uri_append,
                     false,
                     id,
@@ -327,7 +450,7 @@ pub async fn proxy_frontend(
             }
         }
     } else if let Some(process) = process {
-        if let Some(client_port) = process.client_port {
+        if let (Some(client_port), Some(server_port)) = (process.client_port, process.server_port) {
             let response = wasp_app::request(
                 context.clone(),
                 chat_message_id,
@@ -335,6 +458,7 @@ pub async fn proxy_frontend(
                 client_port,
                 "proxy-frontend",
                 request,
+                server_port,
                 uri_append,
                 true,
                 id,
