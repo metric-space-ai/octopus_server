@@ -532,6 +532,13 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .put(wasp_apps::proxy_frontend),
         )
         .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/",
+            delete(wasp_apps::proxy_frontend)
+                .get(wasp_apps::proxy_frontend)
+                .post(wasp_apps::proxy_frontend)
+                .put(wasp_apps::proxy_frontend),
+        )
+        .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/*pass",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)

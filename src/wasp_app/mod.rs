@@ -79,6 +79,7 @@ pub async fn request(
         }
     }
 
+    let headers = request.headers().clone();
     let method = request.method().clone();
 
     let request_builder = match method {
@@ -88,17 +89,28 @@ pub async fn request(
         _ => client.get(url.clone()),
     };
 
-    tracing::error!("REQUEST = {:?}", request);
     let body = BodyExt::collect(request.into_body())
         .await?
         .to_bytes()
         .to_vec();
     let body = String::from_utf8(body.clone())?;
-    tracing::error!("BODY = {:?}", body);
+
+    let request_builder = if headers.get("authorization").is_some() {
+        if let Some(authorization) = headers.get("authorization") {
+            request_builder.header(reqwest::header::AUTHORIZATION, authorization.as_ref())
+        } else {
+            request_builder
+        }
+    } else {
+        request_builder
+    };
 
     let request_builder = match method {
         Method::POST | Method::PUT => request_builder
-            .header(reqwest::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+            .header(
+                reqwest::header::CONTENT_TYPE,
+                mime::APPLICATION_JSON.as_ref(),
+            )
             .body(body),
         _ => request_builder,
     };
@@ -107,13 +119,13 @@ pub async fn request(
 
     let status_code = format!("{}", response.status().as_u16());
     let status_code = StatusCode::from_str(&status_code)?;
-    tracing::error!("STATUS_CODE = {:?}", status_code);
+
     let content_type = response
         .headers()
         .get("Content-Type")
         .ok_or(AppError::Conflict)?
         .to_str()?;
-    tracing::error!("CONTENT_TYPE = {:?}", content_type);
+    tracing::info!("CONTENT_TYPE = {:?}", content_type);
 
     let url_prefix = match pass {
         None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
@@ -139,10 +151,15 @@ pub async fn request(
 
             Ok((status_code, JavaScript(text)).into_response())
         }
+        "application/json" => {
+            let bytes = response.bytes().await?.to_vec();
+            let body: serde_json::Value = serde_json::from_slice(&bytes)?;
+
+            Ok((status_code, Json(body)).into_response())
+        }
         "application/json; charset=utf-8" => {
             let bytes = response.bytes().await?.to_vec();
             let body: serde_json::Value = serde_json::from_slice(&bytes)?;
-            tracing::error!("TEXT = {:?}", body);
 
             Ok((status_code, Json(body)).into_response())
         }
@@ -158,7 +175,7 @@ pub async fn request(
         }
         "text/html" => {
             let text = response.text().await?;
-            let text = update_urls_in_html(&text, &url_prefix);
+            let text = update_urls_in_html(&text, &url_prefix)?;
 
             Ok((status_code, Html(text)).into_response())
         }
@@ -187,9 +204,14 @@ pub async fn request_ws(port: i32, server_web_socket: WebSocket) {
             let text = msg.to_text();
 
             if let Ok(text) = text {
+                tracing::error!("CLIENT_SENDER MESSAGE = {:?}", text);
                 let message = Message::from(text);
 
-                let _ = client_sender.send(message).await;
+                let result = client_sender.send(message).await;
+
+                if let Err(error) = result {
+                    tracing::error!("CLIENT_SENDER ERROR = {:?}", error);
+                }
             }
         }
     });
@@ -199,24 +221,29 @@ pub async fn request_ws(port: i32, server_web_socket: WebSocket) {
             let text = msg.to_text();
 
             if let Ok(text) = text {
+                tracing::error!("SERVER_SENDER MESSAGE = {:?}", text);
                 let message = AxumMessage::from(text);
 
-                let _ = server_sender.send(message).await;
+                let result = server_sender.send(message).await;
+
+                if let Err(error) = result {
+                    tracing::error!("SERVER_SENDER ERROR = {:?}", error);
+                }
             }
         }
     });
 
     tokio::select! {
         _ = (&mut send_task) => {
-            recv_task.abort();
+            //recv_task.abort();
         },
         _ = (&mut recv_task) => {
-            send_task.abort();
+            //send_task.abort();
         }
     }
 }
 
-pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
+pub fn update_urls_in_html(code: &str, url_prefix: &str) -> Result<String> {
     let mut code = code.to_string();
 
     let to: String = format!("href=\"{url_prefix}/");
@@ -226,7 +253,10 @@ pub fn update_urls_in_html(code: &str, url_prefix: &str) -> String {
     let to: String = format!("from \"{url_prefix}/");
     code = code.replace("from \"/", &to);
 
-    code
+    let re = Regex::new(r":login\/")?;
+    code = re.replace_all(&code, "").to_string();
+
+    Ok(code)
 }
 
 #[allow(clippy::too_many_arguments)]
