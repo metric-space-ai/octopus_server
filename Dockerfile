@@ -5,11 +5,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.74.1/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.75.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.74.1
+    RUST_VERSION=1.75.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -17,6 +17,7 @@ RUN set -eux; \
         armhf) rustArch='armv7-unknown-linux-gnueabihf'; rustupSha256='f21c44b01678c645d8fbba1e55e4180a01ac5af2d38bcbd14aa665e0d96ed69a' ;; \
         arm64) rustArch='aarch64-unknown-linux-gnu'; rustupSha256='673e336c81c65e6b16dcdede33f4cc9ed0f08bde1dbe7a935f113605292dc800' ;; \
         i386) rustArch='i686-unknown-linux-gnu'; rustupSha256='e7b0f47557c1afcd86939b118cbcf7fb95a5d1d917bdd355157b63ca00fc4333' ;; \
+        ppc64el) rustArch='powerpc64le-unknown-linux-gnu'; rustupSha256='1032934fb154ad2d365e02dcf770c6ecfaec6ab2987204c618c21ba841c97b44' ;; \
         *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
     esac; \
     url="https://static.rust-lang.org/rustup/archive/1.26.0/${rustArch}/rustup-init"; \
@@ -40,6 +41,7 @@ FROM chef AS backend_builder
 ARG DATABASE_URL
 RUN cargo install sqlx-cli
 COPY --from=planner /octopus_server/recipe.json recipe.json
+COPY octopus_server/crates /octopus_server/crates
 RUN cargo chef cook --release --recipe-path recipe.json
 COPY octopus_server /octopus_server/
 WORKDIR /octopus_server
@@ -140,11 +142,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.74.1/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.75.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.74.1
+    RUST_VERSION=1.75.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -152,6 +154,7 @@ RUN set -eux; \
         armhf) rustArch='armv7-unknown-linux-gnueabihf'; rustupSha256='f21c44b01678c645d8fbba1e55e4180a01ac5af2d38bcbd14aa665e0d96ed69a' ;; \
         arm64) rustArch='aarch64-unknown-linux-gnu'; rustupSha256='673e336c81c65e6b16dcdede33f4cc9ed0f08bde1dbe7a935f113605292dc800' ;; \
         i386) rustArch='i686-unknown-linux-gnu'; rustupSha256='e7b0f47557c1afcd86939b118cbcf7fb95a5d1d917bdd355157b63ca00fc4333' ;; \
+        ppc64el) rustArch='powerpc64le-unknown-linux-gnu'; rustupSha256='1032934fb154ad2d365e02dcf770c6ecfaec6ab2987204c618c21ba841c97b44' ;; \
         *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
     esac; \
     url="https://static.rust-lang.org/rustup/archive/1.26.0/${rustArch}/rustup-init"; \
@@ -184,21 +187,18 @@ RUN apt-get update -q && \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH /opt/conda/bin:$PATH
 CMD [ "/bin/bash" ]
-ARG CONDA_VERSION=py311_23.10.0-1
+ARG CONDA_VERSION=py311_23.11.0-1
 RUN set -x && \
     UNAME_M="$(uname -m)" && \
     if [ "${UNAME_M}" = "x86_64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-x86_64.sh"; \
-        SHA256SUM="d0643508fa49105552c94a523529f4474f91730d3e0d1f168f1700c43ae67595"; \
+        SHA256SUM="5b3cefe534e23541f5f703f40d4818e361c3615dbf14651a0f29554c3fc3d0fd"; \
     elif [ "${UNAME_M}" = "s390x" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-s390x.sh"; \
-        SHA256SUM="ae212385c9d7f7473da7401d3f5f6cbbbc79a1fce730aa48531947e9c07e0808"; \
+        SHA256SUM="04586c734987a39114b81384014c2cfa89360c518371b6fa249d3062efca27fe"; \
     elif [ "${UNAME_M}" = "aarch64" ]; then \
         MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-aarch64.sh"; \
-        SHA256SUM="a60e70ad7e8ac5bb44ad876b5782d7cdc66e10e1f45291b29f4f8d37cc4aa2c8"; \
-    elif [ "${UNAME_M}" = "ppc64le" ]; then \
-        MINICONDA_URL="https://repo.anaconda.com/miniconda/Miniconda3-${CONDA_VERSION}-Linux-ppc64le.sh"; \
-        SHA256SUM="1a2eda0a9a52a4bd058abbe9de5bb2bc751fcd7904c4755deffdf938d6f4436e"; \
+        SHA256SUM="63c06a1974695e50bbe767a030903d169e637e42d5b7b6d30876b19a01fbbad8"; \
     fi && \
     wget "${MINICONDA_URL}" -O miniconda.sh -q && \
     echo "${SHA256SUM} miniconda.sh" > shasum && \
@@ -294,6 +294,7 @@ RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
 RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
+RUN export PATH=$PATH:/root/.local/bin
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./
