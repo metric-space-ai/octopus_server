@@ -22,6 +22,7 @@ use crate::{
         profiles::ProfilePut,
         setup::{SetupInfoResponse, SetupPost},
         users::{UserInvitationPost, UserPost, UserPut},
+        version::VersionInfoResponse,
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -78,6 +79,7 @@ mod server_resources;
 mod setup;
 mod simple_apps;
 mod users;
+mod version;
 mod wasp_apps;
 mod workspaces;
 
@@ -152,6 +154,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 UserInvitationPost,
                 UserPost,
                 UserPut,
+                VersionInfoResponse,
                 WaspApp,
                 Workspace,
                 WorkspacePost,
@@ -255,6 +258,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             users::read,
             users::roles,
             users::update,
+            version::info,
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::list,
@@ -292,6 +296,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "setup", description = "Setup API."),
             (name = "simple_apps", description = "Simple apps API."),
             (name = "users", description = "Users API."),
+            (name = "version", description = "Version API."),
             (name = "wasp_apps", description = "Wasp apps API."),
             (name = "workspaces", description = "Workspaces API."),
         )
@@ -506,6 +511,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/users/:user_id",
             delete(users::delete).get(users::read).put(users::update),
         )
+        .route("/api/v1/version", get(version::info))
         .route(
             "/api/v1/wasp-apps",
             get(wasp_apps::list).post(wasp_apps::create),
