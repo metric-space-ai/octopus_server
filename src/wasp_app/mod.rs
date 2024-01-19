@@ -326,21 +326,21 @@ pub fn update_urls_in_javascript(
         code = code.replace("export default \"/", &to);
     }
 
-    let re = Regex::new(r":node_modules\/[^\s]+.js\/")?;
+    let re = Regex::new(r":node_modules\/[^\s]+\.js\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.css\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.css\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.js\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.js\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.jsx\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.jsx\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.png\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.png\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.ts\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.ts\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r":src\/[^\s]+.tsx\/")?;
+    let re = Regex::new(r":src\/[^\s]+\.tsx\/")?;
     code = re.replace_all(&code, "").to_string();
-    let re = Regex::new(r".vite\/[^\s]+.js\/")?;
+    let re = Regex::new(r".vite\/[^\s]+\.js\/")?;
     code = re.replace_all(&code, "").to_string();
     let re = Regex::new(r":@vite\/client\/")?;
     code = re.replace_all(&code, "").to_string();
