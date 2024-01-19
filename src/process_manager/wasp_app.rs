@@ -6,7 +6,7 @@ use crate::{
     process_manager::{try_get_pid, try_kill_process, Process, ProcessState, ProcessType},
     Result, WASP_APPS_DIR,
 };
-use chrono::Utc;
+use chrono::{Duration as ChronoDuration, Utc};
 use port_selector::{select_free_port, Selector};
 use std::{
     fs::{create_dir, remove_dir_all, remove_file, File},
@@ -172,8 +172,38 @@ pub async fn create_environment(
     if let Some(wasp_app_client_port) = wasp_app_client_port {
         file.write_fmt(format_args!("sed -i \"s/    port: 3000,/    port: {wasp_app_client_port},/g\" {full_wasp_app_dir_path}/.wasp/out/web-app/vite.config.ts\n"))?;
     }
+
+    let mut parameters = String::new();
+
+    let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
+
+    if let Some(octopus_api_url) = octopus_api_url {
+        parameters.push_str(&format!("OCTOPUS_API_URL={octopus_api_url} "));
+    }
+
+    let expired_at = Utc::now() + ChronoDuration::days(365);
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let session = context
+        .octopus_database
+        .insert_session(&mut transaction, chat_message.user_id, "", expired_at)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+
+    parameters.push_str(&format!("OCTOPUS_TOKEN={} ", session.id));
+
+    let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
+
+    if let Some(openai_api_key) = openai_api_key {
+        parameters.push_str(&format!("OPENAI_API_KEY={openai_api_key} "));
+    }
+
     if let Some(wasp_app_server_port) = wasp_app_server_port {
-        file.write_fmt(format_args!("PORT={wasp_app_server_port} DATABASE_URL={wasp_database_url} REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
+        file.write_fmt(format_args!("{parameters} PORT={wasp_app_server_port} DATABASE_URL={wasp_database_url} REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
     }
 
     process.client_port = wasp_app_client_port;
