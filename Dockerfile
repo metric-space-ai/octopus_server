@@ -1,8 +1,19 @@
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS chef
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
+        build-essential \
+        curl \
+        git \
+        libffi-dev \
+        libffi8ubuntu1 \
+        libgmp-dev \
+        libgmp10 \
+        libncurses-dev \
+        libncurses5 \
         librust-openssl-dev \
-        wget && \
+        libtinfo5 \
+        wget \
+        zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
@@ -132,14 +143,23 @@ FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS prod
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
+        build-essential \
         cgroup-tools \
         curl \
         g++ \
         git \
+        libffi-dev \
+        libffi8ubuntu1 \
+        libgmp-dev \
+        libgmp10 \
+        libncurses-dev \
+        libncurses5 \
         librust-openssl-dev \
+        libtinfo5 \
         nvidia-utils-535 \
         procps \
-        wget && \
+        wget \
+        zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
@@ -286,10 +306,13 @@ ARG OCTOPUS_SERVER_PORT
 ARG OPENAI_API_KEY
 ARG SENDGRID_API_KEY
 ARG NEXT_PUBLIC_BASE_URL
+ARG WASP_MAGE_DATABASE_URL
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES all
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
+ENV WASP_MAGE_BACKEND_PORT 3031
+ENV WASP_MAGE_PORT 3030
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
@@ -298,6 +321,18 @@ ENV PATH "$PATH:/root/.local/bin"
 RUN chmod u+s /usr/bin/cgcreate
 RUN chmod u+s /usr/bin/cgdelete
 RUN chmod u+s /usr/bin/cgexec
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+ENV PATH "$PATH:/root/.ghcup/bin"
+RUN ghcup install ghc 8.10.7
+WORKDIR /
+RUN git clone https://github.com/wasp-lang/wasp.git
+WORKDIR /wasp
+RUN git checkout wasp-ai
+WORKDIR /wasp/waspc
+RUN ./run build
+RUN ./run install
+WORKDIR /wasp_mage
+COPY octopus_server/wasp_mage /wasp_mage
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./
@@ -311,8 +346,10 @@ COPY --from=backend_builder /octopus_server/target/release/octopus_server ./
 COPY --from=backend_builder /octopus_server/migrations ./migrations
 COPY --from=backend_builder /octopus_server/docker-entrypoint.sh ./
 COPY --from=backend_builder /octopus_server/frontend-start.sh ./
+COPY --from=backend_builder /octopus_server/wasp-mage-start.sh ./
 RUN chmod +x docker-entrypoint.sh && \
     chmod +x frontend-start.sh && \
+    chmod +x wasp-mage-start.sh && \
     mkdir ./public/ && \
     mkdir ./services/ && \
     mkdir ./wasp_apps/
