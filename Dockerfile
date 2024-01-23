@@ -183,6 +183,7 @@ RUN apt-get update -q && \
         procps \
         subversion \
         wget \
+        xdg-utils \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 ENV PATH /opt/conda/bin:$PATH
@@ -287,14 +288,13 @@ ARG SENDGRID_API_KEY
 ARG NEXT_PUBLIC_BASE_URL
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES all
-ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
 RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
-RUN export PATH=$PATH:/root/.local/bin
+ENV PATH "$PATH:/root/.local/bin"
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./

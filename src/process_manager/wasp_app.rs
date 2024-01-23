@@ -167,7 +167,7 @@ pub async fn create_environment(
         file.write_fmt(format_args!("cd .wasp/build/\n"))?;
     */
     file.write_fmt(format_args!(
-        "DATABASE_URL={wasp_database_url} wasp db migrate-dev --name \"initial\"\n"
+        "DATABASE_URL=\"{wasp_database_url}\" wasp db migrate-dev --name \"initial\"\n"
     ))?;
     if let Some(wasp_app_client_port) = wasp_app_client_port {
         file.write_fmt(format_args!("sed -i \"s/    port: 3000,/    port: {wasp_app_client_port},/g\" {full_wasp_app_dir_path}/.wasp/out/web-app/vite.config.ts\n"))?;
@@ -203,7 +203,7 @@ pub async fn create_environment(
     }
 
     if let Some(wasp_app_server_port) = wasp_app_server_port {
-        file.write_fmt(format_args!("{parameters} PORT={wasp_app_server_port} DATABASE_URL={wasp_database_url} REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
+        file.write_fmt(format_args!("{parameters} PORT={wasp_app_server_port} DATABASE_URL=\"{wasp_database_url}\" REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
     }
 
     process.client_port = wasp_app_client_port;
