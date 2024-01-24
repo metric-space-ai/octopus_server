@@ -3,7 +3,9 @@ use crate::{
     entity::{ChatMessage, WaspApp},
     error::AppError,
     get_pwd,
-    process_manager::{try_get_pid, try_kill_process, Process, ProcessState, ProcessType},
+    process_manager::{
+        try_get_pid, try_kill_cgroup, try_kill_process, Process, ProcessState, ProcessType,
+    },
     Result, WASP_APPS_DIR,
 };
 use chrono::{Duration as ChronoDuration, Utc};
@@ -385,6 +387,8 @@ pub async fn stop(context: Arc<Context>, chat_message: ChatMessage) -> Result<Ch
         try_kill_process(pid).await?;
     }
 
+    try_kill_cgroup(chat_message.id).await?;
+
     context.process_manager.remove_process(chat_message.id)?;
 
     Ok(chat_message)
@@ -404,7 +408,24 @@ pub async fn stop_and_remove(
 pub async fn try_start(chat_message_id: Uuid) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
 
-    Command::new("/bin/bash")
+    let path = format!("/sys/fs/cgroup/{chat_message_id}");
+    let dir_exists = Path::new(&path).is_dir();
+
+    if dir_exists {
+        Command::new("/usr/bin/cgdelete")
+            .arg(format!("cpu:{chat_message_id}"))
+            .output()?;
+    }
+
+    Command::new("/usr/bin/cgcreate")
+        .arg("-g")
+        .arg(format!("cpu:{chat_message_id}"))
+        .output()?;
+
+    Command::new("/usr/bin/cgexec")
+        .arg("-g")
+        .arg(format!("cpu:{chat_message_id}"))
+        .arg("/bin/bash")
         .arg(format!(
             "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.sh"
         ))

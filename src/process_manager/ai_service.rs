@@ -6,7 +6,9 @@ use crate::{
         AiServiceSetupStatus, AiServiceStatus,
     },
     get_pwd, parser,
-    process_manager::{try_get_pid, try_kill_process, Process, ProcessState, ProcessType},
+    process_manager::{
+        try_get_pid, try_kill_cgroup, try_kill_process, Process, ProcessState, ProcessType,
+    },
     Result, SERVICES_DIR,
 };
 use std::{
@@ -380,6 +382,8 @@ pub async fn stop(ai_service: AiService, context: Arc<Context>) -> Result<AiServ
         try_kill_process(pid).await?;
     }
 
+    try_kill_cgroup(ai_service.id).await?;
+
     context.process_manager.remove_process(ai_service.id)?;
 
     Ok(ai_service)
@@ -421,7 +425,24 @@ pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result
 pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
 
-    Command::new("/bin/bash")
+    let path = format!("/sys/fs/cgroup/{ai_service_id}");
+    let dir_exists = Path::new(&path).is_dir();
+
+    if dir_exists {
+        Command::new("/usr/bin/cgdelete")
+            .arg(format!("cpu:{ai_service_id}"))
+            .output()?;
+    }
+
+    Command::new("/usr/bin/cgcreate")
+        .arg("-g")
+        .arg(format!("cpu:{ai_service_id}"))
+        .output()?;
+
+    Command::new("/usr/bin/cgexec")
+        .arg("-g")
+        .arg(format!("cpu:{ai_service_id}"))
+        .arg("/bin/bash")
         .arg(format!(
             "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
         ))

@@ -2,6 +2,9 @@ use crate::{context::Context, error::AppError, Result};
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
+    fs::OpenOptions,
+    io::Write,
+    path::Path,
     process::Command,
     sync::{Arc, RwLock},
 };
@@ -247,6 +250,37 @@ pub fn try_get_zombie_pids() -> Result<Vec<i32>> {
     }
 
     Ok(pids)
+}
+
+pub async fn try_kill_cgroup(id: Uuid) -> Result<()> {
+    let path = format!("/sys/fs/cgroup/{id}/cgroup.freeze");
+    let file_exists = Path::new(&path).is_file();
+
+    if file_exists {
+        let mut file = OpenOptions::new().write(true).open(path)?;
+
+        file.write_all("1".as_bytes())?;
+
+        sleep(Duration::from_secs(2)).await;
+    }
+
+    let path = format!("/sys/fs/cgroup/{id}/cgroup.kill");
+    let file_exists = Path::new(&path).is_file();
+
+    if file_exists {
+        let mut file = OpenOptions::new().write(true).open(path)?;
+
+        file.write_all("1".as_bytes())?;
+
+        sleep(Duration::from_secs(2)).await;
+    }
+
+    Command::new("/usr/bin/cgdelete")
+        .arg("-g")
+        .arg(format!("cpu:{id}"))
+        .output()?;
+
+    Ok(())
 }
 
 pub async fn try_kill_process(pid: i32) -> Result<()> {
