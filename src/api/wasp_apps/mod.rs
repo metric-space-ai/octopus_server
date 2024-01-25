@@ -15,8 +15,9 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
+use validator::Validate;
 
 #[derive(Deserialize, IntoParams)]
 pub struct BackendProxyParams {
@@ -36,6 +37,58 @@ pub struct FrontendProxyParams {
     id: Uuid,
     chat_message_id: Uuid,
     pass: Option<String>,
+}
+
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct WaspAppAllowedUsersPut {
+    pub allowed_user_ids: Vec<Uuid>,
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/wasp-apps/:id/allowed-users",
+    request_body = WaspAppAllowedUsersPut,
+    responses(
+        (status = 200, description = "Wasp app updated.", body = WaspApp),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn allowed_users(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+    Json(input): Json<WaspAppAllowedUsersPut>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    input.validate()?;
+
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let wasp_app = context
+        .octopus_database
+        .update_wasp_app_allowed_user_ids(&mut transaction, wasp_app.id, &input.allowed_user_ids)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+
+    Ok((StatusCode::OK, Json(wasp_app)).into_response())
 }
 
 #[axum_macros::debug_handler]

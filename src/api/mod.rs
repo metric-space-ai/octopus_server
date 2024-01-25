@@ -23,6 +23,7 @@ use crate::{
         setup::{SetupInfoResponse, SetupPost},
         users::{UserInvitationPost, UserPost, UserPut},
         version::VersionInfoResponse,
+        wasp_apps::WaspAppAllowedUsersPut,
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -156,6 +157,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 UserPut,
                 VersionInfoResponse,
                 WaspApp,
+                WaspAppAllowedUsersPut,
                 Workspace,
                 WorkspacePost,
                 WorkspacePut,
@@ -259,6 +261,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             users::roles,
             users::update,
             version::info,
+            wasp_apps::allowed_users,
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::list,
@@ -515,6 +518,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/wasp-apps",
             get(wasp_apps::list).post(wasp_apps::create),
+        )
+        .route(
+            "/api/v1/wasp-apps/:id/allowed-users",
+            put(wasp_apps::allowed_users),
         )
         .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
