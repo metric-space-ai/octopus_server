@@ -3325,6 +3325,33 @@ impl OctopusDatabase {
         Ok(wasp_app)
     }
 
+    pub async fn update_wasp_app_info(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        description: &str,
+        formatted_name: &str,
+        is_enabled: bool,
+        name: &str,
+    ) -> Result<WaspApp> {
+        let wasp_app = sqlx::query_as!(
+            WaspApp,
+            "UPDATE wasp_apps
+            SET description = $2, formatted_name = $3, is_enabled = $4, name = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at",
+            id,
+            description,
+            formatted_name,
+            is_enabled,
+            name,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_app)
+    }
+
     pub async fn update_workspace(
         &self,
         transaction: &mut Transaction<'_, Postgres>,

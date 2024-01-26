@@ -113,6 +113,7 @@ pub async fn create(
 
     let mut code = None;
     let mut description = None;
+    let mut is_enabled = true;
     let mut name = None;
 
     while let Some(field) = multipart.next_field().await? {
@@ -122,6 +123,8 @@ pub async fn create(
             description = Some((field.text().await?).to_string());
         } else if field_name == "name" {
             name = Some((field.text().await?).to_string());
+        } else if field_name == "is_enabled" {
+            is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
             let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
@@ -143,7 +146,7 @@ pub async fn create(
                 &code,
                 &description,
                 &formatted_name,
-                true,
+                is_enabled,
                 &name,
             )
             .await?;
@@ -596,6 +599,7 @@ pub async fn update(
 
     let mut code = None;
     let mut description = None;
+    let mut is_enabled = true;
     let mut name = None;
 
     while let Some(field) = multipart.next_field().await? {
@@ -605,6 +609,8 @@ pub async fn update(
             description = Some((field.text().await?).to_string());
         } else if field_name == "name" {
             name = Some((field.text().await?).to_string());
+        } else if field_name == "is_enabled" {
+            is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
             let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
@@ -614,7 +620,9 @@ pub async fn update(
         }
     }
 
-    if let (Some(code), Some(description), Some(name)) = (code, description, name) {
+    if let (Some(code), Some(description), Some(name)) =
+        (code.clone(), description.clone(), name.clone())
+    {
         let formatted_name = name.clone().replace(' ', "_").to_lowercase();
 
         let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -627,7 +635,7 @@ pub async fn update(
                 &code,
                 &description,
                 &formatted_name,
-                true,
+                is_enabled,
                 &name,
             )
             .await?;
@@ -637,10 +645,33 @@ pub async fn update(
             .transaction_commit(transaction)
             .await?;
 
-        return Ok((StatusCode::OK, Json(wasp_app)).into_response());
-    }
+        Ok((StatusCode::OK, Json(wasp_app)).into_response())
+    } else if let (None, Some(description), Some(name)) = (code, description, name) {
+        let formatted_name = name.clone().replace(' ', "_").to_lowercase();
 
-    Err(AppError::BadRequest)
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let wasp_app = context
+            .octopus_database
+            .update_wasp_app_info(
+                &mut transaction,
+                id,
+                &description,
+                &formatted_name,
+                is_enabled,
+                &name,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        Ok((StatusCode::OK, Json(wasp_app)).into_response())
+    } else {
+        Err(AppError::BadRequest)
+    }
 }
 /*
 #[cfg(test)]
