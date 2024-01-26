@@ -295,6 +295,9 @@ RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
 RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
 ENV PATH "$PATH:/root/.local/bin"
+RUN chmod u+s /usr/bin/cgcreate
+RUN chmod u+s /usr/bin/cgdelete
+RUN chmod u+s /usr/bin/cgexec
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./
