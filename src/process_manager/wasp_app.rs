@@ -21,7 +21,7 @@ use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
 pub async fn create_environment(
-    context: &Arc<Context>,
+    context: Arc<Context>,
     chat_message: &ChatMessage,
     mut process: Process,
     wasp_app: &WaspApp,
@@ -305,7 +305,7 @@ pub async fn install(
     let process = context.process_manager.insert_process(&process)?;
 
     if let Some(process) = process {
-        let process = create_environment(context, chat_message, process, &wasp_app).await?;
+        let process = create_environment(context.clone(), chat_message, process, &wasp_app).await?;
 
         if process.state == ProcessState::EnvironmentPrepared {
             context.process_manager.insert_process(&process)?;

@@ -21,7 +21,7 @@ use std::{
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
 
-pub fn create_environment(ai_service: &AiService) -> Result<bool> {
+pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -> Result<bool> {
     let pwd = get_pwd()?;
 
     let ai_service_id = ai_service.id;
@@ -61,7 +61,28 @@ pub fn create_environment(ai_service: &AiService) -> Result<bool> {
 
     file.write_fmt(format_args!("fi\n"))?;
     file.write_fmt(format_args!("conda activate {full_service_dir_path}\n"))?;
-    file.write_fmt(format_args!("nohup python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} &\n"))?;
+
+    let mut parameters = String::new();
+
+    let nextcloud_username = context
+        .get_config()
+        .await?
+        .get_parameter_nextcloud_username();
+
+    if let Some(nextcloud_username) = nextcloud_username {
+        parameters.push_str(&format!("NC_USERNAME={nextcloud_username} "));
+    }
+
+    let nextcloud_password = context
+        .get_config()
+        .await?
+        .get_parameter_nextcloud_password();
+
+    if let Some(nextcloud_password) = nextcloud_password {
+        parameters.push_str(&format!("NC_PASSWORD={nextcloud_password} "));
+    }
+
+    file.write_fmt(format_args!("{parameters} nohup python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} &\n"))?;
 
     Ok(true)
 }
@@ -109,7 +130,7 @@ pub async fn install(ai_service: AiService, context: Arc<Context>) -> Result<AiS
     let process = context.process_manager.insert_process(&process)?;
 
     if let Some(mut process) = process {
-        let environment_created = create_environment(&ai_service)?;
+        let environment_created = create_environment(&ai_service, context.clone()).await?;
 
         if environment_created {
             process.state = ProcessState::EnvironmentPrepared;
@@ -221,7 +242,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
 pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.status == AiServiceStatus::Setup || ai_service.status == AiServiceStatus::Stopped
     {
-        let environment_created = create_environment(&ai_service)?;
+        let environment_created = create_environment(&ai_service, context.clone()).await?;
 
         if environment_created {
             let process = Process {
@@ -333,7 +354,8 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
                     let ai_service =
                         parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
 
-                    let environment_created = create_environment(&ai_service)?;
+                    let environment_created =
+                        create_environment(&ai_service, context.clone()).await?;
 
                     if environment_created {
                         let process = Process {

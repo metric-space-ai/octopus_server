@@ -1,7 +1,8 @@
 use crate::{
     entity::{
         Parameter, PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
-        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_OCTOPUS_API_URL,
+        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
+        PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
         PARAMETER_NAME_SENDGRID_API_KEY,
     },
@@ -90,6 +91,14 @@ impl Config {
                 parse_result.unwrap_or(false)
             }
         }
+    }
+
+    pub fn get_parameter_nextcloud_password(&self) -> Option<String> {
+        self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_PASSWORD)
+    }
+
+    pub fn get_parameter_nextcloud_username(&self) -> Option<String> {
+        self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_USERNAME)
     }
 
     pub fn get_parameter_octopus_api_url(&self) -> Option<String> {
