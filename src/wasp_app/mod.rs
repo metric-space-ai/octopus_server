@@ -32,7 +32,7 @@ pub async fn request(
     warmed_up: bool,
     wasp_app_id: Uuid,
 ) -> Result<Response> {
-    let url = match pass {
+    let url = match pass.clone() {
         None => match uri_append {
             None => format!("{BASE_WASP_APP_URL}:{port}"),
             Some(uri_append) => format!("{BASE_WASP_APP_URL}:{port}?{uri_append}"),
@@ -46,7 +46,7 @@ pub async fn request(
     let server_url_to_replace = format!("http://127.0.0.1:{server_port}");
     let octopus_url = context.get_config().await?.get_parameter_octopus_api_url();
     let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
-    let server_url = match octopus_url {
+    let server_url = match octopus_url.clone() {
         None => String::new(),
         Some(server_url) => {
             format!("{server_url}{server_path}")
@@ -127,10 +127,24 @@ pub async fn request(
         .to_str()?;
     tracing::info!("CONTENT_TYPE = {:?}", content_type);
 
-    let url_prefix = match pass {
+    let url_prefix = match pass.clone() {
         None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
         Some(pass) => {
             format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
+        }
+    };
+
+    let html_server_url = match octopus_url {
+        None => String::new(),
+        Some(server_url) => {
+            format!("{server_url}")
+        }
+    };
+
+    let html_url_prefix = match pass {
+        None => format!("{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
+        Some(pass) => {
+            format!("{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
         }
     };
 
@@ -146,7 +160,6 @@ pub async fn request(
                 &server_ws_url_to_replace,
                 &url,
                 &url_prefix,
-                context.get_config().await?.ws_port,
             )?;
 
             Ok((status_code, JavaScript(text)).into_response())
@@ -175,7 +188,7 @@ pub async fn request(
         }
         "text/html" => {
             let text = response.text().await?;
-            let text = update_urls_in_html(&text, &url_prefix)?;
+            let text = update_urls_in_html(&text, &html_url_prefix)?;
 
             Ok((status_code, Html(text)).into_response())
         }
@@ -269,7 +282,6 @@ pub fn update_urls_in_javascript(
     server_ws_url_to_replace: &str,
     url: &str,
     url_prefix: &str,
-    ws_port: u16,
 ) -> Result<String> {
     let mut code = code.to_string();
     let url = url.to_string();
@@ -293,9 +305,17 @@ pub fn update_urls_in_javascript(
     }
 
     if url.contains("@vite/client") {
+        /*
+        let from = "'wss' : 'ws'";
+        if code.contains(from) {
+            let to = format!("'ws' : 'ws'");
+            code = code.replace(from, &to);
+        }
+        */
+
         let from = "${hmrPort || importMetaUrl.port}${\"/\"}";
         if code.contains(from) {
-            let to = format!("{ws_port}${{\"{server_path}\"}}");
+            let to = format!("/ws${{\"{server_path}\"}}");
             code = code.replace(from, &to);
         }
 

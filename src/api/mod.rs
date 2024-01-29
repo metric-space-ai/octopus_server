@@ -637,9 +637,9 @@ pub fn ws_router(context: Arc<Context>) -> Result<Router> {
     }
 
     let router = Router::new()
-        .merge(SwaggerUi::new("/swagger-ui").url("/api-doc/openapi.json", ApiDoc::openapi()))
+        .merge(SwaggerUi::new("/ws/swagger-ui").url("/ws/api-doc/openapi.json", ApiDoc::openapi()))
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/",
+            "/ws/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/",
             delete(wasp_apps::proxy_backend_web_socket)
                 .get(wasp_apps::proxy_backend_web_socket)
                 .post(wasp_apps::proxy_backend_web_socket)

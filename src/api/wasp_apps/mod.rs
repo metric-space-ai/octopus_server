@@ -340,7 +340,7 @@ pub async fn proxy_backend(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+    path = "/ws/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
     responses(
         (status = 200, description = "Wasp app backend WebSocket proxy.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
