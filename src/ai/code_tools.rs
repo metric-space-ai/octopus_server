@@ -165,10 +165,15 @@ pub async fn open_ai_post_parsing_code_check(
                                     response_content
                                 };
 
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&response_content)?;
+                                let response: std::result::Result<ParsingCodeCheckResponse, serde_json::error::Error> =
+                                    serde_json::from_str(&response_content);
 
-                                return Ok(Some(response));
+                                match response {
+                                    Err(_) => return Ok(None),
+                                    Ok(response) => {
+                                        return Ok(Some(response));
+                                    }
+                                }
                             }
                         }
                     }
@@ -265,10 +270,15 @@ pub async fn open_ai_pre_parsing_code_check(
                                     response_content
                                 };
 
-                                let response: ParsingCodeCheckResponse =
-                                    serde_json::from_str(&response_content)?;
+                                let response: std::result::Result<ParsingCodeCheckResponse, serde_json::error::Error> =
+                                    serde_json::from_str(&response_content);
 
-                                return Ok(Some(response));
+                                match response {
+                                    Err(_) => return Ok(None),
+                                    Ok(response) => {
+                                        return Ok(Some(response));
+                                    }
+                                }
                             }
                         }
                     }
