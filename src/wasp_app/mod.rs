@@ -136,13 +136,13 @@ pub async fn request(
 
     let html_server_url = match octopus_url {
         None => String::new(),
-        Some(server_url) => {
-            format!("{server_url}")
-        }
+        Some(server_url) => server_url.to_string(),
     };
 
     let html_url_prefix = match pass {
-        None => format!("{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
+        None => format!(
+            "{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"
+        ),
         Some(pass) => {
             format!("{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
         }
@@ -248,10 +248,8 @@ pub async fn request_ws(port: i32, server_web_socket: WebSocket) {
 
     tokio::select! {
         _ = (&mut send_task) => {
-            //recv_task.abort();
         },
         _ = (&mut recv_task) => {
-            //send_task.abort();
         }
     }
 }
@@ -304,15 +302,13 @@ pub fn update_urls_in_javascript(
         code = code.replace("    basename: \"/\",", &to);
     }
 
-    if url.contains("@vite/client") {
-        /*
-        let from = "'wss' : 'ws'";
-        if code.contains(from) {
-            let to = format!("'ws' : 'ws'");
-            code = code.replace(from, &to);
-        }
-        */
+    if url.contains("react-router-dom.js") {
+        let from: String = "    true ? tiny_warning_esm_default(!basename || hasBasename(path, basename), 'You are attempting to use a basename on a page whose URL path does not begin with the basename.".to_string();
+        let to: String = "    //true ? tiny_warning_esm_default(!basename || hasBasename(path, basename), 'You are attempting to use a basename on a page whose URL path does not begin with the basename.".to_string();
+        code = code.replace(&from, &to);
+    }
 
+    if url.contains("@vite/client") {
         let from = "${hmrPort || importMetaUrl.port}${\"/\"}";
         if code.contains(from) {
             let to = format!("/ws${{\"{server_path}\"}}");

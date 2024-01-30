@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.5.0-pre"
+version = "0.5.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -39,7 +39,7 @@ sqlx = { version = "0.7", features = [
     "runtime-tokio-rustls",
     "uuid",
 ] }
-strum_macros = "0.25"
+strum_macros = "0.26"
 systemstat = "0.2"
 tokio = { version = "1.35", features = ["rt-multi-thread", "time"] }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
