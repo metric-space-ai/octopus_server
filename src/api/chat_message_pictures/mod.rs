@@ -90,8 +90,7 @@ pub async fn create(
             }
         }
         WorkspacesType::Public => {
-            if session_user.id != chat_message.user_id || session_user.company_id != user.company_id
-            {
+            if session_user.company_id != user.company_id {
                 return Err(AppError::Forbidden);
             }
         }
@@ -290,7 +289,7 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat_message.user_id || session_user.company_id != user.company_id {
+    if session_user.company_id != user.company_id {
         return Err(AppError::Forbidden);
     }
 
@@ -641,19 +640,10 @@ mod tests {
             )
             .await;
 
-        let (email, is_enabled, job_title, name, password, roles) =
-            api::users::tests::get_user_create_params();
-        let user = api::users::tests::user_create(
-            router.clone(),
-            session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let second_company_id = user.company_id;
         let second_user_id = user.id;
 
         let session_response =
@@ -703,7 +693,7 @@ mod tests {
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
+            &[company_id, second_company_id],
             &[user_id, second_user_id],
         )
         .await;
@@ -1315,19 +1305,10 @@ mod tests {
             chat_message_picture_create(router.clone(), session_id, chat_message_id).await;
         let chat_message_picture_id = chat_message_picture.id;
 
-        let (email, is_enabled, job_title, name, password, roles) =
-            api::users::tests::get_user_create_params();
-        let user = api::users::tests::user_create(
-            router.clone(),
-            session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let second_company_id = user.company_id;
         let second_user_id = user.id;
 
         let session_response =
@@ -1379,7 +1360,7 @@ mod tests {
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
+            &[company_id, second_company_id],
             &[user_id, second_user_id],
         )
         .await;

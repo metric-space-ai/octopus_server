@@ -264,7 +264,7 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+    if session_user.company_id != user.company_id {
         return Err(AppError::Forbidden);
     }
 

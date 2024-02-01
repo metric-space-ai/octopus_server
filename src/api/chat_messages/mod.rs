@@ -316,7 +316,7 @@ pub async fn create(
             }
         }
         WorkspacesType::Public => {
-            if session_user.id != chat.user_id || session_user.company_id != user.company_id {
+            if session_user.company_id != user.company_id {
                 return Err(AppError::Forbidden);
             }
         }
@@ -575,7 +575,7 @@ pub async fn latest(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+    if session_user.company_id != user.company_id {
         return Err(AppError::Forbidden);
     }
 
@@ -629,7 +629,7 @@ pub async fn list(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat.user_id && session_user.company_id != user.company_id {
+    if session_user.company_id != user.company_id {
         return Err(AppError::Forbidden);
     }
 
@@ -805,7 +805,7 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != chat_message.user_id && session_user.company_id != user.company_id {
+    if session_user.company_id != user.company_id {
         return Err(AppError::Forbidden);
     }
 
