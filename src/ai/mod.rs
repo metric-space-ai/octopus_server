@@ -7,13 +7,14 @@ use crate::{
     error::AppError,
     Result, PUBLIC_DIR,
 };
+#[allow(deprecated)]
 use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
         ChatCompletionFunctions, ChatCompletionFunctionsArgs,
         ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage,
         ChatCompletionRequestUserMessageArgs, ChatCompletionTool, ChatCompletionToolArgs,
-        ChatCompletionToolType, CreateChatCompletionRequestArgs,
+        ChatCompletionToolType, CreateChatCompletionRequestArgs, FunctionObjectArgs,
     },
     Client,
 };
@@ -247,6 +248,7 @@ pub async fn check_sensitive_information_service(
     Ok(chat_message)
 }
 
+#[allow(deprecated)]
 pub async fn get_functions_ai_functions(
     context: Arc<Context>,
     user_id: Uuid,
@@ -276,6 +278,7 @@ pub async fn get_functions_ai_functions(
     Ok(functions)
 }
 
+#[allow(deprecated)]
 pub async fn get_functions_all(
     context: Arc<Context>,
     user_id: Uuid,
@@ -294,6 +297,7 @@ pub async fn get_functions_all(
     Ok(functions)
 }
 
+#[allow(deprecated)]
 pub async fn get_functions_simple_apps(
     context: Arc<Context>,
 ) -> Result<Vec<ChatCompletionFunctions>> {
@@ -326,6 +330,7 @@ pub async fn get_functions_simple_apps(
     Ok(functions)
 }
 
+#[allow(deprecated)]
 pub async fn get_functions_wasp_apps(
     context: Arc<Context>,
     user_id: Uuid,
@@ -482,7 +487,7 @@ pub async fn get_tools_ai_functions(
             let tool = ChatCompletionToolArgs::default()
                 .r#type(ChatCompletionToolType::Function)
                 .function(
-                    ChatCompletionFunctionsArgs::default()
+                    FunctionObjectArgs::default()
                         .name(ai_function.name)
                         .description(ai_function.description)
                         .parameters(json!(ai_function.parameters))
@@ -527,7 +532,7 @@ pub async fn get_tools_simple_apps(context: Arc<Context>) -> Result<Vec<ChatComp
         let tool = ChatCompletionToolArgs::default()
             .r#type(ChatCompletionToolType::Function)
             .function(
-                ChatCompletionFunctionsArgs::default()
+                FunctionObjectArgs::default()
                     .name(simple_app.formatted_name)
                     .description(simple_app.description)
                     .parameters(json!({
@@ -565,7 +570,7 @@ pub async fn get_tools_wasp_apps(
         let tool = ChatCompletionToolArgs::default()
             .r#type(ChatCompletionToolType::Function)
             .function(
-                ChatCompletionFunctionsArgs::default()
+                FunctionObjectArgs::default()
                     .name(wasp_app.formatted_name)
                     .description(wasp_app.description)
                     .parameters(json!({

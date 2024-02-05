@@ -1,13 +1,13 @@
 [package]
 name = "octopus_server"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.17"
+async-openai = "0.18"
 axum = { version = "0.7", features = ["multipart", "ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 axum-macros = "0.4"
@@ -41,7 +41,7 @@ sqlx = { version = "0.7", features = [
 ] }
 strum_macros = "0.26"
 systemstat = "0.2"
-tokio = { version = "1.35", features = ["rt-multi-thread", "time"] }
+tokio = { version = "1.36", features = ["rt-multi-thread", "time"] }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
 tower = { version = "0.4", features = ["timeout", "util"] }
 tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "trace"] }
@@ -54,6 +54,6 @@ validator = { version = "0.16", features = ["derive"] }
 zip = "0.6"
 
 [profile.release]
+lto = true
 opt-level = "s"
 strip = true
-lto = true
