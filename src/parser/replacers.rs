@@ -101,7 +101,12 @@ pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
-        if code_line.contains("pip") && code_line.contains("install") {
+        if code_line.contains("pip")
+            && code_line.contains("install")
+            && !code_line.contains("bpy")
+            && !code_line.contains("nc_py_api")
+            && !code_line.contains("tqdm")
+        {
             let new_line = code_line.replace("pip", "mamba");
             parsed_code_lines.push(new_line);
         } else {
