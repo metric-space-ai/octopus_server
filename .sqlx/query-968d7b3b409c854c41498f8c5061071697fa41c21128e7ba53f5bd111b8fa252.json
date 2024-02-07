@@ -61,9 +61,12 @@
             "kind": {
               "Enum": [
                 "application_json",
+                "application_pdf",
+                "audio_mpeg",
                 "image_jpeg",
                 "image_png",
-                "text_plain"
+                "text_plain",
+                "video_mp4"
               ]
             }
           }

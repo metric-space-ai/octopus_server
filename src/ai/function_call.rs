@@ -131,8 +131,11 @@ pub async fn function_call(
 
                     AiFunctionResponse::Text(ai_function_text_response)
                 }
-                AiFunctionResponseContentType::ImageJpeg
-                | AiFunctionResponseContentType::ImagePng => {
+                AiFunctionResponseContentType::ApplicationPdf
+                | AiFunctionResponseContentType::AudioMpeg
+                | AiFunctionResponseContentType::ImageJpeg
+                | AiFunctionResponseContentType::ImagePng
+                | AiFunctionResponseContentType::VideoMp4 => {
                     let headers_map = response.headers();
                     let content_type_header =
                         headers_map.get(CONTENT_TYPE).ok_or(AppError::File)?;

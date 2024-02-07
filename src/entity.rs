@@ -31,9 +31,12 @@ impl FromStr for AiFunctionRequestContentType {
 )]
 pub enum AiFunctionResponseContentType {
     ApplicationJson,
+    ApplicationPdf,
+    AudioMpeg,
     ImageJpeg,
     ImagePng,
     TextPlain,
+    VideoMp4,
 }
 
 impl FromStr for AiFunctionResponseContentType {
@@ -41,9 +44,12 @@ impl FromStr for AiFunctionResponseContentType {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
+            "application_pdf" => Ok(AiFunctionResponseContentType::ApplicationPdf),
+            "audio_mpeg" => Ok(AiFunctionResponseContentType::AudioMpeg),
             "image_jpeg" => Ok(AiFunctionResponseContentType::ImageJpeg),
             "image_png" => Ok(AiFunctionResponseContentType::ImagePng),
             "text_plain" => Ok(AiFunctionResponseContentType::TextPlain),
+            "video_mp4" => Ok(AiFunctionResponseContentType::VideoMp4),
             _ => Ok(AiFunctionResponseContentType::ApplicationJson),
         }
     }
