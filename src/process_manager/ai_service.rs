@@ -469,7 +469,7 @@ pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
     .arg(format!(
         "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
     ))
-    .arg("&>>")
+    .arg("& 2>>")
     .arg(format!(
         "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
     ))
