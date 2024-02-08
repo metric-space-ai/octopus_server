@@ -1,5 +1,8 @@
 use crate::{
     context::Context,
+    entity::{
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, InspectionDisabling,
+    },
     error::AppError,
     session::{require_authenticated, ExtractedSession},
 };
@@ -192,12 +195,57 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let inspection_disabling = context
+    let mut inspection_disabling;
+
+    let ai_function = context
         .octopus_database
-        .try_get_inspection_disabling_by_user_id(session_user.id)
+        .try_get_ai_function_for_direct_call("sensitive_information")
         .await?;
 
+    if let Some(ai_function) = ai_function {
+        let ai_service = context
+            .octopus_database
+            .try_get_ai_service_by_id(ai_function.ai_service_id)
+            .await?;
+
+        if let Some(ai_service) = ai_service {
+            if ai_function.is_enabled
+                && ai_service.is_enabled
+                && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
+                && ai_service.setup_status == AiServiceSetupStatus::Performed
+                && ai_service.status == AiServiceStatus::Running
+            {
+                inspection_disabling = None;
+            } else {
+                inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+            }
+        } else {
+            inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+        }
+    } else {
+        inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+    }
+
+    if inspection_disabling.is_none() {
+        inspection_disabling = context
+            .octopus_database
+            .try_get_inspection_disabling_by_user_id(session_user.id)
+            .await?;
+    }
+
     Ok((StatusCode::OK, Json(inspection_disabling)).into_response())
+}
+
+fn get_temporaty_inspection_disabling(user_id: Uuid) -> InspectionDisabling {
+    let created_at = Utc::now();
+    let content_safety_disabled_until = Utc::now() + Duration::minutes(1);
+    InspectionDisabling {
+        id: Uuid::new_v4(),
+        user_id,
+        content_safety_disabled_until,
+        created_at,
+        updated_at: created_at,
+    }
 }
 
 #[cfg(test)]
