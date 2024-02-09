@@ -421,10 +421,14 @@ pub async fn get_messages(
                 let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
                 if let Some(octopus_api_url) = octopus_api_url {
-                    let api_url = octopus_api_url
-                        .strip_suffix('/')
-                        .ok_or(AppError::Parsing)?
-                        .to_string();
+                    let api_url = if octopus_api_url.ends_with('/') {
+                        octopus_api_url
+                            .strip_suffix('/')
+                            .ok_or(AppError::Parsing)?
+                            .to_string()
+                    } else {
+                        octopus_api_url
+                    };
 
                     for chat_message_file in chat_message_tmp.chat_message_files {
                         urls.push_str(&format!("{api_url}/{}", chat_message_file.file_name));

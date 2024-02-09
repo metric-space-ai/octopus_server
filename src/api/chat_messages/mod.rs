@@ -18,7 +18,7 @@ use chrono::{Duration, Utc};
 use reqwest::StatusCode as ReqwestStatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tracing::debug;
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
@@ -242,7 +242,7 @@ pub async fn anonymize(
                     ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
                 if let Err(e) = chat_message {
-                    debug!("Error: {:?}", e);
+                    error!("Error: {:?}", e);
                 }
             }
         }
@@ -367,7 +367,7 @@ pub async fn create(
             ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
-            debug!("Error: {:?}", e);
+            error!("Error: {:?}", e);
         }
     });
 
@@ -748,7 +748,7 @@ pub async fn not_sensitive(
             ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
-            debug!("Error: {:?}", e);
+            error!("Error: {:?}", e);
         }
     });
 
@@ -926,7 +926,7 @@ pub async fn regenerate(
             ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
-            debug!("Error: {:?}", e);
+            error!("Error: {:?}", e);
         }
     });
 
@@ -1054,7 +1054,7 @@ pub async fn update(
             ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
 
         if let Err(e) = chat_message {
-            debug!("Error: {:?}", e);
+            error!("Error: {:?}", e);
         }
     });
 

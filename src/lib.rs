@@ -105,10 +105,14 @@ pub async fn run() -> Result<()> {
 pub fn get_pwd() -> Result<String> {
     let pwd_output = Command::new("pwd").output()?;
     let pwd_output = String::from_utf8(pwd_output.stdout.clone())?;
-    let pwd = pwd_output
-        .strip_suffix('\n')
-        .ok_or(AppError::Parsing)?
-        .to_string();
+    let pwd = if pwd_output.ends_with('\n') {
+        pwd_output
+            .strip_suffix('\n')
+            .ok_or(AppError::Parsing)?
+            .to_string()
+    } else {
+        pwd_output
+    };
 
     Ok(pwd)
 }

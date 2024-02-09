@@ -61,20 +61,28 @@ pub fn get() -> Result<ServerResources> {
             let mut id = String::new();
             for line in line.to_string().split('(') {
                 if line.starts_with("GPU") {
-                    name = line
-                        .to_string()
-                        .strip_suffix(' ')
-                        .ok_or(AppError::Parsing)?
-                        .to_string();
+                    name = if line.ends_with(' ') {
+                        line.to_string()
+                            .strip_suffix(' ')
+                            .ok_or(AppError::Parsing)?
+                            .to_string()
+                    } else {
+                        line.to_string()
+                    };
                 }
                 if line.starts_with("UUID") {
-                    id = line
+                    let id_tmp = line
                         .strip_prefix("UUID: ")
                         .ok_or(AppError::Parsing)?
-                        .to_string()
-                        .strip_suffix(')')
-                        .ok_or(AppError::Parsing)?
                         .to_string();
+                    id = if id_tmp.ends_with(')') {
+                        id_tmp
+                            .strip_suffix(')')
+                            .ok_or(AppError::Parsing)?
+                            .to_string()
+                    } else {
+                        id_tmp
+                    };
                 }
             }
 
@@ -85,20 +93,30 @@ pub fn get() -> Result<ServerResources> {
                     .arg(format!("--id={id}"))
                     .output()?;
                 let nvidia_smi_memory_total =
-                    String::from_utf8(nvidia_smi_memory_total.stdout.clone())?
+                    String::from_utf8(nvidia_smi_memory_total.stdout.clone())?;
+                let nvidia_smi_memory_total = if nvidia_smi_memory_total.ends_with('\n') {
+                    nvidia_smi_memory_total
                         .strip_suffix('\n')
                         .ok_or(AppError::Parsing)?
-                        .to_string();
+                        .to_string()
+                } else {
+                    nvidia_smi_memory_total
+                };
                 let nvidia_smi_memory_free = Command::new("nvidia-smi")
                     .arg("--query-gpu=memory.free")
                     .arg("--format=csv,nounits,noheader")
                     .arg(format!("--id={id}"))
                     .output()?;
                 let nvidia_smi_memory_free =
-                    String::from_utf8(nvidia_smi_memory_free.stdout.clone())?
+                    String::from_utf8(nvidia_smi_memory_free.stdout.clone())?;
+                let nvidia_smi_memory_free = if nvidia_smi_memory_free.ends_with('\n') {
+                    nvidia_smi_memory_free
                         .strip_suffix('\n')
                         .ok_or(AppError::Parsing)?
-                        .to_string();
+                        .to_string()
+                } else {
+                    nvidia_smi_memory_free
+                };
 
                 //let nvidia_smi_memory_total = r#"15360"#.to_string();
                 //let nvidia_smi_memory_free = r#"14925"#.to_string();
