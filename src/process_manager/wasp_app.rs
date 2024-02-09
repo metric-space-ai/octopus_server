@@ -430,7 +430,7 @@ pub async fn try_start(chat_message_id: Uuid) -> Result<Option<i32>> {
     .arg(format!(
         "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.sh"
     ))
-    .arg("& 2>>")
+    .arg("&>>")
     .arg(format!(
         "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.log"
     ))
