@@ -8,6 +8,7 @@ use utoipa::ToSchema;
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct Gpu {
     pub id: String,
+    pub cuda: String,
     pub memory_free: String,
     pub memory_total: String,
     pub memory_used: String,
@@ -27,6 +28,7 @@ pub struct ServerResources {
 
 pub fn get() -> Result<ServerResources> {
     let logical_cpus = num_cpus::get();
+    let mut device_map = HashMap::new();
     let mut gpus = vec![];
     let mut memory_free = String::new();
     let mut memory_total = String::new();
@@ -54,9 +56,9 @@ pub fn get() -> Result<ServerResources> {
     GPU 3: Tesla T4 (UUID: GPU-b0868300-4848-d1e3-8c55-7054206bdddd)
     "#
                     .to_string();
-    */
+            */
     if nvidia_smi_list.starts_with("GPU") {
-        for line in nvidia_smi_list.lines() {
+        for (i, line) in nvidia_smi_list.lines().enumerate() {
             let mut name = String::new();
             let mut id = String::new();
             for line in line.to_string().split('(') {
@@ -129,23 +131,21 @@ pub fn get() -> Result<ServerResources> {
                 let nvidia_smi_memory_free = ByteSize(nvidia_smi_memory_free);
                 let nvidia_smi_memory_used = ByteSize(nvidia_smi_memory_used);
 
+                let cuda = format!("cuda:{i}");
                 let gpu = Gpu {
                     id,
+                    cuda: cuda.clone(),
                     memory_free: nvidia_smi_memory_free.to_string_as(true).replace(' ', ""),
                     memory_total: nvidia_smi_memory_total.to_string_as(true).replace(' ', ""),
                     memory_used: nvidia_smi_memory_used.to_string_as(true).replace(' ', ""),
                     name,
                 };
 
+                device_map.insert(cuda, gpu.memory_free.clone());
+
                 gpus.push(gpu);
             }
         }
-    }
-
-    let mut device_map = HashMap::new();
-
-    for (i, gpu) in gpus.iter().enumerate() {
-        device_map.insert(format!("cuda:{i}"), gpu.memory_free.clone());
     }
 
     device_map.insert("cpu".to_string(), memory_free.clone());
