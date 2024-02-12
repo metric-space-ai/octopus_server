@@ -1,7 +1,7 @@
 use crate::{
     ai,
     context::Context,
-    entity::{AiServiceStatus, ROLE_COMPANY_ADMIN_USER},
+    entity::{AiServiceStatus, AiServiceType, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     get_pwd, parser, process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
@@ -29,6 +29,7 @@ pub struct AiServiceAllowedUsersPut {
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiServiceConfigurationPut {
     pub device_map: serde_json::Value,
+    pub r#type: Option<AiServiceType>,
 }
 
 #[derive(Clone, Debug, Deserialize, ToSchema)]
@@ -147,6 +148,8 @@ pub async fn configuration(
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
+    let r#type = input.r#type.unwrap_or(AiServiceType::Normal);
+
     let ai_service = context
         .octopus_database
         .update_ai_service_device_map(
@@ -154,6 +157,7 @@ pub async fn configuration(
             ai_service.id,
             input.device_map,
             AiServiceStatus::ParsingStarted,
+            r#type,
         )
         .await?;
 

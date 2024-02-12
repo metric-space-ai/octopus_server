@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE ai_services\n            SET is_enabled = $2, original_file_name = $3, original_function_body = $4, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS \"required_python_version: _\", setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", created_at, deleted_at, health_check_at, setup_at, updated_at",
+  "query": "UPDATE ai_services\n            SET priority = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS \"required_python_version: _\", setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", type AS \"type: _\", created_at, deleted_at, health_check_at, setup_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -140,26 +140,41 @@
       },
       {
         "ordinal": 17,
+        "name": "type: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_services_types",
+            "kind": {
+              "Enum": [
+                "normal",
+                "system"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 18,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -167,9 +182,7 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Bool",
-        "Varchar",
-        "Text"
+        "Int4"
       ]
     },
     "nullable": [
@@ -191,11 +204,12 @@
       false,
       false,
       false,
+      false,
       true,
       true,
       true,
       false
     ]
   },
-  "hash": "cbde39c9cb888c4b0e9e479bbcd41bc1b93a2963321c972b646d62e6a037e379"
+  "hash": "b29eab425f50b1610febfbc7a6f269e32408cd5399d2778eb1a6c9a58fa836dc"
 }

@@ -82,13 +82,6 @@ pub enum AiServiceHealthCheckStatus {
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
-#[sqlx(type_name = "ai_services_setup_statuses", rename_all = "snake_case")]
-pub enum AiServiceSetupStatus {
-    NotPerformed,
-    Performed,
-}
-
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[serde(rename_all = "snake_case")]
 #[sqlx(
     type_name = "ai_services_required_python_versions",
@@ -98,6 +91,13 @@ pub enum AiServiceRequiredPythonVersion {
     Cp310,
     Cp311,
     Cp312,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_services_setup_statuses", rename_all = "snake_case")]
+pub enum AiServiceSetupStatus {
+    NotPerformed,
+    Performed,
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
@@ -114,6 +114,13 @@ pub enum AiServiceStatus {
     Running,
     Setup,
     Stopped,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_services_types", rename_all = "snake_case")]
+pub enum AiServiceType {
+    Normal,
+    System,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
@@ -135,6 +142,7 @@ pub struct AiService {
     pub setup_execution_time: i32,
     pub setup_status: AiServiceSetupStatus,
     pub status: AiServiceStatus,
+    pub r#type: AiServiceType,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,
