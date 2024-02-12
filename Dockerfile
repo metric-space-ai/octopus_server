@@ -5,11 +5,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.75.0/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.75.0
+    RUST_VERSION=1.76.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -142,11 +142,11 @@ RUN apt-get update --fix-missing && \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.75.0/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.75.0
+    RUST_VERSION=1.76.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
