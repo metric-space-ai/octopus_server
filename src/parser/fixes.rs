@@ -38,6 +38,7 @@ pub fn fix_input_type_json(code_lines: Vec<String>) -> Vec<String> {
         if code_line.contains("input_type")
             && code_line.contains("json")
             && !code_line.contains("application/json")
+            && !code_line.contains("jsonify")
         {
             let new_line = code_line.replace("json", "application/json");
             parsed_code_lines.push(new_line);
