@@ -11,7 +11,7 @@ use crate::{
 use chrono::{Duration as ChronoDuration, Utc};
 use port_selector::{select_free_port, Selector};
 use std::{
-    fs::{create_dir, remove_dir_all, remove_file, File},
+    fs::{create_dir, remove_dir_all, remove_file, File, OpenOptions},
     io::Write,
     path::Path,
     process::Command,
@@ -422,6 +422,22 @@ pub async fn try_start(chat_message_id: Uuid) -> Result<Option<i32>> {
         .arg(format!("cpu:{chat_message_id}"))
         .output()?;
     */
+    let stderr_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .write(true)
+        .open(format!(
+            "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.log"
+        ))?;
+
+    let stdout_file = OpenOptions::new()
+        .append(true)
+        .create(true)
+        .write(true)
+        .open(format!(
+            "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.log"
+        ))?;
+
     Command::/*new("/usr/bin/cgexec")
         .arg("-g")
         .arg(format!("cpu:{chat_message_id}"))
@@ -430,10 +446,8 @@ pub async fn try_start(chat_message_id: Uuid) -> Result<Option<i32>> {
     .arg(format!(
         "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.sh"
     ))
-    .arg("&>>")
-    .arg(format!(
-        "{working_dir}/{WASP_APPS_DIR}/{chat_message_id}/{chat_message_id}.log"
-    ))
+    .stderr(stderr_file)
+    .stdout(stdout_file)
     .spawn()?;
 
     let mut failed_pid_get_attempts = 0;
