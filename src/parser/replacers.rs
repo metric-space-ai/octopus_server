@@ -105,6 +105,7 @@ pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
             && code_line.contains("install")
             && !code_line.contains("bpy")
             && !code_line.contains("nc_py_api")
+            && !code_line.contains("reduct-py")
             && !code_line.contains("tqdm")
         {
             let new_line = code_line.replace("pip", "mamba");
