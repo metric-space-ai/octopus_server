@@ -128,7 +128,10 @@ pub async fn create(
         } else {
             let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-            if content_type == "application/zip" || content_type == "application/x-zip" {
+            if content_type == "application/zip"
+                || content_type == "application/x-zip"
+                || content_type == "application/x-zip-compressed"
+            {
                 code = Some(field.bytes().await?.clone().to_vec());
             }
         }
@@ -614,7 +617,10 @@ pub async fn update(
         } else {
             let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-            if content_type == "application/zip" || content_type == "application/x-zip" {
+            if content_type == "application/zip"
+                || content_type == "application/x-zip"
+                || content_type == "application/x-zip-compressed"
+            {
                 code = Some(field.bytes().await?.clone().to_vec());
             }
         }
