@@ -396,3 +396,100 @@ pub async fn open_ai_simple_app_meta_extraction(
 
     Err(Box::new(AppError::Parsing))
 }
+
+pub async fn open_ai_simple_app_advanced_meta_extraction(
+    code: &str,
+    context: Arc<Context>,
+) -> Result<SimpleAppMeta> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
+    let mut messages = vec![];
+
+    let text = "you try to create a title and description for the app from given source code. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
+
+    let text = code.to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
+
+    if context.get_config().await?.test_mode {
+        let simple_app_meta = SimpleAppMeta {
+            title: "test title".to_string(),
+            description: "test description".to_string(),
+        };
+
+        return Ok(simple_app_meta);
+    }
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model(MODEL128K)
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::error!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
+
+            match response_message {
+                Err(e) => {
+                    tracing::error!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.first();
+
+                    match response_message {
+                        None => {
+                            tracing::error!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(response_content) = response_message.content {
+                                let response_content = if response_content.starts_with("```json")
+                                    && response_content.ends_with("```")
+                                {
+                                    response_content
+                                        .strip_prefix("```json")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                        .strip_suffix("```")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                } else {
+                                    response_content
+                                };
+
+                                let simple_app_meta: SimpleAppMeta =
+                                    serde_json::from_str(&response_content)?;
+
+                                return Ok(simple_app_meta);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err(Box::new(AppError::Parsing))
+}

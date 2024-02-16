@@ -84,8 +84,16 @@ pub async fn create(
                 return Err(AppError::BadRequest);
             }
 
-            let simple_app_meta =
+            let mut simple_app_meta =
                 ai::code_tools::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
+
+            if simple_app_meta.title.is_empty() || simple_app_meta.description.is_empty() {
+                simple_app_meta = ai::code_tools::open_ai_simple_app_advanced_meta_extraction(
+                    &code,
+                    context.clone(),
+                )
+                .await?;
+            }
 
             let formatted_name = simple_app_meta
                 .title
