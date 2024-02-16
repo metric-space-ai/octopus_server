@@ -13,8 +13,9 @@ use async_openai::{
     types::{
         ChatCompletionFunctions, ChatCompletionFunctionsArgs,
         ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage,
-        ChatCompletionRequestUserMessageArgs, ChatCompletionTool, ChatCompletionToolArgs,
-        ChatCompletionToolType, CreateChatCompletionRequestArgs, FunctionObjectArgs,
+        ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
+        ChatCompletionTool, ChatCompletionToolArgs, ChatCompletionToolType,
+        CreateChatCompletionRequestArgs, FunctionObjectArgs,
     },
     Client,
 };
@@ -373,6 +374,19 @@ pub async fn get_messages(
     let mut chat_audit_trails = vec![];
     let mut messages = vec![];
 
+    let ai_system_prompt = context.get_config().await?.get_parameter_ai_system_prompt();
+
+    if let Some(ai_system_prompt) = ai_system_prompt {
+        let chat_completion_request_system_message =
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(ai_system_prompt)
+                .build()?;
+
+        messages.push(ChatCompletionRequestMessage::System(
+            chat_completion_request_system_message,
+        ));
+    }
+
     let chat_messages = context
         .octopus_database
         .get_chat_messages_extended_by_chat_id(chat_message.chat_id)
@@ -678,6 +692,11 @@ pub async fn open_ai_request(
     }
 
     let messages = get_messages(context.clone(), &mut transaction, &chat_message).await?;
+    let model = context
+        .get_config()
+        .await?
+        .get_parameter_ai_model()
+        .unwrap_or(MODEL.to_string());
 
     if !context.get_config().await?.test_mode {
         let request = match &ai_client {
@@ -687,13 +706,13 @@ pub async fn open_ai_request(
                 if functions.is_empty() {
                     CreateChatCompletionRequestArgs::default()
                         .max_tokens(512u16)
-                        .model(MODEL)
+                        .model(model)
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
                         .max_tokens(512u16)
-                        .model(MODEL)
+                        .model(model)
                         .messages(messages)
                         .functions(functions)
                         .build()
@@ -705,13 +724,13 @@ pub async fn open_ai_request(
                 if tools.is_empty() {
                     CreateChatCompletionRequestArgs::default()
                         .max_tokens(512u16)
-                        .model(MODEL)
+                        .model(model)
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
                         .max_tokens(512u16)
-                        .model(MODEL)
+                        .model(model)
                         .messages(messages)
                         .tools(tools)
                         .build()
