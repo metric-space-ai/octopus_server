@@ -446,7 +446,7 @@ pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result
 
 pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
-    /*
+
     let path = format!("/sys/fs/cgroup/{ai_service_id}");
     let dir_exists = Path::new(&path).is_dir();
 
@@ -460,7 +460,7 @@ pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
         .arg("-g")
         .arg(format!("cpu:{ai_service_id}"))
         .output()?;
-    */
+
     let stderr_file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -477,17 +477,16 @@ pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
             "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.log"
         ))?;
 
-    Command::/*new("/usr/bin/cgexec")
+    Command::new("/usr/bin/cgexec")
         .arg("-g")
         .arg(format!("cpu:{ai_service_id}"))
-        */
-        new("/bin/bash")
-    .arg(format!(
-        "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
-    ))
-    .stderr(stderr_file)
-    .stdout(stdout_file)
-    .spawn()?;
+        .arg("/bin/bash")
+        .arg(format!(
+            "{working_dir}/{SERVICES_DIR}/{ai_service_id}/{ai_service_id}.sh"
+        ))
+        .stderr(stderr_file)
+        .stdout(stdout_file)
+        .spawn()?;
 
     let mut failed_pid_get_attempts = 0;
     let pid = None;
