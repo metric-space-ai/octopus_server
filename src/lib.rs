@@ -67,10 +67,17 @@ pub async fn run() -> Result<()> {
 
     let cloned_context = app.context.clone();
     task::spawn(async move {
-        let result = process_manager::start(cloned_context);
+        let mut running = false;
+        loop {
+            if !running {
+                running = true;
+                let result = process_manager::start(cloned_context.clone());
 
-        if let Err(e) = result.await {
-            error!("Error: {:?}", e);
+                if let Err(e) = result.await {
+                    error!("Error: {:?}", e);
+                    running = false;
+                }
+            }
         }
     });
 
