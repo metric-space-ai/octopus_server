@@ -1,6 +1,7 @@
 use crate::{
     entity::{
-        Parameter, PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
+        Parameter, PARAMETER_NAME_AI_MODEL, PARAMETER_NAME_AI_SYSTEM_PROMPT,
+        PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
         PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
@@ -43,6 +44,30 @@ impl Config {
             wasp_database_url,
             ws_port,
         }
+    }
+
+    pub fn get_parameter_ai_model(&self) -> Option<String> {
+        let ai_model = self.get_parameter_value(PARAMETER_NAME_AI_MODEL);
+
+        if let Some(ai_model) = ai_model {
+            if ai_model != *"default" {
+                return Some(ai_model);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_ai_system_prompt(&self) -> Option<String> {
+        let ai_system_prompt = self.get_parameter_value(PARAMETER_NAME_AI_SYSTEM_PROMPT);
+
+        if let Some(ai_system_prompt) = ai_system_prompt {
+            if ai_system_prompt != *"default" {
+                return Some(ai_system_prompt);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_azure_openai_api_key(&self) -> Option<String> {
