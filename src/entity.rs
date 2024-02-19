@@ -437,6 +437,13 @@ pub struct UserExtended {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "wasp_apps_instance_types", rename_all = "snake_case")]
+pub enum WaspAppInstanceType {
+    Private,
+    Shared,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct WaspApp {
     pub id: Uuid,
@@ -445,6 +452,7 @@ pub struct WaspApp {
     pub code: Vec<u8>,
     pub description: String,
     pub formatted_name: String,
+    pub instance_type: WaspAppInstanceType,
     pub is_enabled: bool,
     pub name: String,
     pub created_at: DateTime<Utc>,

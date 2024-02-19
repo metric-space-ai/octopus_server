@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
+    entity::{WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
@@ -113,6 +113,7 @@ pub async fn create(
 
     let mut code = None;
     let mut description = None;
+    let mut instance_type = WaspAppInstanceType::Shared;
     let mut is_enabled = true;
     let mut name = None;
 
@@ -123,6 +124,11 @@ pub async fn create(
             description = Some((field.text().await?).to_string());
         } else if field_name == "name" {
             name = Some((field.text().await?).to_string());
+        } else if field_name == "instance_type" {
+            let value = (field.text().await?).to_string();
+            if value == "Private" {
+                instance_type = WaspAppInstanceType::Private;
+            }
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
@@ -149,6 +155,7 @@ pub async fn create(
                 &code,
                 &description,
                 &formatted_name,
+                instance_type,
                 is_enabled,
                 &name,
             )
@@ -254,8 +261,23 @@ pub async fn proxy_backend(
     }): Path<BackendProxyParams>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
-    let process = context.process_manager.get_process(chat_message_id)?;
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !wasp_app.is_enabled {
+        return Err(AppError::NotFound);
+    }
+
+    let app_id = match wasp_app.instance_type {
+        WaspAppInstanceType::Private => chat_message_id,
+        WaspAppInstanceType::Shared => wasp_app.id,
+    };
+
+    let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
+    let process = context.process_manager.get_process(app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -265,16 +287,6 @@ pub async fn proxy_backend(
     };
 
     if pid.is_none() || process.is_none() {
-        let wasp_app = context
-            .octopus_database
-            .try_get_wasp_app_by_id(id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if !wasp_app.is_enabled {
-            return Err(AppError::NotFound);
-        }
-
         let chat_message = context
             .octopus_database
             .try_get_chat_message_by_id(chat_message_id)
@@ -292,7 +304,7 @@ pub async fn proxy_backend(
         )
         .await?;
 
-        let process = context.process_manager.get_process(chat_message_id)?;
+        let process = context.process_manager.get_process(app_id)?;
 
         if let Some(process) = process {
             if let Some(server_port) = process.server_port {
@@ -310,7 +322,7 @@ pub async fn proxy_backend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, chat_message_id)?;
+                process_manager::try_update_last_used_at(&context, app_id)?;
 
                 return Ok(response);
             }
@@ -331,7 +343,7 @@ pub async fn proxy_backend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, chat_message_id)?;
+            process_manager::try_update_last_used_at(&context, app_id)?;
 
             return Ok(response);
         }
@@ -365,20 +377,25 @@ pub async fn proxy_backend_web_socket(
     }): Path<BackendWebSocketProxyParams>,
     web_socket_upgrade: WebSocketUpgrade,
 ) -> Result<impl IntoResponse, AppError> {
-    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
-    let process = context.process_manager.get_process(chat_message_id)?;
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !wasp_app.is_enabled {
+        return Err(AppError::NotFound);
+    }
+
+    let app_id = match wasp_app.instance_type {
+        WaspAppInstanceType::Private => chat_message_id,
+        WaspAppInstanceType::Shared => wasp_app.id,
+    };
+
+    let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
+    let process = context.process_manager.get_process(app_id)?;
 
     if pid.is_none() || process.is_none() {
-        let wasp_app = context
-            .octopus_database
-            .try_get_wasp_app_by_id(id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if !wasp_app.is_enabled {
-            return Err(AppError::NotFound);
-        }
-
         let chat_message = context
             .octopus_database
             .try_get_chat_message_by_id(chat_message_id)
@@ -396,7 +413,7 @@ pub async fn proxy_backend_web_socket(
         )
         .await?;
 
-        let process = context.process_manager.get_process(chat_message_id)?;
+        let process = context.process_manager.get_process(app_id)?;
 
         if let Some(process) = process {
             if let Some(client_port) = process.client_port {
@@ -445,8 +462,23 @@ pub async fn proxy_frontend(
     }): Path<FrontendProxyParams>,
     request: Request<Body>,
 ) -> Result<impl IntoResponse, AppError> {
-    let pid = process_manager::try_get_pid(&format!("{chat_message_id}.sh"))?;
-    let process = context.process_manager.get_process(chat_message_id)?;
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !wasp_app.is_enabled {
+        return Err(AppError::NotFound);
+    }
+
+    let app_id = match wasp_app.instance_type {
+        WaspAppInstanceType::Private => chat_message_id,
+        WaspAppInstanceType::Shared => wasp_app.id,
+    };
+
+    let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
+    let process = context.process_manager.get_process(app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -456,16 +488,6 @@ pub async fn proxy_frontend(
     };
 
     if pid.is_none() || process.is_none() {
-        let wasp_app = context
-            .octopus_database
-            .try_get_wasp_app_by_id(id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if !wasp_app.is_enabled {
-            return Err(AppError::NotFound);
-        }
-
         let chat_message = context
             .octopus_database
             .try_get_chat_message_by_id(chat_message_id)
@@ -483,7 +505,7 @@ pub async fn proxy_frontend(
         )
         .await?;
 
-        let process = context.process_manager.get_process(chat_message_id)?;
+        let process = context.process_manager.get_process(app_id)?;
 
         if let Some(process) = process {
             if let (Some(client_port), Some(server_port)) =
@@ -503,7 +525,7 @@ pub async fn proxy_frontend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, chat_message_id)?;
+                process_manager::try_update_last_used_at(&context, app_id)?;
 
                 return Ok(response);
             }
@@ -524,7 +546,7 @@ pub async fn proxy_frontend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, chat_message_id)?;
+            process_manager::try_update_last_used_at(&context, app_id)?;
 
             return Ok(response);
         }
@@ -602,6 +624,7 @@ pub async fn update(
 
     let mut code = None;
     let mut description = None;
+    let mut instance_type = WaspAppInstanceType::Shared;
     let mut is_enabled = true;
     let mut name = None;
 
@@ -612,6 +635,11 @@ pub async fn update(
             description = Some((field.text().await?).to_string());
         } else if field_name == "name" {
             name = Some((field.text().await?).to_string());
+        } else if field_name == "instance_type" {
+            let value = (field.text().await?).to_string();
+            if value == "Private" {
+                instance_type = WaspAppInstanceType::Private;
+            }
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
@@ -641,6 +669,7 @@ pub async fn update(
                 &code,
                 &description,
                 &formatted_name,
+                instance_type,
                 is_enabled,
                 &name,
             )
@@ -664,6 +693,7 @@ pub async fn update(
                 id,
                 &description,
                 &formatted_name,
+                instance_type,
                 is_enabled,
                 &name,
             )

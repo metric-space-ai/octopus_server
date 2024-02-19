@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE wasp_apps\n            SET description = $2, formatted_name = $3, is_enabled = $4, name = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at",
+  "query": "SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS \"instance_type: _\", is_enabled, name, created_at, deleted_at, updated_at\n            FROM wasp_apps\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -30,37 +30,48 @@
       },
       {
         "ordinal": 5,
+        "name": "instance_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "wasp_apps_instance_types",
+            "kind": {
+              "Enum": [
+                "private",
+                "shared"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 6,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Text",
-        "Varchar",
-        "Bool",
-        "Varchar"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -72,9 +83,10 @@
       false,
       false,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "dd0c26557dbad0fc542fe4eef05ef5f6cc67220cc5f90b49c3af831f7fc51747"
+  "hash": "e5bf2cbf88c803076c576e1f4360fdbc0c822fb7453b0fa8c84fed67acebb172"
 }
