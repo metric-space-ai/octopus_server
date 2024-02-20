@@ -2,9 +2,9 @@ use crate::{context::Context, error::AppError, Result};
 use chrono::{DateTime, Utc};
 use std::{
     collections::HashMap,
-    //fs::OpenOptions,
-    //io::Write,
-    //path::Path,
+    fs::OpenOptions,
+    io::Write,
+    path::Path,
     process::Command,
     sync::{Arc, RwLock},
 };
@@ -252,8 +252,7 @@ pub fn try_get_zombie_pids() -> Result<Vec<i32>> {
     Ok(pids)
 }
 
-pub async fn try_kill_cgroup(_id: Uuid) -> Result<()> {
-    /*
+pub async fn try_kill_cgroup(id: Uuid) -> Result<()> {
     let path = format!("/sys/fs/cgroup/{id}/cgroup.freeze");
     let file_exists = Path::new(&path).is_file();
 
@@ -280,7 +279,6 @@ pub async fn try_kill_cgroup(_id: Uuid) -> Result<()> {
         .arg("-g")
         .arg(format!("cpu:{id}"))
         .output()?;
-    */
 
     Ok(())
 }
