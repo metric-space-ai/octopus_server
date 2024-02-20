@@ -8,14 +8,15 @@ use crate::{
     SERVICES_DIR,
 };
 use axum::{
-    extract::{Multipart, Path, State},
+    extract::{Multipart, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use chrono::{DateTime, Duration, Utc};
+use rev_buf_reader::RevBufReader;
 use serde::{Deserialize, Serialize};
-use std::{fs::read_to_string, path, sync::Arc};
+use std::{fs::File, io::BufRead, path, sync::Arc};
 use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -363,6 +364,11 @@ pub async fn list(
     Ok((StatusCode::OK, Json(ai_services)).into_response())
 }
 
+#[derive(Deserialize)]
+pub struct LogsParameters {
+    limit: Option<usize>,
+}
+
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
@@ -383,6 +389,7 @@ pub async fn logs(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
+    logs_parameters: Query<LogsParameters>,
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
@@ -391,6 +398,8 @@ pub async fn logs(
         .try_get_ai_service_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    let limit = logs_parameters.limit.unwrap_or(50);
 
     let pwd = get_pwd()?;
 
@@ -402,7 +411,12 @@ pub async fn logs(
     let file_exists = path::Path::new(&path).is_file();
 
     let logs = if file_exists {
-        read_to_string(path)?
+        let file = File::open(path)?;
+        let buf = RevBufReader::new(file);
+        buf.lines()
+            .take(limit)
+            .map(|l| l.expect("Could not parse line"))
+            .collect()
     } else {
         String::new()
     };

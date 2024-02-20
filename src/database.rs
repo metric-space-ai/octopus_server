@@ -6,7 +6,7 @@ use crate::{
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
         Parameter, PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended,
-        WaspApp, Workspace, WorkspacesType,
+        WaspApp, WaspAppInstanceType, Workspace, WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -579,9 +579,9 @@ impl OctopusDatabase {
     pub async fn get_wasp_apps(&self) -> Result<Vec<WaspApp>> {
         let wasp_apps = sqlx::query_as!(
             WaspApp,
-            "SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
-            WHERE deleted_at IS NULL"
+            WHERE deleted_at IS NULL"#
         )
         .fetch_all(&*self.pool)
         .await?;
@@ -593,11 +593,11 @@ impl OctopusDatabase {
         let is_enabled = true;
         let wasp_apps = sqlx::query_as!(
             WaspApp,
-            "SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE is_enabled = $1
             AND deleted_at IS NULL
-            AND (allowed_user_ids IS NULL OR $2 = ANY(allowed_user_ids))",
+            AND (allowed_user_ids IS NULL OR $2 = ANY(allowed_user_ids))"#,
             is_enabled,
             user_id
         )
@@ -1110,27 +1110,29 @@ impl OctopusDatabase {
         Ok(user)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_wasp_app(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         code: &[u8],
         description: &str,
         formatted_name: &str,
+        instance_type: WaspAppInstanceType,
         is_enabled: bool,
         name: &str,
     ) -> Result<WaspApp> {
-        let wasp_app = sqlx::query_as!(
-            WaspApp,
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
             "INSERT INTO wasp_apps
-            (code, description, formatted_name, is_enabled, name)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at",
-            code,
-            description,
-            formatted_name,
-            is_enabled,
-            name,
+            (code, description, formatted_name, instance_type, is_enabled, name)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
+        .bind(code)
+        .bind(description)
+        .bind(formatted_name)
+        .bind(instance_type)
+        .bind(is_enabled)
+        .bind(name)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -2228,10 +2230,10 @@ impl OctopusDatabase {
     pub async fn try_get_wasp_app_by_id(&self, id: Uuid) -> Result<Option<WaspApp>> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
-            "SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE id = $1
-            AND deleted_at IS NULL",
+            AND deleted_at IS NULL"#,
             id
         )
         .fetch_optional(&*self.pool)
@@ -2260,10 +2262,10 @@ impl OctopusDatabase {
     ) -> Result<Option<WaspApp>> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
-            "SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, instance_type AS "instance_type: _", name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE formatted_name = $1
-            AND deleted_at IS NULL",
+            AND deleted_at IS NULL"#,
             formatted_name
         )
         .fetch_optional(&*self.pool)
@@ -3284,22 +3286,23 @@ impl OctopusDatabase {
         code: &[u8],
         description: &str,
         formatted_name: &str,
+        instance_type: WaspAppInstanceType,
         is_enabled: bool,
         name: &str,
     ) -> Result<WaspApp> {
-        let wasp_app = sqlx::query_as!(
-            WaspApp,
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
             "UPDATE wasp_apps
-            SET code = $2, description = $3, formatted_name = $4, is_enabled = $5, name = $6, updated_at = current_timestamp(0)
+            SET code = $2, description = $3, formatted_name = $4, instance_type = $5, is_enabled = $6, name = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at",
-            id,
-            code,
-            description,
-            formatted_name,
-            is_enabled,
-            name,
+            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
+        .bind(id)
+        .bind(code)
+        .bind(description)
+        .bind(formatted_name)
+        .bind(instance_type)
+        .bind(is_enabled)
+        .bind(name)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -3317,7 +3320,7 @@ impl OctopusDatabase {
             r#"UPDATE wasp_apps
             SET allowed_user_ids = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at"#,
+            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at"#,
             id,
             allowed_user_ids,
         )
@@ -3327,27 +3330,29 @@ impl OctopusDatabase {
         Ok(wasp_app)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_wasp_app_info(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         description: &str,
         formatted_name: &str,
+        instance_type: WaspAppInstanceType,
         is_enabled: bool,
         name: &str,
     ) -> Result<WaspApp> {
-        let wasp_app = sqlx::query_as!(
-            WaspApp,
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
             "UPDATE wasp_apps
-            SET description = $2, formatted_name = $3, is_enabled = $4, name = $5, updated_at = current_timestamp(0)
+            SET description = $2, formatted_name = $3, instance_type = $4, is_enabled = $5, name = $6, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, is_enabled, name, created_at, deleted_at, updated_at",
-            id,
-            description,
-            formatted_name,
-            is_enabled,
-            name,
+            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
+        .bind(id)
+        .bind(description)
+        .bind(formatted_name)
+        .bind(instance_type)
+        .bind(is_enabled)
+        .bind(name)
         .fetch_one(&mut **transaction)
         .await?;
 
