@@ -1,6 +1,10 @@
 use crate::{
-    ai::function_call::{
-        AiFunctionErrorResponse, AiFunctionFileResponse, AiFunctionResponse, AiFunctionTextResponse,
+    ai::{
+        code_tools::WaspAppMeta,
+        function_call::{
+            AiFunctionErrorResponse, AiFunctionFileResponse, AiFunctionResponse,
+            AiFunctionTextResponse,
+        },
     },
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
@@ -159,6 +163,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 VersionInfoResponse,
                 WaspApp,
                 WaspAppAllowedUsersPut,
+                WaspAppMeta,
                 Workspace,
                 WorkspacePost,
                 WorkspacePut,
@@ -265,6 +270,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             wasp_apps::allowed_users,
             wasp_apps::create,
             wasp_apps::delete,
+            wasp_apps::extract_meta,
             wasp_apps::list,
             wasp_apps::proxy_frontend,
             wasp_apps::read,
@@ -519,6 +525,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/wasp-apps",
             get(wasp_apps::list).post(wasp_apps::create),
+        )
+        .route(
+            "/api/v1/wasp-apps/extract-meta",
+            post(wasp_apps::extract_meta),
         )
         .route(
             "/api/v1/wasp-apps/:id/allowed-users",
