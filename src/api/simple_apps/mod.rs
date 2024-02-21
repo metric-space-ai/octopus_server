@@ -77,11 +77,13 @@ pub async fn create(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected =
+            let parsing_code_check_response =
                 ai::code_tools::open_ai_malicious_code_check(&code, context.clone()).await?;
 
-            if malicious_code_detected {
-                return Err(AppError::BadRequest);
+            if let Some(parsing_code_check_response) = parsing_code_check_response {
+                if !parsing_code_check_response.is_passed {
+                    return Err(AppError::BadRequest);
+                }
             }
 
             let mut simple_app_meta =
@@ -263,11 +265,13 @@ pub async fn update(
             let data = field.bytes().await?.clone().to_vec();
             let code = String::from_utf8(data)?;
 
-            let malicious_code_detected =
+            let parsing_code_check_response =
                 ai::code_tools::open_ai_malicious_code_check(&code, context.clone()).await?;
 
-            if malicious_code_detected {
-                return Err(AppError::BadRequest);
+            if let Some(parsing_code_check_response) = parsing_code_check_response {
+                if !parsing_code_check_response.is_passed {
+                    return Err(AppError::BadRequest);
+                }
             }
 
             let simple_app_meta =

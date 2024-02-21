@@ -11,12 +11,32 @@ use async_openai::types::{
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> Result<bool> {
+#[derive(Debug, Deserialize)]
+pub struct ParsingCodeCheckResponse {
+    pub fixing_proposal: Option<String>,
+    pub is_passed: bool,
+    pub reason: Option<String>,
+}
+
+pub async fn open_ai_malicious_code_check(
+    code: &str,
+    context: Arc<Context>,
+) -> Result<Option<ParsingCodeCheckResponse>> {
     let ai_client = open_ai_get_client(context.clone()).await?;
 
     let mut messages = vec![];
 
-    let text = format!("Check if the following code contains sections that looks malicious and provide YES or NO answer {code}");
+    let text = "you check source code of an app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
+
+    let text = format!("Check if the following code contains sections that looks malicious {code}");
 
     let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
         .content(text)
@@ -26,40 +46,70 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
         chat_completion_request_message,
     ));
 
-    if !context.get_config().await?.test_mode {
-        let request = CreateChatCompletionRequestArgs::default()
-            .max_tokens(512u16)
-            .model(MODEL128K)
-            .messages(messages)
-            .build();
+    if context.get_config().await?.test_mode {
+        let response = ParsingCodeCheckResponse {
+            fixing_proposal: None,
+            is_passed: true,
+            reason: None,
+        };
 
-        match request {
-            Err(e) => {
-                tracing::error!("OpenAIError: {e}");
-            }
-            Ok(request) => {
-                let response_message = match ai_client {
-                    AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
-                    AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
-                };
+        return Ok(Some(response));
+    }
 
-                match response_message {
-                    Err(e) => {
-                        tracing::error!("OpenAIError: {e}");
-                    }
-                    Ok(response_message) => {
-                        let response_message = response_message.choices.first();
+    let request = CreateChatCompletionRequestArgs::default()
+        .max_tokens(512u16)
+        .model(MODEL128K)
+        .messages(messages)
+        .build();
 
-                        match response_message {
-                            None => {
-                                tracing::error!("BadResponse");
-                            }
-                            Some(response_message) => {
-                                let response_message = response_message.message.clone();
+    match request {
+        Err(e) => {
+            tracing::error!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
 
-                                if let Some(content) = response_message.content {
-                                    if content == "YES" {
-                                        return Ok(true);
+            match response_message {
+                Err(e) => {
+                    tracing::error!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.first();
+
+                    match response_message {
+                        None => {
+                            tracing::error!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(response_content) = response_message.content {
+                                let response_content = if response_content.starts_with("```json")
+                                    && response_content.ends_with("```")
+                                {
+                                    response_content
+                                        .strip_prefix("```json")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                        .strip_suffix("```")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                } else {
+                                    response_content
+                                };
+
+                                let response: std::result::Result<
+                                    ParsingCodeCheckResponse,
+                                    serde_json::error::Error,
+                                > = serde_json::from_str(&response_content);
+
+                                match response {
+                                    Err(_) => return Ok(None),
+                                    Ok(response) => {
+                                        return Ok(Some(response));
                                     }
                                 }
                             }
@@ -70,14 +120,7 @@ pub async fn open_ai_malicious_code_check(code: &str, context: Arc<Context>) -> 
         }
     }
 
-    Ok(false)
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ParsingCodeCheckResponse {
-    pub fixing_proposal: Option<String>,
-    pub is_passed: bool,
-    pub reason: Option<String>,
+    Ok(None)
 }
 
 pub async fn open_ai_post_parsing_code_check(
