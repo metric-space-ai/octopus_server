@@ -18,21 +18,45 @@ mod replacers;
 
 pub async fn ai_service_malicious_code_check(
     ai_service: AiService,
+    bypass_code_check: bool,
     context: Arc<Context>,
 ) -> Result<AiService> {
-    let malicious_code_detected = ai::code_tools::open_ai_malicious_code_check(
+    let parsing_code_check_response = ai::code_tools::open_ai_malicious_code_check(
         &ai_service.original_function_body,
         context.clone(),
     )
     .await?;
 
-    let status = if malicious_code_detected {
-        AiServiceStatus::MaliciousCodeDetected
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let status = if let Some(parsing_code_check_response) = parsing_code_check_response {
+        if parsing_code_check_response.is_passed {
+            AiServiceStatus::Configuration
+        } else {
+            if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
+                let fixing_proposal = format!("Malicious code check: {}", fixing_proposal);
+
+                context
+                    .octopus_database
+                    .update_ai_service_parser_feedback(
+                        &mut transaction,
+                        ai_service.id,
+                        &fixing_proposal,
+                        100,
+                        AiServiceStatus::MaliciousCodeDetected,
+                    )
+                    .await?;
+            }
+
+            if bypass_code_check {
+                AiServiceStatus::Configuration
+            } else {
+                AiServiceStatus::MaliciousCodeDetected
+            }
+        }
     } else {
         AiServiceStatus::Configuration
     };
-
-    let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let ai_service = context
         .octopus_database

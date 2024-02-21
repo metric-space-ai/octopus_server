@@ -200,42 +200,54 @@ pub async fn create(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let mut bypass_code_check = false;
+    let mut data = None;
+    let mut original_file_name = None;
+
     while let Some(field) = multipart.next_field().await? {
-        let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
-        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+        let field_name = (field.name().ok_or(AppError::Parsing)?).to_string();
 
-        if content_type == "application/octet-stream" || content_type == "text/plain" {
-            let data = field.bytes().await?.clone().to_vec();
+        if field_name == "bypass_code_check" {
+            bypass_code_check = (field.text().await?).parse::<bool>().unwrap_or(false);
+        } else {
+            original_file_name = Some((field.file_name().ok_or(AppError::File)?).to_string());
+            let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let port = context
-                .octopus_database
-                .get_ai_services_max_port(&mut transaction)
-                .await?;
-
-            let port = port.max.unwrap_or(9999) + 1;
-            let original_function_body = String::from_utf8(data)?;
-
-            let ai_service = context
-                .octopus_database
-                .insert_ai_service(
-                    &mut transaction,
-                    &original_file_name,
-                    &original_function_body,
-                    port,
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;
-
-            return Ok((StatusCode::CREATED, Json(ai_service)).into_response());
+            if content_type == "application/octet-stream" || content_type == "text/plain" {
+                data = Some(field.bytes().await?.clone().to_vec());
+            }
         }
+    }
+
+    if let (Some(data), Some(original_file_name)) = (data, original_file_name) {
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let port = context
+            .octopus_database
+            .get_ai_services_max_port(&mut transaction)
+            .await?;
+
+        let port = port.max.unwrap_or(9999) + 1;
+        let original_function_body = String::from_utf8(data)?;
+
+        let ai_service = context
+            .octopus_database
+            .insert_ai_service(
+                &mut transaction,
+                &original_file_name,
+                &original_function_body,
+                port,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        let ai_service = parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
+
+        return Ok((StatusCode::CREATED, Json(ai_service)).into_response());
     }
 
     Err(AppError::BadRequest)
@@ -655,6 +667,10 @@ pub async fn update(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let mut bypass_code_check = false;
+    let mut data = None;
+    let mut original_file_name = None;
+
     context
         .octopus_database
         .try_get_ai_service_id_by_id(id)
@@ -662,36 +678,44 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     while let Some(field) = multipart.next_field().await? {
-        let original_file_name = (field.file_name().ok_or(AppError::File)?).to_string();
-        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+        let field_name = (field.name().ok_or(AppError::Parsing)?).to_string();
 
-        if content_type == "application/octet-stream" || content_type == "text/plain" {
-            let data = field.bytes().await?.clone().to_vec();
+        if field_name == "bypass_code_check" {
+            bypass_code_check = (field.text().await?).parse::<bool>().unwrap_or(false);
+        } else {
+            original_file_name = Some((field.file_name().ok_or(AppError::File)?).to_string());
+            let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
-            let original_function_body = String::from_utf8(data)?;
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let ai_service = context
-                .octopus_database
-                .update_ai_service(
-                    &mut transaction,
-                    id,
-                    false,
-                    &original_file_name,
-                    &original_function_body,
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            let ai_service = parser::ai_service_malicious_code_check(ai_service, context).await?;
-
-            return Ok((StatusCode::OK, Json(ai_service)).into_response());
+            if content_type == "application/octet-stream" || content_type == "text/plain" {
+                data = Some(field.bytes().await?.clone().to_vec());
+            }
         }
+    }
+
+    if let (Some(data), Some(original_file_name)) = (data, original_file_name) {
+        let original_function_body = String::from_utf8(data)?;
+
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let ai_service = context
+            .octopus_database
+            .update_ai_service(
+                &mut transaction,
+                id,
+                false,
+                &original_file_name,
+                &original_function_body,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        let ai_service = parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
+
+        return Ok((StatusCode::OK, Json(ai_service)).into_response());
     }
 
     Err(AppError::BadRequest)
