@@ -35,6 +35,7 @@ pub enum AiFunctionResponseContentType {
     AudioMpeg,
     ImageJpeg,
     ImagePng,
+    TextHtml,
     TextPlain,
     VideoMp4,
 }
@@ -48,6 +49,7 @@ impl FromStr for AiFunctionResponseContentType {
             "audio_mpeg" => Ok(AiFunctionResponseContentType::AudioMpeg),
             "image_jpeg" => Ok(AiFunctionResponseContentType::ImageJpeg),
             "image_png" => Ok(AiFunctionResponseContentType::ImagePng),
+            "text_html" => Ok(AiFunctionResponseContentType::TextHtml),
             "text_plain" => Ok(AiFunctionResponseContentType::TextPlain),
             "video_mp4" => Ok(AiFunctionResponseContentType::VideoMp4),
             _ => Ok(AiFunctionResponseContentType::ApplicationJson),
