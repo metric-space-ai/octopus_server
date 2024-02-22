@@ -15,11 +15,7 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
-use std::{
-    fs::read_to_string,
-    io::Write,
-    sync::Arc,
-};
+use std::{fs::read_to_string, io::Write, sync::Arc};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;

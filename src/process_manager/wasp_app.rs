@@ -111,25 +111,28 @@ pub async fn create_environment(
         };
 
         if (*file.name()).ends_with('/') {
-            let path = outpath
-                .to_str()
-                .ok_or(AppError::Parsing)?
-                .to_string()
-                .strip_prefix(&shortest_parent)
-                .ok_or(AppError::Parsing)?
-                .to_string();
+            let path = outpath.to_str().ok_or(AppError::Parsing)?.to_string();
+            let path = if path.starts_with(&shortest_parent) {
+                path.strip_prefix(&shortest_parent)
+                    .ok_or(AppError::Parsing)?
+                    .to_string()
+            } else {
+                path
+            };
             let path = format!("{full_wasp_app_dir_path}/{path}");
 
             std::fs::create_dir_all(&path)?;
         } else {
             if let Some(parent) = outpath.parent() {
-                let path = parent
-                    .to_str()
-                    .ok_or(AppError::Parsing)?
-                    .to_string()
-                    .strip_prefix(&shortest_parent)
-                    .ok_or(AppError::Parsing)?
-                    .to_string();
+                let path = parent.to_str().ok_or(AppError::Parsing)?.to_string();
+                let path = if path.starts_with(&shortest_parent) {
+                    path.strip_prefix(&shortest_parent)
+                        .ok_or(AppError::Parsing)?
+                        .to_string()
+                } else {
+                    path
+                };
+
                 let path = format!("{full_wasp_app_dir_path}/{path}");
                 let dir_exists = Path::new(&path).is_dir();
 
@@ -138,13 +141,15 @@ pub async fn create_environment(
                 }
             }
 
-            let path = outpath
-                .to_str()
-                .ok_or(AppError::Parsing)?
-                .to_string()
-                .strip_prefix(&shortest_parent)
-                .ok_or(AppError::Parsing)?
-                .to_string();
+            let path = outpath.to_str().ok_or(AppError::Parsing)?.to_string();
+            let path = if path.starts_with(&shortest_parent) {
+                path.strip_prefix(&shortest_parent)
+                    .ok_or(AppError::Parsing)?
+                    .to_string()
+            } else {
+                path
+            };
+
             let path = format!("{full_wasp_app_dir_path}/{path}");
             let mut outfile = std::fs::File::create(&path)?;
             std::io::copy(&mut file, &mut outfile)?;
