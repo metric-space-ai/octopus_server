@@ -245,7 +245,8 @@ pub async fn create(
             .transaction_commit(transaction)
             .await?;
 
-        let ai_service = parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
+        let ai_service =
+            parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
 
         return Ok((StatusCode::CREATED, Json(ai_service)).into_response());
     }
@@ -713,7 +714,8 @@ pub async fn update(
             .transaction_commit(transaction)
             .await?;
 
-        let ai_service = parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
+        let ai_service =
+            parser::ai_service_malicious_code_check(ai_service, bypass_code_check, context).await?;
 
         return Ok((StatusCode::OK, Json(ai_service)).into_response());
     }

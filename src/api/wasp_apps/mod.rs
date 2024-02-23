@@ -1,4 +1,5 @@
 use crate::{
+    ai::code_tools::open_ai_wasp_app_advanced_meta_extraction,
     context::Context,
     entity::{WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
@@ -14,7 +15,7 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{fs::read_to_string, io::Write, sync::Arc};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
@@ -209,6 +210,68 @@ pub async fn delete(
         .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    post,
+    path = "/api/v1/wasp-apps/extract-meta",
+    responses(
+        (status = 201, description = "Extract meta info from Wasp app.", body = WaspAppMeta),
+        (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn extract_meta(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    mut multipart: Multipart,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let mut code = None;
+
+    while let Some(field) = multipart.next_field().await? {
+        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+
+        if content_type == "application/zip"
+            || content_type == "application/x-zip"
+            || content_type == "application/x-zip-compressed"
+        {
+            code = Some(field.bytes().await?.clone().to_vec());
+        }
+    }
+
+    if let Some(code) = code {
+        let mut tmpfile = tempfile::tempfile()?;
+        tmpfile.write_all(&code)?;
+
+        let mut archive = zip::ZipArchive::new(tmpfile)?;
+
+        let mut code = None;
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i)?;
+            if (*file.name()).contains("main.wasp") {
+                let mut wasptmpfile = tempfile::NamedTempFile::new()?;
+                std::io::copy(&mut file, &mut wasptmpfile)?;
+
+                let content = read_to_string(wasptmpfile.into_temp_path())?;
+                code = Some(content);
+            }
+        }
+
+        if let Some(code) = code {
+            let wasp_app_meta = open_ai_wasp_app_advanced_meta_extraction(&code, context).await?;
+
+            return Ok((StatusCode::CREATED, Json(wasp_app_meta)).into_response());
+        }
+    }
+
+    Err(AppError::BadRequest)
 }
 
 #[axum_macros::debug_handler]

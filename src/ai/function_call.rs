@@ -122,6 +122,23 @@ pub async fn function_call(
 
                     AiFunctionResponse::Text(ai_function_text_response)
                 }
+                AiFunctionResponseContentType::TextHtml => {
+                    let content = response.text().await?;
+                    let media_type = "text/html".to_string();
+
+                    let engine = engine::GeneralPurpose::new(
+                        &alphabet::URL_SAFE,
+                        engine::general_purpose::PAD,
+                    );
+                    let content = engine.encode(content);
+
+                    let ai_function_file_response = AiFunctionFileResponse {
+                        content,
+                        media_type,
+                    };
+
+                    AiFunctionResponse::File(ai_function_file_response)
+                }
                 AiFunctionResponseContentType::TextPlain => {
                     let response = response.text().await?;
 

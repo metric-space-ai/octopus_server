@@ -96,13 +96,14 @@ pub fn replace_function_names(code_lines: &[String], ai_service_id: Uuid) -> Res
 
     Ok(parsed_code_lines)
 }
-
+/*
 pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
         if code_line.contains("pip")
             && code_line.contains("install")
+            && !code_line.contains("accelerate")
             && !code_line.contains("bpy")
             && !code_line.contains("nc_py_api")
             && !code_line.contains("reduct-py")
@@ -117,7 +118,7 @@ pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
 
     parsed_code_lines
 }
-
+*/
 pub fn replace_print(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 

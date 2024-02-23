@@ -13,6 +13,7 @@ use strum_macros::Display;
 use tracing::error;
 use utoipa::ToSchema;
 use validator::ValidationErrors;
+use zip::result::ZipError;
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Display)]
@@ -46,6 +47,7 @@ pub enum AppError {
     Utf8(FromUtf8Error),
     Uuid(uuid::Error),
     Validation(ValidationErrors),
+    Zip(ZipError),
 }
 
 impl IntoResponse for AppError {
@@ -103,6 +105,7 @@ impl IntoResponse for AppError {
             AppError::Utf8(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Utf8 error."),
             AppError::Uuid(_error) => (StatusCode::BAD_REQUEST, "Invalid API key."),
             AppError::Validation(_error) => (StatusCode::BAD_REQUEST, "Validation problem."),
+            AppError::Zip(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Zip error."),
         };
 
         let body = Json(json!(ResponseError {
@@ -194,6 +197,12 @@ impl From<uuid::Error> for AppError {
 impl From<ValidationErrors> for AppError {
     fn from(inner: ValidationErrors) -> Self {
         AppError::Validation(inner)
+    }
+}
+
+impl From<ZipError> for AppError {
+    fn from(inner: ZipError) -> Self {
+        AppError::Zip(inner)
     }
 }
 
