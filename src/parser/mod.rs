@@ -168,7 +168,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = addons::add_handle_exception(code_lines);
 
     code_lines = replacers::replace_function_names(&code_lines, ai_service.id)?;
-    code_lines = replacers::replace_pip(code_lines);
+    //code_lines = replacers::replace_pip(code_lines);
     code_lines = replacers::replace_print(code_lines);
 
     let last_return_jsonify_line = detectors::detect_last_return_jsonify_line(&code_lines);

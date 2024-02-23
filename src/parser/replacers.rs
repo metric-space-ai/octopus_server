@@ -96,7 +96,7 @@ pub fn replace_function_names(code_lines: &[String], ai_service_id: Uuid) -> Res
 
     Ok(parsed_code_lines)
 }
-
+/*
 pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
@@ -118,7 +118,7 @@ pub fn replace_pip(code_lines: Vec<String>) -> Vec<String> {
 
     parsed_code_lines
 }
-
+*/
 pub fn replace_print(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
