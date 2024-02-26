@@ -61,13 +61,14 @@ RUN cargo build --release
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS frontend_builder
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
-        curl && \
+        curl \
+        git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.19.0
+ENV NODE_VERSION 18.19.1
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -236,7 +237,7 @@ RUN set -x && \
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.19.0
+ENV NODE_VERSION 18.19.1
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -296,6 +297,239 @@ RUN set -ex \
     && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
     && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
     && yarn --version
+# https://github.com/SeleniumHQ/docker-selenium/blob/trunk/Base/Dockerfile
+LABEL authors="Selenium <selenium-developers@googlegroups.com>"
+ARG VERSION=4.18.0
+ARG RELEASE=selenium-${VERSION}
+ARG OPENTELEMETRY_VERSION=1.34.1
+ARG GRPC_VERSION=1.61.0
+ARG SEL_USER=seluser
+ARG SEL_GROUP=${SEL_USER}
+ARG SEL_PASSWD=secret
+ARG UID=1200
+ARG GID=1201
+USER root
+RUN  echo "deb http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
+    && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
+    && echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list
+ENV DEBIAN_FRONTEND=noninteractive \
+    DEBCONF_NONINTERACTIVE_SEEN=true
+RUN apt-get -qqy update \
+    && apt-get upgrade -yq \
+    && apt-get -qqy --no-install-recommends install \
+        acl \
+        bzip2 \
+        ca-certificates \
+        openjdk-11-jre-headless \
+        tzdata \
+        sudo \
+        unzip \
+        wget \
+        jq \
+        curl \
+        supervisor \
+        gnupg2 \
+        libnss3-tools \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
+    && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-amd64/conf/security/java.security
+ENV TZ "UTC"
+RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
+    dpkg-reconfigure -f noninteractive tzdata && \
+    cat /etc/timezone
+ENV SEL_USER=${SEL_USER}
+ENV SEL_UID=${UID}
+ENV SEL_GID=${GID}
+ENV HOME=/home/${SEL_USER}
+ENV SEL_DOWNLOAD_DIR=${HOME}/Downloads
+RUN groupadd ${SEL_GROUP} \
+            --gid ${SEL_GID} \
+    && useradd ${SEL_USER} \
+            --create-home \
+            --gid ${SEL_GID} \
+            --shell /bin/bash \
+            --uid ${SEL_UID} \
+    && usermod -a -G sudo ${SEL_USER} \
+    && echo 'ALL ALL = (ALL) NOPASSWD: ALL' >> /etc/sudoers \
+    && echo "${SEL_USER}:${SEL_PASSWD}" | chpasswd
+COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/check-grid.sh octopus_server/selenium/entry_point.sh /opt/bin/
+COPY octopus_server/selenium/supervisord.conf /etc
+RUN mkdir -p /opt/selenium /opt/selenium/assets /var/run/supervisor /var/log/supervisor ${SEL_DOWNLOAD_DIR} \
+        ${HOME}/.mozilla ${HOME}/.vnc $HOME/.pki/nssdb \
+    && touch /opt/selenium/config.toml \
+    && chown -R ${SEL_USER}:${SEL_GROUP} /opt/selenium /var/run/supervisor /var/log/supervisor /etc/passwd ${HOME} \
+    && chmod -R 775 /opt/selenium /var/run/supervisor /var/log/supervisor /etc/passwd ${HOME} \
+    && wget --no-verbose https://github.com/SeleniumHQ/selenium/releases/download/${RELEASE}/selenium-server-${VERSION}.jar \
+        -O /opt/selenium/selenium-server.jar \
+    && echo "${SEL_PASSWD}" > /opt/selenium/initialPasswd \
+    && chgrp -R 0 /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
+    && chmod -R g=u /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
+    && setfacl -Rm u:${SEL_USER}:rwx /opt /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor \
+    && setfacl -Rm g:${SEL_GROUP}:rwx /opt /opt/selenium ${HOME} /opt/selenium/assets /var/run/supervisor /var/log/supervisor
+RUN curl -fLo /tmp/cs https://github.com/coursier/launchers/raw/master/coursier \
+    && chmod +x /tmp/cs \
+    && mkdir -p /external_jars \
+    && chmod -R 775 /external_jars
+RUN /tmp/cs fetch --classpath --cache /external_jars \
+    io.opentelemetry:opentelemetry-exporter-otlp:${OPENTELEMETRY_VERSION} \
+    io.grpc:grpc-netty:${GRPC_VERSION} > /external_jars/.classpath.txt
+RUN chmod 664 /external_jars/.classpath.txt
+RUN rm -fr /root/.cache/*
+USER ${SEL_UID}:${SEL_GID}
+RUN certutil -d sql:$HOME/.pki/nssdb -N --empty-password
+ENV SE_BIND_HOST false
+ENV SE_REJECT_UNSUPPORTED_CAPS false
+ENV SE_OTEL_JAVA_GLOBAL_AUTOCONFIGURE_ENABLED true
+ENV SE_OTEL_TRACES_EXPORTER "otlp"
+RUN echo 'if [[ $(ulimit -n) -gt 200000 ]]; then echo "WARNING: Very high value reported by \"ulimit -n\". Consider passing \"--ulimit nofile=32768\" to \"docker run\"."; fi' >> ${HOME}/.bashrc
+
+# https://github.com/SeleniumHQ/docker-selenium/blob/trunk/NodeDocker/Dockerfile
+USER root
+RUN apt-get update -qqy \
+    && apt-get -qqy --no-install-recommends install socat \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+USER ${SEL_UID}
+EXPOSE 4444
+COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/start-selenium-grid-docker.sh \
+    octopus_server/selenium/config.toml \
+    octopus_server/selenium/start-socat.sh \
+    /opt/bin/
+COPY octopus_server/selenium/selenium-grid-docker.conf /etc/supervisor/conf.d/
+ENV SE_OTEL_SERVICE_NAME "selenium-node-docker"
+
+# https://github.com/SeleniumHQ/docker-selenium/blob/trunk/NodeBase/Dockerfile
+ARG NOVNC_VERSION="1.4.0"
+ARG WEBSOCKIFY_VERSION="0.11.0"
+USER root
+RUN apt-get update -qqy \
+    && apt-get -qqy --no-install-recommends install \
+        xvfb \
+        xauth \
+        pulseaudio \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+ENV LANG_WHICH en
+ENV LANG_WHERE US
+ENV ENCODING UTF-8
+ENV LANGUAGE ${LANG_WHICH}_${LANG_WHERE}.${ENCODING}
+ENV LANG ${LANGUAGE}
+RUN apt-get -qqy update \
+    && apt-get -qqy --no-install-recommends install \
+        language-pack-en \
+        tzdata \
+        locales \
+    && locale-gen ${LANGUAGE} \
+    && dpkg-reconfigure --frontend noninteractive locales \
+    && apt-get -qyy autoremove \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get -qyy clean
+RUN apt-get update -qqy \
+    && apt-get -qqy --no-install-recommends install \
+    x11vnc x11-utils \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+RUN apt-get update -qqy \
+    && apt-get -qqy --no-install-recommends install \
+        fluxbox eterm hsetroot feh \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+RUN apt-get -qqy update \
+    && apt-get -qqy --no-install-recommends install \
+        libfontconfig \
+        libfreetype6 \
+        xfonts-cyrillic \
+        xfonts-scalable \
+        fonts-liberation \
+        fonts-ipafont-gothic \
+        fonts-wqy-zenhei \
+        fonts-tlwg-loma-otf \
+        fonts-ubuntu \
+        fonts-noto-color-emoji \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get -qyy clean
+RUN wget -nv -O noVNC.zip \
+        "https://github.com/novnc/noVNC/archive/refs/tags/v${NOVNC_VERSION}.zip" \
+    && unzip -x noVNC.zip \
+    && mv noVNC-${NOVNC_VERSION} /opt/bin/noVNC \
+    && cp /opt/bin/noVNC/vnc.html /opt/bin/noVNC/index.html \
+    && rm noVNC.zip \
+    && wget -nv -O websockify.zip \
+        "https://github.com/novnc/websockify/archive/refs/tags/v${WEBSOCKIFY_VERSION}.zip" \
+    && unzip -x websockify.zip \
+    && rm websockify.zip \
+    && mv websockify-${WEBSOCKIFY_VERSION} /opt/bin/noVNC/utils/websockify \
+    && rm -rf /opt/bin/noVNC/utils/websockify/docker /opt/bin/noVNC/utils/websockify/tests
+RUN chmod +x /dev/shm
+RUN mkdir -p /tmp/.X11-unix
+RUN mkdir -p ${HOME}/.vnc \
+    && x11vnc -storepasswd $(cat /opt/selenium/initialPasswd) ${HOME}/.vnc/passwd \
+    && chown -R "${SEL_USER}:${SEL_GROUP}" ${HOME}/.vnc
+RUN chmod -R 775 ${HOME} /tmp/.X11-unix \
+    && chgrp -R 0 ${HOME} /tmp/.X11-unix \
+    && chmod -R g=u ${HOME} /tmp/.X11-unix
+USER ${SEL_UID}
+COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/start-selenium-node.sh \
+    octopus_server/selenium/start-xvfb.sh \
+    /opt/bin/
+COPY octopus_server/selenium/selenium.conf /etc/supervisor/conf.d/
+COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/start-vnc.sh \
+    octopus_server/selenium/start-novnc.sh \
+    /opt/bin/
+ENV SE_SCREEN_WIDTH 1360
+ENV SE_SCREEN_HEIGHT 1020
+ENV SE_SCREEN_DEPTH 24
+ENV SE_SCREEN_DPI 96
+ENV SE_START_XVFB true
+ENV SE_START_VNC true
+ENV SE_START_NO_VNC true
+ENV SE_NO_VNC_PORT 7900
+ENV SE_VNC_PORT 5900
+ENV DISPLAY :99.0
+ENV DISPLAY_NUM 99
+ENV CONFIG_FILE=/opt/selenium/config.toml
+ENV GENERATE_CONFIG true
+ENV SE_DRAIN_AFTER_SESSION_COUNT 0
+ENV SE_OFFLINE true
+ENV SE_NODE_MAX_SESSIONS 1
+ENV SE_NODE_SESSION_TIMEOUT 300
+ENV SE_NODE_OVERRIDE_MAX_SESSIONS false
+ENV SE_NODE_HEARTBEAT_PERIOD 30
+ENV DBUS_SESSION_BUS_ADDRESS=/dev/null
+ENV SE_OTEL_SERVICE_NAME "selenium-node"
+COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/generate_config /opt/bin/generate_config
+# https://github.com/SeleniumHQ/docker-selenium/blob/trunk/NodeChrome/Dockerfile
+USER root
+ARG CHROME_VERSION="google-chrome-stable"
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor | tee /etc/apt/trusted.gpg.d/google.gpg >/dev/null \
+    && echo "deb http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list \
+    && apt-get update -qqy \
+    && apt-get -qqy --no-install-recommends install \
+        ${CHROME_VERSION:-google-chrome-stable} \
+    && rm /etc/apt/sources.list.d/google-chrome.list \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
+COPY octopus_server/selenium/wrap_chrome_binary /opt/bin/wrap_chrome_binary
+RUN /opt/bin/wrap_chrome_binary
+ARG CHROME_DRIVER_VERSION
+RUN if [ ! -z "$CHROME_DRIVER_VERSION" ]; \
+    then CHROME_DRIVER_URL=https://storage.googleapis.com/chrome-for-testing-public/$CHROME_DRIVER_VERSION/linux64/chromedriver-linux64.zip ; \
+    else CHROME_MAJOR_VERSION=$(google-chrome --version | sed -E "s/.* ([0-9]+)(\.[0-9]+){3}.*/\1/") \
+        && echo "Geting ChromeDriver latest version from https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_MAJOR_VERSION}" \
+        && CHROME_DRIVER_VERSION=$(wget -qO- https://googlechromelabs.github.io/chrome-for-testing/LATEST_RELEASE_${CHROME_MAJOR_VERSION} | sed 's/\r$//') \
+        && CHROME_DRIVER_URL=https://storage.googleapis.com/chrome-for-testing-public/$CHROME_DRIVER_VERSION/linux64/chromedriver-linux64.zip ; \
+    fi \
+    && echo "Using ChromeDriver from: "$CHROME_DRIVER_URL \
+    && echo "Using ChromeDriver version: "$CHROME_DRIVER_VERSION \
+    && wget --no-verbose -O /tmp/chromedriver_linux64.zip $CHROME_DRIVER_URL \
+    && rm -rf /opt/selenium/chromedriver \
+    && unzip /tmp/chromedriver_linux64.zip -d /opt/selenium \
+    && rm /tmp/chromedriver_linux64.zip \
+    && mv /opt/selenium/chromedriver-linux64/chromedriver /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
+    && chmod 755 /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION \
+    && ln -fs /opt/selenium/chromedriver-$CHROME_DRIVER_VERSION /usr/bin/chromedriver
+USER ${SEL_UID}
+RUN echo "chrome" > /opt/selenium/browser_name
+RUN google-chrome --version | awk '{print $3}' > /opt/selenium/browser_version
+RUN echo "\"goog:chromeOptions\": {\"binary\": \"/usr/bin/google-chrome\"}" > /opt/selenium/browser_binary_location
+ENV SE_OTEL_SERVICE_NAME "selenium-node-chrome"
+
+ENV HOME=/root
+USER root
 ARG AZURE_OPENAI_API_KEY
 ARG AZURE_OPENAI_DEPLOYMENT_ID
 ARG AZURE_OPENAI_ENABLED
