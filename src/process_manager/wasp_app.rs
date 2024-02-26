@@ -185,7 +185,7 @@ pub async fn create_environment(
     let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
     if let Some(octopus_api_url) = octopus_api_url {
-        parameters.push_str(&format!("OCTOPUS_API_URL={octopus_api_url} "));
+        parameters.push_str(&format!("REACT_APP_OCTOPUS_API_URL={octopus_api_url} "));
     }
 
     let expired_at = Utc::now() + ChronoDuration::days(365);
@@ -201,12 +201,12 @@ pub async fn create_environment(
         .transaction_commit(transaction)
         .await?;
 
-    parameters.push_str(&format!("OCTOPUS_TOKEN={} ", session.id));
+    parameters.push_str(&format!("REACT_APP_OCTOPUS_TOKEN={} ", session.id));
 
     let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
 
     if let Some(openai_api_key) = openai_api_key {
-        parameters.push_str(&format!("OPENAI_API_KEY={openai_api_key} "));
+        parameters.push_str(&format!("REACT_APP_OPENAI_API_KEY={openai_api_key} "));
     }
 
     if let Some(wasp_app_server_port) = wasp_app_server_port {

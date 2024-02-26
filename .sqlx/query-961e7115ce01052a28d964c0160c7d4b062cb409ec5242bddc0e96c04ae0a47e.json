@@ -65,6 +65,7 @@
                 "audio_mpeg",
                 "image_jpeg",
                 "image_png",
+                "text_html",
                 "text_plain",
                 "video_mp4"
               ]
