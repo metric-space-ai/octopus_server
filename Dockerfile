@@ -132,14 +132,23 @@ FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS prod
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
+        build-essential \
         cgroup-tools \
         curl \
         g++ \
         git \
+        libffi-dev \
+        libffi8ubuntu1 \
+        libgmp-dev \
+        libgmp10 \
+        libncurses-dev \
+        libncurses5 \
         librust-openssl-dev \
+        libtinfo5 \
         nvidia-utils-535 \
         procps \
-        wget && \
+        wget \
+        zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
@@ -293,11 +302,22 @@ ENV PORT 3000
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
-RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
 ENV PATH "$PATH:/root/.local/bin"
 RUN chmod u+s /usr/bin/cgcreate
 RUN chmod u+s /usr/bin/cgdelete
 RUN chmod u+s /usr/bin/cgexec
+RUN curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
+ENV PATH "$PATH:/root/.ghcup/bin"
+RUN ghcup install ghc 8.10.7
+WORKDIR /
+RUN git clone https://github.com/wasp-lang/wasp.git
+WORKDIR /wasp
+RUN git checkout wasp-ai
+WORKDIR /wasp/waspc
+RUN ./run build
+RUN ./run install
+ENV PATH "$PATH:/root/.cabal/bin"
+RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json /octopus_client/yarn.lock ./
