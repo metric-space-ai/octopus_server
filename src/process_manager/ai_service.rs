@@ -64,6 +64,17 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
 
     let mut parameters = String::new();
 
+    let hugging_face_token_access = context
+        .get_config()
+        .await?
+        .get_parameter_hugging_face_token_access();
+
+    if let Some(hugging_face_token_access) = hugging_face_token_access {
+        parameters.push_str(&format!(
+            "HUGGING_FACE_TOKEN_ACCESS={hugging_face_token_access} "
+        ));
+    }
+
     let nextcloud_username = context
         .get_config()
         .await?
