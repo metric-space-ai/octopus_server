@@ -550,7 +550,6 @@ ENV WASP_MAGE_PORT 3030
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
-RUN curl -sSL https://get.wasp-lang.dev/installer.sh | sh
 ENV PATH "$PATH:/root/.local/bin"
 RUN chmod u+s /usr/bin/cgcreate
 RUN chmod u+s /usr/bin/cgdelete
@@ -565,6 +564,8 @@ RUN git checkout wasp-ai
 WORKDIR /wasp/waspc
 RUN ./run build
 RUN ./run install
+ENV PATH "$PATH:/root/.cabal/bin"
+RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
 WORKDIR /wasp_mage
 COPY octopus_server/wasp_mage /wasp_mage
 WORKDIR /octopus_client

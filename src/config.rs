@@ -2,10 +2,10 @@ use crate::{
     entity::{
         Parameter, PARAMETER_NAME_AI_MODEL, PARAMETER_NAME_AI_SYSTEM_PROMPT,
         PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
-        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
-        PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
-        PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
-        PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
+        PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_USERNAME,
+        PARAMETER_NAME_OCTOPUS_API_URL, PARAMETER_NAME_OCTOPUS_WS_URL,
+        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -116,6 +116,19 @@ impl Config {
                 parse_result.unwrap_or(false)
             }
         }
+    }
+
+    pub fn get_parameter_hugging_face_token_access(&self) -> Option<String> {
+        let hugging_face_token_access =
+            self.get_parameter_value(PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS);
+
+        if let Some(hugging_face_token_access) = hugging_face_token_access {
+            if hugging_face_token_access != *"default" {
+                return Some(hugging_face_token_access);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_nextcloud_password(&self) -> Option<String> {
