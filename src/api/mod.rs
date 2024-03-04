@@ -612,7 +612,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                         ))
                     }
                 }))
-                .timeout(Duration::from_secs(120))
+                .timeout(Duration::from_secs(1800))
                 .layer(TraceLayer::new_for_http())
                 .into_inner(),
         )

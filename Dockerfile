@@ -297,6 +297,11 @@ RUN set -ex \
     && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
     && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
     && yarn --version
+
+ENV SE_EVENT_BUS_HOST=localhost
+ENV SE_EVENT_BUS_PUBLISH_PORT=4442
+ENV SE_EVENT_BUS_SUBSCRIBE_PORT=4443
+
 # https://github.com/SeleniumHQ/docker-selenium/blob/trunk/Base/Dockerfile
 LABEL authors="Selenium <selenium-developers@googlegroups.com>"
 ARG VERSION=4.18.0
