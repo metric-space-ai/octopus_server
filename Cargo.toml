@@ -18,7 +18,7 @@ chrono = { version = "0.4", features = ["serde"] }
 fake = "2.9"
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
-http = "1.0"
+http = "1.1"
 http-body = "1.0"
 http-body-util = "0.1"
 hyper = { version = "1.2", features = ["full"] }
