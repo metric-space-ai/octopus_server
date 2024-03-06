@@ -7,8 +7,9 @@ use crate::{
         PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_USERNAME,
         PARAMETER_NAME_OCTOPUS_API_URL, PARAMETER_NAME_OCTOPUS_WS_URL,
-        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY, ROLE_COMPANY_ADMIN_USER,
-        ROLE_PRIVATE_USER, ROLE_PUBLIC_USER,
+        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_REGISTRATION_ALLOWED,
+        PARAMETER_NAME_SENDGRID_API_KEY, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
+        ROLE_PUBLIC_USER,
     },
     error::AppError,
 };
@@ -48,6 +49,7 @@ pub struct SetupPost {
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct SetupInfoResponse {
+    registration_allowed: bool,
     setup_required: bool,
 }
 
@@ -64,8 +66,14 @@ pub struct SetupInfoResponse {
 )]
 pub async fn info(State(context): State<Arc<Context>>) -> Result<impl IntoResponse, AppError> {
     let companies = context.octopus_database.get_companies().await?;
+    let registration_allowed = context
+        .get_config()
+        .await?
+        .get_parameter_registration_allowed()
+        .unwrap_or(true);
 
     let setup_info_response = SetupInfoResponse {
+        registration_allowed,
         setup_required: companies.is_empty(),
     };
 
@@ -327,6 +335,7 @@ pub async fn create_missing_parameters(
         PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL,
         PARAMETER_NAME_OPENAI_API_KEY,
+        PARAMETER_NAME_REGISTRATION_ALLOWED,
         PARAMETER_NAME_SENDGRID_API_KEY,
     ];
 

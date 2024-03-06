@@ -5,7 +5,8 @@ use crate::{
         PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_USERNAME,
         PARAMETER_NAME_OCTOPUS_API_URL, PARAMETER_NAME_OCTOPUS_WS_URL,
-        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_OPENAI_API_KEY, PARAMETER_NAME_REGISTRATION_ALLOWED,
+        PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -158,6 +159,24 @@ impl Config {
             }
             Some(openai_api_key) => Some(openai_api_key),
         }
+    }
+
+    pub fn get_parameter_registration_allowed(&self) -> Option<bool> {
+        let registration_allowed = self.get_parameter_value(PARAMETER_NAME_REGISTRATION_ALLOWED);
+
+        if let Some(registration_allowed) = registration_allowed {
+            if registration_allowed != *"default" {
+                if let Ok(val) = registration_allowed.parse::<bool>() {
+                    return Some(val);
+                } else {
+                    return Some(true);
+                }
+            } else {
+                return Some(true);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_sendgrid_api_key(&self) -> Option<String> {
