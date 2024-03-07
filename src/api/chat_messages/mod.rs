@@ -337,8 +337,10 @@ pub async fn create(
         .await?;
 
     let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::seconds(5),
-        Some(estimated_seconds) => Utc::now() + Duration::seconds(estimated_seconds + 1),
+        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
+        Some(estimated_seconds) => {
+            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
+        }
     };
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -877,8 +879,10 @@ pub async fn regenerate(
         .await?;
 
     let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::seconds(5),
-        Some(estimated_seconds) => Utc::now() + Duration::seconds(estimated_seconds + 1),
+        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
+        Some(estimated_seconds) => {
+            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
+        }
     };
 
     let chat_messages = context
@@ -1004,8 +1008,10 @@ pub async fn update(
         .await?;
 
     let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::seconds(5),
-        Some(estimated_seconds) => Utc::now() + Duration::seconds(estimated_seconds + 1),
+        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
+        Some(estimated_seconds) => {
+            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
+        }
     };
 
     let chat_messages = context

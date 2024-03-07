@@ -25,6 +25,7 @@ pub enum AppError {
     Conflict,
     File,
     Forbidden,
+    FromTime,
     Generic(Box<dyn Error + Send + Sync>),
     Gone,
     Header(ToStrError),
@@ -66,6 +67,7 @@ impl IntoResponse for AppError {
             AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
             AppError::File => (StatusCode::BAD_REQUEST, "File error."),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden."),
+            AppError::FromTime => (StatusCode::INTERNAL_SERVER_ERROR, "From time error."),
             AppError::Generic(error) => {
                 error!("Error: {:?}", error);
 

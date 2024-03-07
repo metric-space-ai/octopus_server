@@ -555,7 +555,8 @@ pub async fn operation(
         AiServiceOperation::Setup => ai_service.setup_execution_time,
     };
 
-    let estimated_operation_end_at = Utc::now() + Duration::seconds(i64::from(execution_time) + 1);
+    let estimated_operation_end_at = Utc::now()
+        + Duration::try_seconds(i64::from(execution_time) + 1).ok_or(AppError::FromTime)?;
 
     let ai_service_operation_response = AiServiceOperationResponse {
         estimated_operation_end_at,

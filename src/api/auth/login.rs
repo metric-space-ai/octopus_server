@@ -62,7 +62,7 @@ pub async fn login(
 
     let session_response_data = SessionResponseData { roles: user.roles };
     let data = serde_json::to_string(&session_response_data)?;
-    let expired_at = Utc::now() + Duration::days(365);
+    let expired_at = Utc::now() + Duration::try_days(365).ok_or(AppError::FromTime)?;
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
