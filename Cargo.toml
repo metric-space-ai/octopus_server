@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 argon2 = "0.5"
 async-openai = "0.19"
+async-recursion = "1.0"
 axum = { version = "0.7", features = ["multipart", "ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
 axum-macros = "0.4"

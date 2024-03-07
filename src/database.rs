@@ -353,7 +353,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageFile>> {
         let chat_message_files = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
+            "SELECT id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at
             FROM chat_message_files
             WHERE chat_message_id = $1
             AND deleted_at IS NULL
@@ -372,7 +372,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<ChatMessageFile>> {
         let chat_message_files = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
+            "SELECT id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at
             FROM chat_message_files
             WHERE chat_message_id = ANY($1)
             AND deleted_at IS NULL
@@ -799,23 +799,24 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
-    #[allow(dead_code)]
     pub async fn insert_chat_message_file(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         chat_message_id: Uuid,
         file_name: &str,
         media_type: &str,
+        original_file_name: Option<String>,
     ) -> Result<ChatMessageFile> {
         let chat_message_file = sqlx::query_as!(
             ChatMessageFile,
             "INSERT INTO chat_message_files
-            (chat_message_id, file_name, media_type)
-            VALUES ($1, $2, $3)
-            RETURNING id, chat_message_id, file_name, media_type, created_at, deleted_at",
+            (chat_message_id, file_name, media_type, original_file_name)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at",
             chat_message_id,
             file_name,
             media_type,
+            original_file_name,
         )
         .fetch_one(&mut **transaction)
         .await?;
@@ -1853,7 +1854,7 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessageFile>> {
         let chat_message_file = sqlx::query_as!(
             ChatMessageFile,
-            "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at
+            "SELECT id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at
             FROM chat_message_files
             WHERE id = $1
             AND deleted_at IS NULL",
