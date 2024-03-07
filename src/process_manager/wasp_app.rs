@@ -188,7 +188,7 @@ pub async fn create_environment(
         parameters.push_str(&format!("REACT_APP_OCTOPUS_API_URL={octopus_api_url} "));
     }
 
-    let expired_at = Utc::now() + ChronoDuration::days(365);
+    let expired_at = Utc::now() + ChronoDuration::try_days(365).ok_or(AppError::FromTime)?;
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let session = context

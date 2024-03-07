@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at\n            FROM chat_message_files\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at\n            FROM chat_message_files\n            WHERE chat_message_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -25,11 +25,16 @@
       },
       {
         "ordinal": 4,
+        "name": "original_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
@@ -44,9 +49,10 @@
       false,
       false,
       false,
+      true,
       false,
       true
     ]
   },
-  "hash": "cbf0351600f633b537d93198e9ea08c1abd85798eb339bc3f0e02a076d0b25a2"
+  "hash": "4db67b34809a38f52b0746be901287b3ee04a1bcc505404ce288f075f6095a39"
 }

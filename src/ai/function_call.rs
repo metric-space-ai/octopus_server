@@ -7,6 +7,7 @@ use crate::{
     error::AppError,
     Result,
 };
+use async_recursion::async_recursion;
 use base64::{alphabet, engine, Engine};
 use reqwest::{header::CONTENT_TYPE, StatusCode};
 use serde::{Deserialize, Serialize};
@@ -20,6 +21,7 @@ use uuid::Uuid;
 pub enum AiFunctionResponse {
     Error(AiFunctionErrorResponse),
     File(AiFunctionFileResponse),
+    Mixed(Vec<AiFunctionResponse>),
     Text(AiFunctionTextResponse),
 }
 
@@ -32,6 +34,7 @@ pub struct AiFunctionErrorResponse {
 pub struct AiFunctionFileResponse {
     pub content: String,
     pub media_type: String,
+    pub original_file_name: Option<String>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
@@ -41,12 +44,20 @@ pub struct AiFunctionTextResponse {
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct ResponseText {
-    pub response: Option<ResponseTextResponse>,
+    pub file_attachements: Option<Vec<FileAttachementResponse>>,
+    pub response: Option<TextResponse>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
+pub struct FileAttachementResponse {
+    pub content: String,
+    pub file_name: String,
+    pub media_type: String,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 #[serde(untagged)]
-pub enum ResponseTextResponse {
+pub enum TextResponse {
     Array(Vec<String>),
     String(String),
 }
@@ -108,19 +119,40 @@ pub async fn function_call(
                     let response_text = response.text().await?;
                     let response: ResponseText = serde_json::from_str(&response_text)?;
 
-                    let response = match response.response {
-                        Some(ResponseTextResponse::Array(array)) => {
+                    let response_str = match response.response {
+                        Some(TextResponse::Array(array)) => {
                             let string = array.into_iter().collect::<String>();
 
                             Some(string)
                         }
-                        Some(ResponseTextResponse::String(string)) => Some(string),
+                        Some(TextResponse::String(string)) => Some(string),
                         None => Some(response_text),
                     };
 
-                    let ai_function_text_response = AiFunctionTextResponse { response };
+                    let ai_function_text_response = AiFunctionTextResponse {
+                        response: response_str,
+                    };
 
-                    AiFunctionResponse::Text(ai_function_text_response)
+                    let mut ai_function_responses = vec![];
+
+                    let ai_function_response = AiFunctionResponse::Text(ai_function_text_response);
+                    ai_function_responses.push(ai_function_response);
+
+                    if let Some(file_attachements) = response.file_attachements {
+                        for file_attachement in file_attachements {
+                            let ai_function_file_response = AiFunctionFileResponse {
+                                content: file_attachement.content,
+                                media_type: file_attachement.media_type,
+                                original_file_name: Some(file_attachement.file_name),
+                            };
+                            let ai_function_response =
+                                AiFunctionResponse::File(ai_function_file_response);
+
+                            ai_function_responses.push(ai_function_response);
+                        }
+                    }
+
+                    AiFunctionResponse::Mixed(ai_function_responses)
                 }
                 AiFunctionResponseContentType::TextHtml => {
                     let content = response.text().await?;
@@ -135,6 +167,7 @@ pub async fn function_call(
                     let ai_function_file_response = AiFunctionFileResponse {
                         content,
                         media_type,
+                        original_file_name: None,
                     };
 
                     AiFunctionResponse::File(ai_function_file_response)
@@ -168,6 +201,7 @@ pub async fn function_call(
                     let ai_function_file_response = AiFunctionFileResponse {
                         content,
                         media_type,
+                        original_file_name: None,
                     };
 
                     AiFunctionResponse::File(ai_function_file_response)
@@ -189,6 +223,7 @@ pub async fn function_call(
     Ok(None)
 }
 
+#[async_recursion]
 pub async fn update_chat_message(
     ai_function: &AiFunction,
     ai_function_response: &AiFunctionResponse,
@@ -251,6 +286,7 @@ pub async fn update_chat_message(
                     chat_message.id,
                     &file_name,
                     &ai_function_file_response.media_type,
+                    None,
                 )
                 .await?;
 
@@ -258,6 +294,20 @@ pub async fn update_chat_message(
                 .octopus_database
                 .transaction_commit(transaction)
                 .await?;
+
+            Ok(chat_message)
+        }
+        AiFunctionResponse::Mixed(ai_function_responses) => {
+            let mut chat_message = chat_message.clone();
+            for ai_function_response_tmp in ai_function_responses {
+                chat_message = update_chat_message(
+                    ai_function,
+                    ai_function_response_tmp,
+                    context.clone(),
+                    &chat_message,
+                )
+                .await?;
+            }
 
             Ok(chat_message)
         }

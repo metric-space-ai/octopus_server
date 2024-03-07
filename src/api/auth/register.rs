@@ -45,6 +45,16 @@ pub async fn register(
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
+    let registration_allowed = context
+        .get_config()
+        .await?
+        .get_parameter_registration_allowed()
+        .unwrap_or(true);
+
+    if !registration_allowed {
+        return Err(AppError::NotFound);
+    }
+
     let user_exists = context
         .octopus_database
         .try_get_user_by_email(&input.email)

@@ -74,7 +74,8 @@ pub async fn create(
         .try_get_inspection_disabling_by_user_id(session_user.id)
         .await?;
 
-    let content_safety_disabled_until = Utc::now() + Duration::minutes(input.minutes);
+    let content_safety_disabled_until =
+        Utc::now() + Duration::try_minutes(input.minutes).ok_or(AppError::FromTime)?;
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -217,13 +218,14 @@ pub async fn read(
             {
                 inspection_disabling = None;
             } else {
-                inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+                inspection_disabling =
+                    Some(get_temporaty_inspection_disabling(session.user_id).await?);
             }
         } else {
-            inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+            inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id).await?);
         }
     } else {
-        inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id));
+        inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id).await?);
     }
 
     if inspection_disabling.is_none() {
@@ -236,16 +238,21 @@ pub async fn read(
     Ok((StatusCode::OK, Json(inspection_disabling)).into_response())
 }
 
-fn get_temporaty_inspection_disabling(user_id: Uuid) -> InspectionDisabling {
+async fn get_temporaty_inspection_disabling(
+    user_id: Uuid,
+) -> Result<InspectionDisabling, AppError> {
     let created_at = Utc::now();
-    let content_safety_disabled_until = Utc::now() + Duration::minutes(1);
-    InspectionDisabling {
+    let content_safety_disabled_until =
+        Utc::now() + Duration::try_minutes(1).ok_or(AppError::FromTime)?;
+    let inspection_disabling = InspectionDisabling {
         id: Uuid::new_v4(),
         user_id,
         content_safety_disabled_until,
         created_at,
         updated_at: created_at,
-    }
+    };
+
+    Ok(inspection_disabling)
 }
 
 #[cfg(test)]

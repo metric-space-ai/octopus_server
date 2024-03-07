@@ -234,7 +234,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -324,7 +330,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -433,7 +445,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -529,7 +547,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -710,7 +734,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -812,7 +842,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -904,7 +940,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -1011,7 +1053,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -1116,7 +1164,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 
@@ -1211,7 +1265,13 @@ mod tests {
         let chat_message_file = app
             .context
             .octopus_database
-            .insert_chat_message_file(&mut transaction, chat_message_id, file_name, "image/png")
+            .insert_chat_message_file(
+                &mut transaction,
+                chat_message_id,
+                file_name,
+                "image/png",
+                None,
+            )
             .await
             .unwrap();
 

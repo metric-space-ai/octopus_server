@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, chat_message_id, file_name, media_type, created_at, deleted_at\n            FROM chat_message_files\n            WHERE chat_message_id = ANY($1)\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "INSERT INTO chat_message_files\n            (chat_message_id, file_name, media_type, original_file_name)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, chat_message_id, file_name, media_type, original_file_name, created_at, deleted_at",
   "describe": {
     "columns": [
       {
@@ -25,18 +25,26 @@
       },
       {
         "ordinal": 4,
+        "name": "original_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "UuidArray"
+        "Uuid",
+        "Varchar",
+        "Varchar",
+        "Varchar"
       ]
     },
     "nullable": [
@@ -44,9 +52,10 @@
       false,
       false,
       false,
+      true,
       false,
       true
     ]
   },
-  "hash": "fc54e47756e77f6b62d6b2096295fccf0743b515149eee143e1e38a06c86368f"
+  "hash": "30223adf87bcab3786b91f5be9530e8ffca89f25e95df7c213c4593484750974"
 }
