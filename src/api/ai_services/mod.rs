@@ -760,9 +760,13 @@ pub mod tests {
     }
 
     pub async fn ai_service_create(router: Router, session_id: Uuid) -> AiService {
-        let body =
-            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .unwrap();
+        let body = multipart::tests::file_data(
+            "application/octet-stream",
+            "test.py",
+            "data/test/test.py",
+            true,
+        )
+        .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1361,9 +1365,13 @@ pub mod tests {
 
         api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
 
-        let body =
-            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .unwrap();
+        let body = multipart::tests::file_data(
+            "application/octet-stream",
+            "test.py",
+            "data/test/test.py",
+            true,
+        )
+        .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2471,9 +2479,13 @@ pub mod tests {
         let ai_service = ai_service_create(router.clone(), session_id).await;
         let ai_service_id = ai_service.id;
 
-        let body =
-            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .unwrap();
+        let body = multipart::tests::file_data(
+            "application/octet-stream",
+            "test.py",
+            "data/test/test.py",
+            true,
+        )
+        .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2602,9 +2614,13 @@ pub mod tests {
         let ai_service = ai_service_create(router.clone(), session_id).await;
         let ai_service_id = ai_service.id;
 
-        let body =
-            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .unwrap();
+        let body = multipart::tests::file_data(
+            "application/octet-stream",
+            "test.py",
+            "data/test/test.py",
+            true,
+        )
+        .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -2664,9 +2680,13 @@ pub mod tests {
 
         let ai_service_id = "33847746-0030-4964-a496-f75d04499160";
 
-        let body =
-            multipart::tests::file_data("application/octet-stream", "test.py", "data/test/test.py")
-                .unwrap();
+        let body = multipart::tests::file_data(
+            "application/octet-stream",
+            "test.py",
+            "data/test/test.py",
+            true,
+        )
+        .unwrap();
 
         let value = format!(
             "{}; boundary={}",

@@ -772,20 +772,36 @@ pub async fn update(
         Err(AppError::BadRequest)
     }
 }
-/*
+
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, context::Context, entity::WaspApp, multipart};
+    use crate::{api, app, context::Context, entity::WaspAppInstanceType, multipart};
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
         Router,
     };
+    use chrono::{DateTime, Utc};
     use http_body_util::BodyExt;
+    use serde::{Deserialize, Serialize};
     use sqlx::{Postgres, Transaction};
-    use std::sync::Arc;
+    use std::{collections::HashMap, sync::Arc};
     use tower::ServiceExt;
     use uuid::Uuid;
+
+    #[derive(Clone, Debug, Deserialize, Serialize)]
+    pub struct WaspApp {
+        pub id: Uuid,
+        pub allowed_user_ids: Option<Vec<Uuid>>,
+        pub description: String,
+        pub formatted_name: String,
+        pub instance_type: WaspAppInstanceType,
+        pub is_enabled: bool,
+        pub name: String,
+        pub created_at: DateTime<Utc>,
+        pub deleted_at: Option<DateTime<Utc>>,
+        pub updated_at: DateTime<Utc>,
+    }
 
     pub async fn wasp_apps_cleanup(
         context: Arc<Context>,
@@ -800,7 +816,16 @@ mod tests {
 
     pub async fn wasp_apps_create(router: Router, session_id: Uuid) -> WaspApp {
         let body =
-            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip").unwrap();
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application");
+        fields.insert("name", "test");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -887,7 +912,7 @@ mod tests {
 
         let request = Request::builder()
             .method(http::Method::POST)
-            .uri("/api/v1/ai-services")
+            .uri("/api/v1/wasp-apps")
             .header(
                 http::header::CONTENT_TYPE,
                 mime::MULTIPART_FORM_DATA.as_ref(),
@@ -954,7 +979,16 @@ mod tests {
         let session_id = session_response.id;
 
         let body =
-            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip").unwrap();
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application");
+        fields.insert("name", "test");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -986,169 +1020,6 @@ mod tests {
             &mut transaction,
             &[company_id],
             &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn code_200() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let session_id = session_response.id;
-
-        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
-        let wasp_app_id = wasp_app.id;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/code"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body = String::from_utf8(body.clone()).unwrap();
-
-        assert!(body.contains("doctype html"));
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn code_401() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let session_id = session_response.id;
-
-        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
-        let wasp_app_id = wasp_app.id;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/code"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn code_404() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let session_id = session_response.id;
-
-        let wasp_app_id = "33847746-0030-4964-a496-f75d04499160";
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/code"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::NOT_FOUND);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id],
         )
         .await;
 
@@ -1626,7 +1497,16 @@ mod tests {
         let wasp_app_id = wasp_app.id;
 
         let body =
-            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip").unwrap();
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application 2");
+        fields.insert("name", "test 2");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1767,7 +1647,16 @@ mod tests {
         let session_id = session_response.id;
 
         let body =
-            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip").unwrap();
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application 2");
+        fields.insert("name", "test 2");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1825,7 +1714,16 @@ mod tests {
         let wasp_app_id = "33847746-0030-4964-a496-f75d04499160";
 
         let body =
-            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip").unwrap();
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application 2");
+        fields.insert("name", "test 2");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1863,4 +1761,3 @@ mod tests {
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 }
-*/

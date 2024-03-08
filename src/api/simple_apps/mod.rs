@@ -337,7 +337,8 @@ mod tests {
 
     pub async fn simple_apps_create(router: Router, session_id: Uuid) -> SimpleApp {
         let body =
-            multipart::tests::file_data("text/html", "test.html", "data/test/test.html").unwrap();
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -424,7 +425,7 @@ mod tests {
 
         let request = Request::builder()
             .method(http::Method::POST)
-            .uri("/api/v1/ai-services")
+            .uri("/api/v1/simple-apps")
             .header(
                 http::header::CONTENT_TYPE,
                 mime::MULTIPART_FORM_DATA.as_ref(),
@@ -491,7 +492,8 @@ mod tests {
         let session_id = session_response.id;
 
         let body =
-            multipart::tests::file_data("text/html", "test.html", "data/test/test.html").unwrap();
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1163,7 +1165,8 @@ mod tests {
         let simple_app_id = simple_app.id;
 
         let body =
-            multipart::tests::file_data("text/html", "test.html", "data/test/test.html").unwrap();
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1304,7 +1307,8 @@ mod tests {
         let session_id = session_response.id;
 
         let body =
-            multipart::tests::file_data("text/html", "test.html", "data/test/test.html").unwrap();
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
 
         let value = format!(
             "{}; boundary={}",
@@ -1362,7 +1366,8 @@ mod tests {
         let simple_app_id = "33847746-0030-4964-a496-f75d04499160";
 
         let body =
-            multipart::tests::file_data("text/html", "test.html", "data/test/test.html").unwrap();
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
 
         let value = format!(
             "{}; boundary={}",
