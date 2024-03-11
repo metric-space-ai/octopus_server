@@ -20,6 +20,7 @@ pub struct Config {
     pub port: u16,
     pub test_mode: bool,
     pub wasp_database_url: String,
+    pub web_driver_url: Option<String>,
     pub ws_port: u16,
 }
 
@@ -33,6 +34,7 @@ impl Config {
         port: u16,
         test_mode: bool,
         wasp_database_url: String,
+        web_driver_url: Option<String>,
         ws_port: u16,
     ) -> Self {
         Self {
@@ -43,6 +45,7 @@ impl Config {
             port,
             test_mode,
             wasp_database_url,
+            web_driver_url,
             ws_port,
         }
     }
@@ -215,6 +218,7 @@ pub fn load(args: Args) -> Result<Config> {
     let mut port = 8080;
     let mut test_mode = false;
     let mut wasp_database_url: Option<String> = None;
+    let mut web_driver_url = None;
     let mut ws_port = 8081;
 
     if let Ok(val) = std::env::var("DATABASE_URL") {
@@ -252,6 +256,10 @@ pub fn load(args: Args) -> Result<Config> {
         wasp_database_url = Some(val);
     }
 
+    if let Ok(val) = std::env::var("WEB_DRIVER_URL") {
+        web_driver_url = Some(val);
+    }
+
     let config = Config::new(
         database_url.expect("Unknown database url"),
         parameters,
@@ -260,6 +268,7 @@ pub fn load(args: Args) -> Result<Config> {
         port,
         test_mode,
         wasp_database_url.expect("Unknown wasp database url"),
+        web_driver_url,
         ws_port,
     );
 

@@ -80,6 +80,7 @@ mod parameters;
 mod password_resets;
 mod profile_pictures;
 mod profiles;
+mod scraper;
 mod server_resources;
 mod setup;
 mod simple_apps;
@@ -250,6 +251,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             profile_pictures::delete,
             profile_pictures::update,
             register::register,
+            scraper::scraper,
             server_resources::info,
             setup::info,
             setup::setup,
@@ -302,6 +304,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "profiles", description = "Profiles API."),
             (name = "profile_pictures", description = "Profile pictures API."),
             (name = "register", description = "Register API."),
+            (name = "scraper", description = "Scraper API."),
             (name = "server_resources", description = "Server resources API."),
             (name = "setup", description = "Setup API."),
             (name = "simple_apps", description = "Simple apps API."),
@@ -501,6 +504,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/profiles/:user_id",
             get(profiles::read).put(profiles::update),
         )
+        .route("/api/v1/scraper", get(scraper::scraper))
         .route("/api/v1/server-resources", get(server_resources::info))
         .route("/api/v1/setup", get(setup::info).post(setup::setup))
         .route(

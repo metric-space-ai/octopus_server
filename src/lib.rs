@@ -17,6 +17,7 @@ mod error;
 mod multipart;
 mod parser;
 mod process_manager;
+mod scraper;
 mod server_resources;
 mod session;
 mod wasp_app;

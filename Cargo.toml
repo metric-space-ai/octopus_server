@@ -17,6 +17,7 @@ bytesize = "1.3"
 clap = { version = "4.5", features = ["derive", "env"] }
 chrono = { version = "0.4", features = ["serde"] }
 fake = "2.9"
+fantoccini = "0.20.0-rc.7"
 futures = "0.3"
 futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
 http = "1.1"
