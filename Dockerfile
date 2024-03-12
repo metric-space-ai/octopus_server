@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.3.2-cudnn9-devel-ubuntu22.04 AS chef
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS chef
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -58,7 +58,7 @@ COPY octopus_server /octopus_server/
 WORKDIR /octopus_server
 RUN cargo build --release
 
-FROM nvidia/cuda:12.3.2-cudnn9-devel-ubuntu22.04 AS frontend_builder
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS frontend_builder
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
         curl \
@@ -140,7 +140,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run lint
 RUN npm run build
 
-FROM nvidia/cuda:12.3.2-cudnn9-devel-ubuntu22.04 AS prod
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS prod
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
