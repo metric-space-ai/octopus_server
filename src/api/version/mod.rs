@@ -21,6 +21,7 @@ pub struct VersionInfoResponse {
 )]
 pub async fn info() -> Result<impl IntoResponse, AppError> {
     let version = env!("CARGO_PKG_VERSION").to_string();
+    let version = format!("v{version}");
     let version_info_response = VersionInfoResponse { version };
 
     Ok((StatusCode::OK, Json(version_info_response)).into_response())
