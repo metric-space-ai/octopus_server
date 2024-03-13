@@ -31,3 +31,43 @@ pub async fn scraper(
 
     Ok((StatusCode::OK, result).into_response())
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::app;
+    use axum::{
+        body::Body,
+        http::{self, Request, StatusCode},
+    };
+    use http_body_util::BodyExt;
+    use tower::ServiceExt;
+
+    #[tokio::test]
+    async fn scraper_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/scraper?url=https://octopus-ai.app")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body = String::from_utf8(body).unwrap();
+
+        assert_eq!("", body);
+    }
+}
