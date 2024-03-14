@@ -1,9 +1,14 @@
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS chef
+FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
         build-essential \
+        ca-certificates \
+        cmake \
         curl \
+        g++ \
+        gcc \
         git \
+        libc6-dev \
         libffi-dev \
         libffi8ubuntu1 \
         libgmp-dev \
@@ -12,6 +17,8 @@ RUN apt-get update --fix-missing && \
         libncurses5 \
         librust-openssl-dev \
         libtinfo5 \
+        make \
+        pkg-config \
         wget \
         zlib1g-dev && \
     apt-get clean && \
@@ -41,44 +48,7 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version;
-RUN cargo install cargo-chef
-WORKDIR /octopus_server
-
-FROM chef AS planner
-COPY octopus_server /octopus_server/
-RUN cargo chef prepare --recipe-path recipe.json
-
-FROM chef AS backend_builder
-ARG DATABASE_URL
-RUN cargo install sqlx-cli
-COPY --from=planner /octopus_server/recipe.json recipe.json
-COPY octopus_server/crates /octopus_server/crates
-RUN cargo chef cook --release --recipe-path recipe.json
-COPY octopus_server /octopus_server/
-WORKDIR /octopus_server
-RUN cargo build --release
-
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS go_builder
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        ca-certificates \
-        cmake \
-        git \
-        wget \
-    ; \
-    rm -rf /var/lib/apt/lists/*
 # https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        g++ \
-        gcc \
-        libc6-dev \
-        make \
-        pkg-config \
-    ; \
-    rm -rf /var/lib/apt/lists/*
 ENV PATH /usr/local/go/bin:$PATH
 ENV GOLANG_VERSION 1.22.1
 RUN set -eux; \
@@ -158,23 +128,6 @@ ENV GOTOOLCHAIN=local
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
 RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
-WORKDIR /
-RUN git clone https://github.com/ollama/ollama.git
-WORKDIR /ollama/llm/generate
-ARG CGO_CFLAGS
-RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
-WORKDIR /ollama/
-ENV CGO_ENABLED 1
-ARG GOFLAGS
-RUN go build -trimpath .
-
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS frontend_builder
-RUN apt-get update --fix-missing && \
-    apt-get install -y --no-install-recommends \
-        curl \
-        git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
@@ -238,6 +191,22 @@ RUN set -ex \
     && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
     && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
     && yarn --version
+RUN cargo install cargo-chef
+WORKDIR /octopus_server
+
+FROM octopus_server_base AS octopus_server_planner
+COPY octopus_server /octopus_server/
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM octopus_server_base AS octopus_server_builder
+ARG DATABASE_URL
+RUN cargo install sqlx-cli
+COPY --from=octopus_server_planner /octopus_server/recipe.json recipe.json
+COPY octopus_server/crates /octopus_server/crates
+RUN cargo chef cook --release --recipe-path recipe.json
+COPY octopus_server /octopus_server/
+WORKDIR /octopus_server
+RUN cargo build --release
 ARG NEXT_PUBLIC_BASE_URL
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
@@ -249,75 +218,78 @@ COPY /octopus_client/src src/
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run lint
 RUN npm run build
+WORKDIR /
+RUN git clone https://github.com/ollama/ollama.git
+WORKDIR /ollama/
+RUN git checkout v0.1.29
+WORKDIR /ollama/llm/generate
+ARG CGO_CFLAGS
+RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
+WORKDIR /ollama/
+ENV CGO_ENABLED 1
+ARG GOFLAGS
+RUN go build -trimpath .
 
-FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS prod
+FROM octopus_server_base AS octopus_server_runtime
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+ENV DEBIAN_FRONTEND=noninteractive \
+    DEBCONF_NONINTERACTIVE_SEEN=true
+ENV LANG_WHICH en
+ENV LANG_WHERE US
+ENV ENCODING UTF-8
+ENV LANGUAGE ${LANG_WHICH}_${LANG_WHERE}.${ENCODING}
+ENV LANG ${LANGUAGE}
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
-        build-essential \
-        ca-certificates \
-        cgroup-tools \
-        cmake \
-        curl \
-        g++ \
-        git \
-        libffi-dev \
-        libffi8ubuntu1 \
-        libgmp-dev \
-        libgmp10 \
-        libncurses-dev \
-        libncurses5 \
-        librust-openssl-dev \
-        libtinfo5 \
-        nvidia-utils-535 \
-        procps \
-        wget \
-        zlib1g-dev && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.76.0/bookworm/Dockerfile
-ENV RUSTUP_HOME=/usr/local/rustup \
-    CARGO_HOME=/usr/local/cargo \
-    PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.76.0
-RUN set -eux; \
-    dpkgArch="$(dpkg --print-architecture)"; \
-    case "${dpkgArch##*-}" in \
-        amd64) rustArch='x86_64-unknown-linux-gnu'; rustupSha256='0b2f6c8f85a3d02fde2efc0ced4657869d73fccfce59defb4e8d29233116e6db' ;; \
-        armhf) rustArch='armv7-unknown-linux-gnueabihf'; rustupSha256='f21c44b01678c645d8fbba1e55e4180a01ac5af2d38bcbd14aa665e0d96ed69a' ;; \
-        arm64) rustArch='aarch64-unknown-linux-gnu'; rustupSha256='673e336c81c65e6b16dcdede33f4cc9ed0f08bde1dbe7a935f113605292dc800' ;; \
-        i386) rustArch='i686-unknown-linux-gnu'; rustupSha256='e7b0f47557c1afcd86939b118cbcf7fb95a5d1d917bdd355157b63ca00fc4333' ;; \
-        ppc64el) rustArch='powerpc64le-unknown-linux-gnu'; rustupSha256='1032934fb154ad2d365e02dcf770c6ecfaec6ab2987204c618c21ba841c97b44' ;; \
-        *) echo >&2 "unsupported architecture: ${dpkgArch}"; exit 1 ;; \
-    esac; \
-    url="https://static.rust-lang.org/rustup/archive/1.26.0/${rustArch}/rustup-init"; \
-    wget "$url"; \
-    echo "${rustupSha256} *rustup-init" | sha256sum -c -; \
-    chmod +x rustup-init; \
-    ./rustup-init -y --no-modify-path --profile minimal --default-toolchain $RUST_VERSION --default-host ${rustArch}; \
-    rm rustup-init; \
-    chmod -R a+w $RUSTUP_HOME $CARGO_HOME; \
-    rustup --version; \
-    cargo --version; \
-    rustc --version;
-# https://github.com/ContinuumIO/docker-images/blob/main/miniconda3/debian/Dockerfile
-ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
-RUN apt-get update -q && \
-    apt-get install -q -y --no-install-recommends \
+        acl \
         bzip2 \
-        ca-certificates \
-        git \
+        cgroup-tools \
+        eterm \
+        feh \
+        fluxbox \
+        fonts-ipafont-gothic \
+        fonts-liberation \
+        fonts-noto-color-emoji \
+        fonts-tlwg-loma-otf \
+        fonts-ubuntu \
+        fonts-wqy-zenhei \
+        gnupg2 \
+        hsetroot \
+        jq \
+        language-pack-en \
+        libfontconfig \
+        libfreetype6 \
         libglib2.0-0 \
+        libnss3-tools \
         libsm6 \
         libxext6 \
         libxrender1 \
+        locales \
         mercurial \
+        nvidia-utils-535 \
+        openjdk-11-jre-headless \
         openssh-client \
         procps \
+        pulseaudio \
+        socat \
         subversion \
-        wget \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        sudo \
+        supervisor \
+        tzdata \
+        unzip \
+        x11vnc \
+        x11-utils \
+        xauth \
+        xvfb \
+        xfonts-cyrillic \
+        xfonts-scalable \
+    && locale-gen ${LANGUAGE} \
+    && dpkg-reconfigure --frontend noninteractive locales \
+    && apt-get -qyy autoremove \
+    && apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+# https://github.com/ContinuumIO/docker-images/blob/main/miniconda3/debian/Dockerfile
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH
 CMD [ "/bin/bash" ]
 ARG CONDA_VERSION=py311_24.1.2-0
@@ -345,69 +317,6 @@ RUN set -x && \
     find /opt/conda/ -follow -type f -name '*.a' -delete && \
     find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
     /opt/conda/bin/conda clean -afy
-# https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
-RUN groupadd --gid 1000 node \
-    && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.19.1
-RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
-    && case "${dpkgArch##*-}" in \
-        amd64) ARCH='x64';; \
-        ppc64el) ARCH='ppc64le';; \
-        s390x) ARCH='s390x';; \
-        arm64) ARCH='arm64';; \
-        armhf) ARCH='armv7l';; \
-        i386) ARCH='x86';; \
-        *) echo "unsupported architecture"; exit 1 ;; \
-    esac \
-    && export GNUPGHOME="$(mktemp -d)" \
-    && set -ex \
-    && for key in \
-        4ED778F539E3634C779C87C6D7062848A1AB005C \
-        141F07595B7B3FFE74309A937405533BE57C7D57 \
-        74F12602B6F1C4E913FAA37AD3A89613643B6201 \
-        DD792F5973C6DE52C432CBDAC77ABFA00DDBF2B7 \
-        61FC681DFB92A079F1685E77973F295594EC4689 \
-        8FCCA13FEF1D0C2E91008E09770F7A9A5AE15600 \
-        C4F0DFFF4E8C1A8236409D08E73BC641CC11F4C8 \
-        890C08DB8579162FEE0DF9DB8BEAB4DFCF555EF4 \
-        C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
-        108F52B48DB57BB0CC439B2997B01419BD92F80A \
-        A363A499291CBBC940DD62E41F10027AF002F8B0 \
-    ; do \
-        gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
-        gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
-    done \
-    && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-$ARCH.tar.xz" \
-    && curl -fsSLO --compressed "https://nodejs.org/dist/v$NODE_VERSION/SHASUMS256.txt.asc" \
-    && gpg --batch --decrypt --output SHASUMS256.txt SHASUMS256.txt.asc \
-    && gpgconf --kill all \
-    && rm -rf "$GNUPGHOME" \
-    && grep " node-v$NODE_VERSION-linux-$ARCH.tar.xz\$" SHASUMS256.txt | sha256sum -c - \
-    && tar -xJf "node-v$NODE_VERSION-linux-$ARCH.tar.xz" -C /usr/local --strip-components=1 --no-same-owner \
-    && rm "node-v$NODE_VERSION-linux-$ARCH.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt \
-    && ln -s /usr/local/bin/node /usr/local/bin/nodejs \
-    && node --version \
-    && npm --version
-ENV YARN_VERSION 1.22.19
-RUN set -ex \
-    && export GNUPGHOME="$(mktemp -d)" \
-    && for key in \
-        6A010C5166006599AA17F08146C2130DFD2497F5 \
-    ; do \
-        gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
-        gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
-    done \
-    && curl -fsSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz" \
-    && curl -fsSLO --compressed "https://yarnpkg.com/downloads/$YARN_VERSION/yarn-v$YARN_VERSION.tar.gz.asc" \
-    && gpg --batch --verify yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
-    && gpgconf --kill all \
-    && rm -rf "$GNUPGHOME" \
-    && mkdir -p /opt \
-    && tar -xzf yarn-v$YARN_VERSION.tar.gz -C /opt/ \
-    && ln -s /opt/yarn-v$YARN_VERSION/bin/yarn /usr/local/bin/yarn \
-    && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
-    && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
-    && yarn --version
 
 ENV SE_EVENT_BUS_HOST=localhost
 ENV SE_EVENT_BUS_PUBLISH_PORT=4442
@@ -425,29 +334,7 @@ ARG SEL_PASSWD=secret
 ARG UID=1200
 ARG GID=1201
 USER root
-RUN  echo "deb http://archive.ubuntu.com/ubuntu jammy main universe\n" > /etc/apt/sources.list \
-    && echo "deb http://archive.ubuntu.com/ubuntu jammy-updates main universe\n" >> /etc/apt/sources.list \
-    && echo "deb http://security.ubuntu.com/ubuntu jammy-security main universe\n" >> /etc/apt/sources.list
-ENV DEBIAN_FRONTEND=noninteractive \
-    DEBCONF_NONINTERACTIVE_SEEN=true
-RUN apt-get -qqy update \
-    && apt-get upgrade -yq \
-    && apt-get -qqy --no-install-recommends install \
-        acl \
-        bzip2 \
-        ca-certificates \
-        openjdk-11-jre-headless \
-        tzdata \
-        sudo \
-        unzip \
-        wget \
-        jq \
-        curl \
-        supervisor \
-        gnupg2 \
-        libnss3-tools \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/* \
-    && sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' ./usr/lib/jvm/java-11-openjdk-amd64/conf/security/java.security
+RUN sed -i 's/securerandom\.source=file:\/dev\/random/securerandom\.source=file:\/dev\/urandom/' /usr/lib/jvm/java-11-openjdk-amd64/conf/security/java.security
 ENV TZ "UTC"
 RUN ln -fs /usr/share/zoneinfo/${TZ} /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata && \
@@ -500,9 +387,6 @@ RUN echo 'if [[ $(ulimit -n) -gt 200000 ]]; then echo "WARNING: Very high value 
 
 # https://github.com/SeleniumHQ/docker-selenium/blob/trunk/NodeDocker/Dockerfile
 USER root
-RUN apt-get update -qqy \
-    && apt-get -qqy --no-install-recommends install socat \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 USER ${SEL_UID}
 EXPOSE 4444
 COPY --chown="${SEL_UID}:${SEL_GID}" octopus_server/selenium/start-selenium-grid-docker.sh \
@@ -516,49 +400,6 @@ ENV SE_OTEL_SERVICE_NAME "selenium-node-docker"
 ARG NOVNC_VERSION="1.4.0"
 ARG WEBSOCKIFY_VERSION="0.11.0"
 USER root
-RUN apt-get update -qqy \
-    && apt-get -qqy --no-install-recommends install \
-        xvfb \
-        xauth \
-        pulseaudio \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-ENV LANG_WHICH en
-ENV LANG_WHERE US
-ENV ENCODING UTF-8
-ENV LANGUAGE ${LANG_WHICH}_${LANG_WHERE}.${ENCODING}
-ENV LANG ${LANGUAGE}
-RUN apt-get -qqy update \
-    && apt-get -qqy --no-install-recommends install \
-        language-pack-en \
-        tzdata \
-        locales \
-    && locale-gen ${LANGUAGE} \
-    && dpkg-reconfigure --frontend noninteractive locales \
-    && apt-get -qyy autoremove \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get -qyy clean
-RUN apt-get update -qqy \
-    && apt-get -qqy --no-install-recommends install \
-    x11vnc x11-utils \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-RUN apt-get update -qqy \
-    && apt-get -qqy --no-install-recommends install \
-        fluxbox eterm hsetroot feh \
-    && rm -rf /var/lib/apt/lists/* /var/cache/apt/*
-RUN apt-get -qqy update \
-    && apt-get -qqy --no-install-recommends install \
-        libfontconfig \
-        libfreetype6 \
-        xfonts-cyrillic \
-        xfonts-scalable \
-        fonts-liberation \
-        fonts-ipafont-gothic \
-        fonts-wqy-zenhei \
-        fonts-tlwg-loma-otf \
-        fonts-ubuntu \
-        fonts-noto-color-emoji \
-    && rm -rf /var/lib/apt/lists/* \
-    && apt-get -qyy clean
 RUN wget -nv -O noVNC.zip \
         "https://github.com/novnc/noVNC/archive/refs/tags/v${NOVNC_VERSION}.zip" \
     && unzip -x noVNC.zip \
@@ -647,101 +488,6 @@ ENV SE_OTEL_SERVICE_NAME "selenium-node-chrome"
 ENV HOME=/root
 USER root
 
-# https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
-RUN set -eux; \
-    apt-get update; \
-    apt-get install -y --no-install-recommends \
-        g++ \
-        gcc \
-        libc6-dev \
-        make \
-        pkg-config \
-    ; \
-    rm -rf /var/lib/apt/lists/*
-ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.1
-RUN set -eux; \
-    arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
-    url=; \
-    case "$arch" in \
-        'amd64') \
-            url='https://dl.google.com/go/go1.22.1.linux-amd64.tar.gz'; \
-            sha256='aab8e15785c997ae20f9c88422ee35d962c4562212bb0f879d052a35c8307c7f'; \
-            ;; \
-        'armhf') \
-            url='https://dl.google.com/go/go1.22.1.linux-armv6l.tar.gz'; \
-            sha256='8cb7a90e48c20daed39a6ac8b8a40760030ba5e93c12274c42191d868687c281'; \
-            ;; \
-        'arm64') \
-            url='https://dl.google.com/go/go1.22.1.linux-arm64.tar.gz'; \
-            sha256='e56685a245b6a0c592fc4a55f0b7803af5b3f827aaa29feab1f40e491acf35b8'; \
-            ;; \
-        'i386') \
-            url='https://dl.google.com/go/go1.22.1.linux-386.tar.gz'; \
-            sha256='8484df36d3d40139eaf0fe5e647b006435d826cc12f9ae72973bf7ec265e0ae4'; \
-            ;; \
-        'mips64el') \
-            url='https://dl.google.com/go/go1.22.1.linux-mips64le.tar.gz'; \
-            sha256='a52386492ee3147d37f7dd80b7b5d41252bc4dbb0e28ce29e730dd095848caa8'; \
-            ;; \
-        'ppc64el') \
-            url='https://dl.google.com/go/go1.22.1.linux-ppc64le.tar.gz'; \
-            sha256='ac775e19d93cc1668999b77cfe8c8964abfbc658718feccfe6e0eb87663cd668'; \
-            ;; \
-        'riscv64') \
-            url='https://dl.google.com/go/go1.22.1.linux-riscv64.tar.gz'; \
-            sha256='77f7c8d2a8ea10c413c1f86c1c42001cd98bf428239cabceda2cdaff2cf29330'; \
-            ;; \
-        's390x') \
-            url='https://dl.google.com/go/go1.22.1.linux-s390x.tar.gz'; \
-            sha256='7bb7dd8e10f95c9a4cc4f6bef44c816a6e7c9e03f56ac6af6efbb082b19b379f'; \
-            ;; \
-        *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
-    esac; \
-    \
-    wget -O go.tgz.asc "$url.asc"; \
-    wget -O go.tgz "$url" --progress=dot:giga; \
-    echo "$sha256 *go.tgz" | sha256sum -c -; \
-    \
-    GNUPGHOME="$(mktemp -d)"; export GNUPGHOME; \
-    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys 'EB4C 1BFD 4F04 2F6D DDCC  EC91 7721 F63B D38B 4796'; \
-    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys '2F52 8D36 D67B 69ED F998  D857 78BD 6547 3CB3 BD13'; \
-    gpg --batch --verify go.tgz.asc go.tgz; \
-    gpgconf --kill all; \
-    rm -rf "$GNUPGHOME" go.tgz.asc; \
-    \
-    tar -C /usr/local -xzf go.tgz; \
-    rm go.tgz; \
-    \
-    SOURCE_DATE_EPOCH="$(stat -c '%Y' /usr/local/go)"; \
-    export SOURCE_DATE_EPOCH; \
-    date --date "@$SOURCE_DATE_EPOCH" --rfc-2822; \
-    \
-    if [ "$arch" = 'armhf' ]; then \
-        [ -s /usr/local/go/go.env ]; \
-        before="$(go env GOARM)"; [ "$before" != '7' ]; \
-        { \
-            echo; \
-            echo '# https://github.com/docker-library/golang/issues/494'; \
-            echo 'GOARM=7'; \
-        } >> /usr/local/go/go.env; \
-        after="$(go env GOARM)"; [ "$after" = '7' ]; \
-        date="$(date -d "@$SOURCE_DATE_EPOCH" '+%Y%m%d%H%M.%S')"; \
-        touch -t "$date" /usr/local/go/go.env /usr/local/go; \
-    fi; \
-    \
-    go version; \
-    epoch="$(stat -c '%Y' /usr/local/go)"; \
-    [ "$SOURCE_DATE_EPOCH" = "$epoch" ]
-ENV GOTOOLCHAIN=local
-ENV GOPATH /go
-ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
-RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
-
-COPY --from=go_builder /ollama/ollama /bin/ollama
-ENV OLLAMA_HOST 0.0.0.0
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
-
 ARG AZURE_OPENAI_API_KEY
 ARG AZURE_OPENAI_DEPLOYMENT_ID
 ARG AZURE_OPENAI_ENABLED
@@ -779,6 +525,9 @@ RUN ./run build
 RUN ./run install
 ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
+COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
+ENV OLLAMA_HOST 0.0.0.0
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 WORKDIR /wasp_mage
 COPY octopus_server/wasp_mage /wasp_mage
 WORKDIR /octopus_client
@@ -788,13 +537,13 @@ COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.
 COPY /octopus_client/public public/
 COPY /octopus_client/src src/
 WORKDIR /octopus_server
-COPY --from=backend_builder /usr/local/cargo/bin/cargo-sqlx ./
-COPY --from=backend_builder /usr/local/cargo/bin/sqlx ./
-COPY --from=backend_builder /octopus_server/target/release/octopus_server ./
-COPY --from=backend_builder /octopus_server/migrations ./migrations
-COPY --from=backend_builder /octopus_server/docker-entrypoint.sh ./
-COPY --from=backend_builder /octopus_server/frontend-start.sh ./
-COPY --from=backend_builder /octopus_server/wasp-mage-start.sh ./
+COPY --from=octopus_server_builder /usr/local/cargo/bin/cargo-sqlx ./
+COPY --from=octopus_server_builder /usr/local/cargo/bin/sqlx ./
+COPY --from=octopus_server_builder /octopus_server/target/release/octopus_server ./
+COPY --from=octopus_server_builder /octopus_server/migrations ./migrations
+COPY --from=octopus_server_builder /octopus_server/docker-entrypoint.sh ./
+COPY --from=octopus_server_builder /octopus_server/frontend-start.sh ./
+COPY --from=octopus_server_builder /octopus_server/wasp-mage-start.sh ./
 RUN chmod +x docker-entrypoint.sh && \
     chmod +x frontend-start.sh && \
     chmod +x wasp-mage-start.sh && \
