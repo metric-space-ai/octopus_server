@@ -1,21 +1,17 @@
 import {
   RegisterZipDownload,
   StartGeneratingNewApp,
-  CreateFeedback,
-  DeleteMyself,
 } from "@wasp/actions/types";
 import {
   GetAppGenerationResult,
   GetStats,
   GetProjects,
-  GetFeedback,
   GetNumProjects,
-  GetProjectsByUser,
 } from "@wasp/queries/types";
 import HttpError from "@wasp/core/HttpError.js";
 import { checkPendingAppsJob } from "@wasp/jobs/checkPendingAppsJob.js";
 import { getNowInUTC } from "./utils.js";
-import type { Project, User } from "@wasp/entities";
+import type { Project } from "@wasp/entities";
 import type { Prisma } from "@prisma/client";
 import { generateLast24HoursData, generateLast30DaysData } from "./stats.js";
 
@@ -50,11 +46,6 @@ export const startGeneratingNewApp: StartGeneratingNewApp<
       authMethod: args.appAuthMethod,
       creativityLevel: args.appCreativityLevel,
       referrer: args.referrer,
-      user: {
-        connect: {
-          id: 1,
-        },
-      },
     },
   });
 
@@ -83,27 +74,6 @@ export const registerZipDownload: RegisterZipDownload<{
       throw e;
     }
   }
-};
-
-export const createFeedback: CreateFeedback<{
-  score: number;
-  message: string;
-  projectId: string;
-}> = async (args, context) => {
-  if (!args.score) {
-    throw new HttpError(422, "Score is required.");
-  }
-  if (!args.message) {
-    throw new HttpError(422, "Message is required.");
-  }
-
-  const feedback = await context.entities.Feedback.create({
-    data: {
-      score: args.score,
-      message: args.message,
-      projectId: args.projectId,
-    },
-  });
 };
 
 export const getAppGenerationResult = (async (args, context) => {
@@ -147,37 +117,8 @@ export const getAppGenerationResult = (async (args, context) => {
   appId: string;
 }>;
 
-export const getFeedback = (async (args, context) => {
-  // TODO(matija): extract this, since it's used at multiple locations?
-  const emailsWhitelist = process.env.ADMIN_EMAILS_WHITELIST?.split(",") || [];
-  if (!context.user || !emailsWhitelist.includes(context.user.username)) {
-    throw new HttpError(401, "Only admins can access stats.");
-  }
-
-  const feedbackEntries = await context.entities.Feedback.findMany({
-    orderBy: {
-      createdAt: "desc",
-    },
-    include: {
-      project: {
-        select: {
-          name: true,
-          description: true,
-        },
-      },
-    },
-  });
-
-  return {
-    feedbackEntries,
-  };
-}) satisfies GetFeedback<{}>;
-
 export const getProjects = (async (_args, context) => {
   const emailsWhitelist = process.env.ADMIN_EMAILS_WHITELIST?.split(",") || [];
-  if (!context.user || !emailsWhitelist.includes(context.user.username)) {
-    throw new HttpError(401, "Only admins can access stats.");
-  }
 
   const { Project } = context.entities;
 
@@ -216,11 +157,6 @@ export const getProjects = (async (_args, context) => {
       status: true,
       referrer: true,
       zipDownloadedAt: true,
-      user: {
-        select: {
-          username: true,
-        },
-      },
     },
     take: 1000,
   });
@@ -233,9 +169,6 @@ export const getProjects = (async (_args, context) => {
 
 export const getStats = (async (args, context) => {
   const emailsWhitelist = process.env.ADMIN_EMAILS_WHITELIST?.split(",") || [];
-  if (!context.user || !emailsWhitelist.includes(context.user.username)) {
-    throw new HttpError(401, "Only admins can access stats.");
-  }
 
   const { Project } = context.entities;
 
@@ -307,65 +240,3 @@ export const getNumProjects = (async (_args, context) => {
   return context.entities.Project.count();
 }) satisfies GetNumProjects<{}>;
 
-export const getProjectsByUser: GetProjectsByUser<void, Project[]> = async (_args, context) => {
-  if (!context.user) {
-    throw new HttpError(401, "Not authorized");
-  }
-  return await context.entities.Project.findMany({
-    where: {
-      user: {
-        id: context.user.id,
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-};
-
-export const deleteMyself: DeleteMyself<void, User> = async (args, context) => {
-  if (!context.user) {
-    throw new HttpError(401, "Not authorized");
-  }
-  try {
-    await context.entities.Log.deleteMany({
-      where: {
-        project: {
-          user: {
-            id: context.user.id,
-          },
-        },
-      },
-    });
-    await context.entities.File.deleteMany({
-      where: {
-        project: {
-          user: {
-            id: context.user.id,
-          },
-        },
-      },
-    });
-    await context.entities.Project.updateMany({
-      where: {
-        user: {
-          id: context.user.id,
-        },
-      },
-      data: {
-        zipDownloadedAt: undefined,
-        name: "Deleted project",
-        description: "Deleted project",
-        status: "deleted",
-      },
-    });
-    return await context.entities.User.delete({
-      where: {
-        id: context.user.id,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    throw new HttpError(500, "Error deleting user");
-  }
-};

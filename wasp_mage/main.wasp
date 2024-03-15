@@ -33,54 +33,15 @@ app waspAi {
     ("@visx/axis", "3.2.0"),
     ("js-confetti", "0.11.0")
   ],
-  client: {
-    rootComponent: import { RootComponent } from "@client/RootComponent.jsx",
-  },
   db: {
     system: PostgreSQL
   },
-  auth: {
-    userEntity: User,
-    methods: {
-      usernameAndPassword: {},
-    },
-    onAuthFailedRedirectTo: "/",
-    onAuthSucceededRedirectTo: "/"
-  }
 }
+
 
 route RootRoute { path: "/", to: MainPage }
 page MainPage {
-  component: import Main from "@client/pages/MainPage.jsx",
-  authRequired: false,
-}
-
-route ResultRoute { path: "/result/:appId", to: ResultPage }
-page ResultPage {
-  component: import { ResultPage } from "@client/pages/ResultPage.jsx"
-}
-
-route UserRoute { path: "/user", to: UserPage }
-page UserPage {
-  component: import { UserPage } from "@client/pages/UserPage.jsx",
-  authRequired: false,
-}
-
-route StatsRoute { path: "/stats", to: StatsPage }
-page StatsPage {
-  component: import { Stats } from "@client/pages/StatsPage.jsx",
-  authRequired: false,
-}
-
-route FeedbackRoute { path: "/feedback", to: FeedbackPage }
-page FeedbackPage {
-  component: import { Feedback } from "@client/pages/FeedbackPage.jsx",
-  authRequired: false,
-}
-
-route LoginRoute { path: "/login", to: LoginPage }
-page LoginPage {
-  component: import { LoginPage } from "@client/pages/LoginPage.jsx",
+  component: import Main from "@client/MainPage.tsx"
 }
 
 action startGeneratingNewApp {
@@ -95,25 +56,6 @@ action registerZipDownload {
   entities: [Project]
 }
 
-action createFeedback {
-  fn: import { createFeedback } from "@server/operations.js",
-  entities: [Feedback]
-}
-
-action deleteMyself {
-  fn: import { deleteMyself } from "@server/operations.js",
-  entities: [User, Project, File, Log]
-}
-
-query getFeedback {
-  fn: import { getFeedback } from "@server/operations.js",
-  entities: [Feedback]
-}
-
-query getProjectsByUser {
-  fn: import { getProjectsByUser } from "@server/operations.js",
-  entities: [Project]
-}
 
 
 query getAppGenerationResult {
@@ -144,25 +86,6 @@ query getNumProjects {
   ]
 }
 
-entity User {=psl
-  id Int @id @default(autoincrement())
-
-  username String @unique
-  password String
-  externalAuthAssociations SocialLogin[]
-  projects Project[]
-psl=}
-
-entity SocialLogin {=psl
-  id String @id @default(uuid())
-
-  provider String
-  providerId String
-
-  userId Int
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-psl=}
 
 entity Project {=psl
   id String @id @default(uuid())
@@ -175,21 +98,8 @@ entity Project {=psl
   status String @default("pending")
   referrer String @default("unknown")
   zipDownloadedAt DateTime?
-  userId Int?
-  user User? @relation(fields: [userId], references: [id])
   files File[]
   logs Log[]
-  feedbacks Feedback[]
-psl=}
-
-entity Feedback {=psl
-  id String @id @default(uuid())
-  score Int
-  message String
-  createdAt DateTime @default(now())
-
-  projectId String
-  project Project @relation(fields: [projectId], references: [id])
 psl=}
 
 entity File {=psl
