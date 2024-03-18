@@ -7,11 +7,11 @@ use crate::{
 use axum::{
     extract::{Path, State},
     http::StatusCode,
-    response::IntoResponse,
+    response::{Html, IntoResponse},
     Json,
 };
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{fs::read_to_string, sync::Arc};
 use utoipa::IntoParams;
 use uuid::Uuid;
 
@@ -183,6 +183,63 @@ pub async fn read(
     }
 
     Ok((StatusCode::OK, Json(chat_message_file)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id/render-html",
+    responses(
+        (status = 200, description = "Chat message file read render html.", body = String),
+        (status = 404, description = "Chat message file not found.", body = ResponseError),
+    ),
+    params(
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+        ("chat_message_file_id" = String, Path, description = "Chat message file id")
+    ),
+    security()
+)]
+pub async fn read_render_html(
+    State(context): State<Arc<Context>>,
+    Path(Params {
+        chat_message_id,
+        chat_message_file_id,
+    }): Path<Params>,
+) -> Result<impl IntoResponse, AppError> {
+    let chat_message_file = context
+        .octopus_database
+        .try_get_chat_message_file_by_id(chat_message_file_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message_id != chat_message_file.chat_message_id {
+        return Err(AppError::Forbidden);
+    }
+
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_file.chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let chat_message_files = context
+        .octopus_database
+        .get_chat_message_files_by_chat_message_id(chat_message.id)
+        .await?;
+
+    let file_name = format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
+    let mut content = read_to_string(file_name)?;
+
+    for chat_message_file in chat_message_files {
+        if let Some(original_file_name) = chat_message_file.original_file_name {
+            if content.contains(&original_file_name) {
+                let new_file_name = format!("/{PUBLIC_DIR}/{}", chat_message_file.file_name);
+                content = content.replace(&original_file_name, &new_file_name);
+            }
+        }
+    }
+
+    Ok((StatusCode::OK, Html(content)).into_response())
 }
 
 #[cfg(test)]

@@ -44,12 +44,12 @@ pub struct AiFunctionTextResponse {
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct ResponseText {
-    pub file_attachements: Option<Vec<FileAttachementResponse>>,
+    pub file_attachments: Option<Vec<FileAttachmentResponse>>,
     pub response: Option<TextResponse>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
-pub struct FileAttachementResponse {
+pub struct FileAttachmentResponse {
     pub content: String,
     pub file_name: String,
     pub media_type: String,
@@ -116,6 +116,8 @@ pub async fn function_call(
         if response.status() == StatusCode::CREATED {
             let ai_function_response = match ai_function.response_content_type {
                 AiFunctionResponseContentType::ApplicationJson => {
+                    let mut ai_function_responses = vec![];
+
                     let response_text = response.text().await?;
                     let response: ResponseText = serde_json::from_str(&response_text)?;
 
@@ -126,24 +128,25 @@ pub async fn function_call(
                             Some(string)
                         }
                         Some(TextResponse::String(string)) => Some(string),
-                        None => Some(response_text),
+                        None => None,
                     };
 
-                    let ai_function_text_response = AiFunctionTextResponse {
-                        response: response_str,
-                    };
+                    if let Some(response_str) = response_str {
+                        let ai_function_text_response = AiFunctionTextResponse {
+                            response: Some(response_str),
+                        };
 
-                    let mut ai_function_responses = vec![];
+                        let ai_function_response =
+                            AiFunctionResponse::Text(ai_function_text_response);
+                        ai_function_responses.push(ai_function_response);
+                    }
 
-                    let ai_function_response = AiFunctionResponse::Text(ai_function_text_response);
-                    ai_function_responses.push(ai_function_response);
-
-                    if let Some(file_attachements) = response.file_attachements {
-                        for file_attachement in file_attachements {
+                    if let Some(file_attachments) = response.file_attachments {
+                        for file_attachment in file_attachments {
                             let ai_function_file_response = AiFunctionFileResponse {
-                                content: file_attachement.content,
-                                media_type: file_attachement.media_type,
-                                original_file_name: Some(file_attachement.file_name),
+                                content: file_attachment.content,
+                                media_type: file_attachment.media_type,
+                                original_file_name: Some(file_attachment.file_name),
                             };
                             let ai_function_response =
                                 AiFunctionResponse::File(ai_function_file_response);
@@ -266,29 +269,61 @@ pub async fn update_chat_message(
                 )
                 .await?;
 
+            let mut data = None;
+
             let engine =
                 engine::GeneralPurpose::new(&alphabet::URL_SAFE, engine::general_purpose::PAD);
-            let data = engine.decode(ai_function_file_response.content.clone())?;
+            let result = engine.decode(ai_function_file_response.content.clone());
 
-            let kind = infer::get(&data).ok_or(AppError::File)?;
-            let extension = kind.extension();
+            if let Ok(result) = result {
+                data = Some(result);
+            }
 
-            let file_name = format!("{}.{}", Uuid::new_v4(), extension);
-            let path = format!("{PUBLIC_DIR}/{file_name}");
+            if data.is_none() {
+                let engine =
+                    engine::GeneralPurpose::new(&alphabet::STANDARD, engine::general_purpose::PAD);
+                let result = engine.decode(ai_function_file_response.content.clone());
 
-            let mut file = File::create(path)?;
-            file.write_all(&data)?;
+                if let Ok(result) = result {
+                    data = Some(result);
+                }
+            }
 
-            context
-                .octopus_database
-                .insert_chat_message_file(
-                    &mut transaction,
-                    chat_message.id,
-                    &file_name,
-                    &ai_function_file_response.media_type,
-                    None,
-                )
-                .await?;
+            if let Some(data) = data {
+                let mut extension = None;
+                let kind = infer::get(&data).ok_or(AppError::File);
+                if let Ok(kind) = kind {
+                    extension = Some(kind.extension());
+                }
+
+                if extension.is_none()
+                    && data.len() >= 4
+                    && data[0] == 103
+                    && data[1] == 108
+                    && data[2] == 84
+                    && data[3] == 70
+                {
+                    extension = Some("glb");
+                }
+
+                if let Some(extension) = extension {
+                    let file_name = format!("{}.{}", Uuid::new_v4(), extension);
+                    let path = format!("{PUBLIC_DIR}/{file_name}");
+                    let mut file = File::create(path)?;
+                    file.write_all(&data)?;
+
+                    context
+                        .octopus_database
+                        .insert_chat_message_file(
+                            &mut transaction,
+                            chat_message.id,
+                            &file_name,
+                            &ai_function_file_response.media_type,
+                            ai_function_file_response.original_file_name.clone(),
+                        )
+                        .await?;
+                }
+            }
 
             context
                 .octopus_database
