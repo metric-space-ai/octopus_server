@@ -207,6 +207,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             chat_message_files::delete,
             chat_message_files::list,
             chat_message_files::read,
+            chat_message_files::read_render_html,
             chat_message_pictures::create,
             chat_message_pictures::delete,
             chat_message_pictures::read,
@@ -420,6 +421,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
             delete(chat_message_files::delete).get(chat_message_files::read),
+        )
+        .route(
+            "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id/render-html",
+            get(chat_message_files::read_render_html),
         )
         .route(
             "/api/v1/chat-message-pictures/:chat_message_id",
