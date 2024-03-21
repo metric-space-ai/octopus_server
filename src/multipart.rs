@@ -48,7 +48,7 @@ pub mod tests {
             ));
             data.push_str("\r\n");
 
-            data.push_str(&format!("{value}"));
+            data.push_str(&value.to_string());
 
             data.push_str("\r\n");
         }

@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status AS \"status: _\", version, created_at, deleted_at, updated_at\n            FROM wasp_generators\n            WHERE user_id = $1\n            AND deleted_at IS NULL",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "wasp_app_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "api_access_secret",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "api_access_url",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "code",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "log",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "status: _",
+        "type_info": {
+          "Custom": {
+            "name": "wasp_generator_statuses",
+            "kind": {
+              "Enum": [
+                "changed",
+                "generated",
+                "generating",
+                "initial"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "fd43da60243af7b9c903f4b2aee9efb1b8959672b5c42f4fbdc403080b708c6b"
+}

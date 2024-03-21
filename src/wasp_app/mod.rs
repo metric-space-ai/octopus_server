@@ -16,13 +16,15 @@ use tokio::time::{sleep, Duration};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use uuid::Uuid;
 
+pub mod generator;
+
 pub const BASE_WASP_APP_URL: &str = "http://127.0.0.1";
 pub const BASE_WASP_APP_WS_URL: &str = "ws://127.0.0.1";
 
 #[allow(clippy::too_many_arguments)]
 pub async fn request(
     context: Arc<Context>,
-    chat_message_id: Uuid,
+    chat_message_id: Option<Uuid>,
     pass: Option<String>,
     port: i32,
     proxy_url: &str,
@@ -30,7 +32,8 @@ pub async fn request(
     server_port: i32,
     uri_append: Option<&str>,
     warmed_up: bool,
-    wasp_app_id: Uuid,
+    wasp_app_id: Option<Uuid>,
+    wasp_generator_id: Option<Uuid>,
 ) -> Result<Response> {
     let url = match pass.clone() {
         None => match uri_append {
@@ -45,7 +48,20 @@ pub async fn request(
 
     let server_url_to_replace = format!("http://127.0.0.1:{server_port}");
     let octopus_url = context.get_config().await?.get_parameter_octopus_api_url();
-    let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
+    let server_path = if wasp_app_id.is_some() && chat_message_id.is_some() {
+        format!(
+            "/api/v1/wasp-apps/{}/{}/proxy-backend/",
+            wasp_app_id.ok_or(AppError::BadRequest)?,
+            chat_message_id.ok_or(AppError::BadRequest)?
+        )
+    } else if wasp_generator_id.is_some() {
+        format!(
+            "/api/v1/wasp-generators/{}/proxy-backend/",
+            wasp_generator_id.ok_or(AppError::BadRequest)?
+        )
+    } else {
+        String::new()
+    };
     let server_url = match octopus_url.clone() {
         None => String::new(),
         Some(server_url) => {
@@ -55,7 +71,20 @@ pub async fn request(
 
     let server_ws_url_to_replace = format!("localhost:{port}/");
     let octopus_ws_url = context.get_config().await?.get_parameter_octopus_ws_url();
-    let server_path = format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/proxy-backend/");
+    let server_path = if wasp_app_id.is_some() && chat_message_id.is_some() {
+        format!(
+            "/api/v1/wasp-apps/{}/{}/proxy-backend/",
+            wasp_app_id.ok_or(AppError::BadRequest)?,
+            chat_message_id.ok_or(AppError::BadRequest)?
+        )
+    } else if wasp_generator_id.is_some() {
+        format!(
+            "/api/v1/wasp-generators/{}/proxy-backend/",
+            wasp_generator_id.ok_or(AppError::BadRequest)?
+        )
+    } else {
+        String::new()
+    };
     let server_ws_url = match octopus_ws_url {
         None => String::new(),
         Some(server_ws_url) => {
@@ -128,9 +157,37 @@ pub async fn request(
     tracing::info!("CONTENT_TYPE = {:?}", content_type);
 
     let url_prefix = match pass.clone() {
-        None => format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"),
+        None => {
+            if wasp_app_id.is_some() && chat_message_id.is_some() {
+                format!(
+                    "/api/v1/wasp-apps/{}/{}/{proxy_url}",
+                    wasp_app_id.ok_or(AppError::BadRequest)?,
+                    chat_message_id.ok_or(AppError::BadRequest)?
+                )
+            } else if wasp_generator_id.is_some() {
+                format!(
+                    "/api/v1/wasp-generators/{}/{proxy_url}",
+                    wasp_generator_id.ok_or(AppError::BadRequest)?
+                )
+            } else {
+                String::new()
+            }
+        }
         Some(pass) => {
-            format!("/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
+            if wasp_app_id.is_some() && chat_message_id.is_some() {
+                format!(
+                    "/api/v1/wasp-apps/{}/{}/{proxy_url}/:{pass}",
+                    wasp_app_id.ok_or(AppError::BadRequest)?,
+                    chat_message_id.ok_or(AppError::BadRequest)?
+                )
+            } else if wasp_generator_id.is_some() {
+                format!(
+                    "/api/v1/wasp-generators/{}/{proxy_url}/:{pass}",
+                    wasp_generator_id.ok_or(AppError::BadRequest)?
+                )
+            } else {
+                String::new()
+            }
         }
     };
 
@@ -140,11 +197,37 @@ pub async fn request(
     };
 
     let html_url_prefix = match pass {
-        None => format!(
-            "{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}"
-        ),
+        None => {
+            if wasp_app_id.is_some() && chat_message_id.is_some() {
+                format!(
+                    "{html_server_url}/api/v1/wasp-apps/{}/{}/{proxy_url}",
+                    wasp_app_id.ok_or(AppError::BadRequest)?,
+                    chat_message_id.ok_or(AppError::BadRequest)?
+                )
+            } else if wasp_generator_id.is_some() {
+                format!(
+                    "{html_server_url}/api/v1/wasp-generators/{}/{proxy_url}",
+                    wasp_generator_id.ok_or(AppError::BadRequest)?
+                )
+            } else {
+                String::new()
+            }
+        }
         Some(pass) => {
-            format!("{html_server_url}/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/{proxy_url}/:{pass}")
+            if wasp_app_id.is_some() && chat_message_id.is_some() {
+                format!(
+                    "{html_server_url}/api/v1/wasp-apps/{}/{}/{proxy_url}/:{pass}",
+                    wasp_app_id.ok_or(AppError::BadRequest)?,
+                    chat_message_id.ok_or(AppError::BadRequest)?
+                )
+            } else if wasp_generator_id.is_some() {
+                format!(
+                    "{html_server_url}/api/v1/wasp-generators/{}/{proxy_url}/:{pass}",
+                    wasp_generator_id.ok_or(AppError::BadRequest)?
+                )
+            } else {
+                String::new()
+            }
         }
     };
 

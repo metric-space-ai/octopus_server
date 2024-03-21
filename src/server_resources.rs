@@ -61,7 +61,7 @@ pub fn get() -> Result<ServerResources> {
         for (i, line) in nvidia_smi_list.lines().enumerate() {
             let mut name = String::new();
             let mut id = String::new();
-            for line in line.to_string().split('(') {
+            for line in line.split('(') {
                 if line.starts_with("GPU") {
                     name = if line.ends_with(' ') {
                         line.to_string()

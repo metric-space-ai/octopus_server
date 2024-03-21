@@ -100,7 +100,6 @@ pub async fn create(
         let extension = (*field
             .file_name()
             .ok_or(AppError::File)?
-            .to_string()
             .split('.')
             .collect::<Vec<&str>>()
             .last()
@@ -109,7 +108,6 @@ pub async fn create(
         let content_image = (*field
             .content_type()
             .ok_or(AppError::File)?
-            .to_string()
             .split('/')
             .collect::<Vec<&str>>()
             .first()
@@ -366,7 +364,6 @@ pub async fn update(
         let extension = (*field
             .file_name()
             .ok_or(AppError::File)?
-            .to_string()
             .split('.')
             .collect::<Vec<&str>>()
             .last()
@@ -375,7 +372,6 @@ pub async fn update(
         let content_image = (*field
             .content_type()
             .ok_or(AppError::File)?
-            .to_string()
             .split('/')
             .collect::<Vec<&str>>()
             .first()

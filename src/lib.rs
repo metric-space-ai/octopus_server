@@ -27,6 +27,7 @@ type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 pub const PUBLIC_DIR: &str = "public";
 pub const SERVICES_DIR: &str = "services";
 pub const WASP_APPS_DIR: &str = "wasp_apps";
+pub const WASP_GENERATOR_DIR: &str = "wasp_generator";
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]

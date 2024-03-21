@@ -29,7 +29,6 @@ pub enum AppError {
     Generic(Box<dyn Error + Send + Sync>),
     Gone,
     Header(ToStrError),
-    HeaderToStr(reqwest::header::ToStrError),
     Io(std::io::Error),
     Json(serde_json::Error),
     Multipart(MultipartError),
@@ -75,7 +74,6 @@ impl IntoResponse for AppError {
             }
             AppError::Gone => (StatusCode::GONE, "Resource gone."),
             AppError::Header(_error) => (StatusCode::CONFLICT, "Invalid header."),
-            AppError::HeaderToStr(_error) => (StatusCode::CONFLICT, "Invalid header."),
             AppError::Io(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Filesystem error."),
             AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON."),
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
@@ -163,12 +161,6 @@ impl From<OpenAIError> for AppError {
 impl From<reqwest::Error> for AppError {
     fn from(inner: reqwest::Error) -> Self {
         AppError::Request(inner)
-    }
-}
-
-impl From<reqwest::header::ToStrError> for AppError {
-    fn from(inner: reqwest::header::ToStrError) -> Self {
-        AppError::HeaderToStr(inner)
     }
 }
 

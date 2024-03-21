@@ -28,6 +28,7 @@ use crate::{
         users::{UserInvitationPost, UserPost, UserPut},
         version::VersionInfoResponse,
         wasp_apps::WaspAppAllowedUsersPut,
+        wasp_generators::{WaspGeneratorDeployPost, WaspGeneratorPost, WaspGeneratorPut},
         workspaces::{WorkspacePost, WorkspacePut},
     },
     context::Context,
@@ -37,7 +38,8 @@ use crate::{
         AiServiceStatus, AiServiceType, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         ExamplePrompt, ExamplePromptCategory, InspectionDisabling, Parameter, PasswordResetToken,
-        Profile, SimpleApp, User, UserExtended, WaspApp, Workspace, WorkspacesType,
+        Profile, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
+        WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -87,6 +89,7 @@ mod simple_apps;
 mod users;
 mod version;
 mod wasp_apps;
+mod wasp_generators;
 mod workspaces;
 
 #[allow(clippy::too_many_lines)]
@@ -164,7 +167,13 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 VersionInfoResponse,
                 WaspApp,
                 WaspAppAllowedUsersPut,
+                WaspAppInstanceType,
                 WaspAppMeta,
+                WaspGenerator,
+                WaspGeneratorDeployPost,
+                WaspGeneratorPost,
+                WaspGeneratorPut,
+                WaspGeneratorStatus,
                 Workspace,
                 WorkspacePost,
                 WorkspacePut,
@@ -278,6 +287,13 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             wasp_apps::proxy_frontend,
             wasp_apps::read,
             wasp_apps::update,
+            wasp_generators::create,
+            wasp_generators::delete,
+            wasp_generators::deploy,
+            wasp_generators::generate,
+            wasp_generators::list,
+            wasp_generators::read,
+            wasp_generators::update,
             workspaces::create,
             workspaces::delete,
             workspaces::list,
@@ -312,6 +328,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "users", description = "Users API."),
             (name = "version", description = "Version API."),
             (name = "wasp_apps", description = "Wasp apps API."),
+            (name = "wasp_generators", description = "Wasp generators API."),
             (name = "workspaces", description = "Workspaces API."),
         )
     )]
@@ -585,6 +602,59 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .put(wasp_apps::update),
         )
         .route(
+            "/api/v1/wasp-generators",
+            get(wasp_generators::list).post(wasp_generators::create),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/proxy-backend",
+            delete(wasp_generators::proxy_backend)
+                .get(wasp_generators::proxy_backend)
+                .post(wasp_generators::proxy_backend)
+                .put(wasp_generators::proxy_backend),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/proxy-backend/*pass",
+            delete(wasp_generators::proxy_backend)
+                .get(wasp_generators::proxy_backend)
+                .post(wasp_generators::proxy_backend)
+                .put(wasp_generators::proxy_backend),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/proxy-frontend",
+            delete(wasp_generators::proxy_frontend)
+                .get(wasp_generators::proxy_frontend)
+                .post(wasp_generators::proxy_frontend)
+                .put(wasp_generators::proxy_frontend),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/proxy-frontend/",
+            delete(wasp_generators::proxy_frontend)
+                .get(wasp_generators::proxy_frontend)
+                .post(wasp_generators::proxy_frontend)
+                .put(wasp_generators::proxy_frontend),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/proxy-frontend/*pass",
+            delete(wasp_generators::proxy_frontend)
+                .get(wasp_generators::proxy_frontend)
+                .post(wasp_generators::proxy_frontend)
+                .put(wasp_generators::proxy_frontend),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id",
+            delete(wasp_generators::delete)
+                .get(wasp_generators::read)
+                .put(wasp_generators::update),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/deploy",
+            post(wasp_generators::deploy),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/generate",
+            post(wasp_generators::generate),
+        )
+        .route(
             "/api/v1/workspaces",
             get(workspaces::list).post(workspaces::create),
         )
@@ -664,6 +734,13 @@ pub fn ws_router(context: Arc<Context>) -> Result<Router> {
                 .get(wasp_apps::proxy_backend_web_socket)
                 .post(wasp_apps::proxy_backend_web_socket)
                 .put(wasp_apps::proxy_backend_web_socket),
+        )
+        .route(
+            "/ws/api/v1/wasp-generators/:id/proxy-backend/",
+            delete(wasp_generators::proxy_backend_web_socket)
+                .get(wasp_generators::proxy_backend_web_socket)
+                .post(wasp_generators::proxy_backend_web_socket)
+                .put(wasp_generators::proxy_backend_web_socket),
         )
         .layer(
             CorsLayer::new()

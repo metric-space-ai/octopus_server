@@ -6,7 +6,8 @@ use crate::{
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
         Parameter, PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, Workspace, WorkspacesType,
+        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -579,7 +580,7 @@ impl OctopusDatabase {
     pub async fn get_wasp_apps(&self) -> Result<Vec<WaspApp>> {
         let wasp_apps = sqlx::query_as!(
             WaspApp,
-            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE deleted_at IS NULL"#
         )
@@ -593,7 +594,7 @@ impl OctopusDatabase {
         let is_enabled = true;
         let wasp_apps = sqlx::query_as!(
             WaspApp,
-            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE is_enabled = $1
             AND deleted_at IS NULL
@@ -605,6 +606,24 @@ impl OctopusDatabase {
         .await?;
 
         Ok(wasp_apps)
+    }
+
+    pub async fn get_wasp_generators_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<WaspGenerator>> {
+        let wasp_generators = sqlx::query_as!(
+            WaspGenerator,
+            r#"SELECT id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status AS "status: _", version, created_at, deleted_at, updated_at
+            FROM wasp_generators
+            WHERE user_id = $1
+            AND deleted_at IS NULL"#,
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(wasp_generators)
     }
 
     pub async fn get_workspaces_by_company_id_and_type(
@@ -1126,7 +1145,7 @@ impl OctopusDatabase {
             "INSERT INTO wasp_apps
             (code, description, formatted_name, instance_type, is_enabled, name)
             VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
         .bind(code)
         .bind(description)
@@ -1138,6 +1157,66 @@ impl OctopusDatabase {
         .await?;
 
         Ok(wasp_app)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_wasp_app_from_wasp_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        code: &[u8],
+        description: &str,
+        formatted_name: &str,
+        instance_type: WaspAppInstanceType,
+        is_enabled: bool,
+        name: &str,
+        wasp_generator_id: Uuid,
+    ) -> Result<WaspApp> {
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
+            "INSERT INTO wasp_apps
+            (code, description, formatted_name, instance_type, is_enabled, name, wasp_generator_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+        )
+        .bind(code)
+        .bind(description)
+        .bind(formatted_name)
+        .bind(instance_type)
+        .bind(is_enabled)
+        .bind(name)
+        .bind(wasp_generator_id)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_app)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_wasp_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        user_id: Uuid,
+        api_access_secret: Option<String>,
+        api_access_url: Option<String>,
+        description: &str,
+        name: &str,
+        version: i32,
+    ) -> Result<WaspGenerator> {
+        let wasp_generator = sqlx::query_as::<_, WaspGenerator>(
+            "INSERT INTO wasp_generators
+            (user_id, api_access_secret, api_access_url, description, name, version)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(user_id)
+        .bind(api_access_secret)
+        .bind(api_access_url)
+        .bind(description)
+        .bind(name)
+        .bind(version)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_generator)
     }
 
     pub async fn insert_workspace(
@@ -1604,6 +1683,25 @@ impl OctopusDatabase {
     ) -> Result<Option<Uuid>> {
         let wasp_app = sqlx::query_scalar::<_, Uuid>(
             "UPDATE wasp_apps
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            AND deleted_at IS NULL
+            RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(wasp_app)
+    }
+
+    pub async fn try_delete_wasp_generator_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let wasp_app = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE wasp_generators
             SET deleted_at = current_timestamp(0)
             WHERE id = $1
             AND deleted_at IS NULL
@@ -2231,7 +2329,7 @@ impl OctopusDatabase {
     pub async fn try_get_wasp_app_by_id(&self, id: Uuid) -> Result<Option<WaspApp>> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
-            r#"SELECT id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
+            r#"SELECT id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -2263,7 +2361,7 @@ impl OctopusDatabase {
     ) -> Result<Option<WaspApp>> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
-            r#"SELECT id, allowed_user_ids, code, description, formatted_name, is_enabled, instance_type AS "instance_type: _", name, created_at, deleted_at, updated_at
+            r#"SELECT id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, is_enabled, instance_type AS "instance_type: _", name, created_at, deleted_at, updated_at
             FROM wasp_apps
             WHERE formatted_name = $1
             AND deleted_at IS NULL"#,
@@ -2273,6 +2371,21 @@ impl OctopusDatabase {
         .await?;
 
         Ok(wasp_app)
+    }
+
+    pub async fn try_get_wasp_generator_by_id(&self, id: Uuid) -> Result<Option<WaspGenerator>> {
+        let wasp_generator = sqlx::query_as!(
+            WaspGenerator,
+            r#"SELECT id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status AS "status: _", version, created_at, deleted_at, updated_at
+            FROM wasp_generators
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(wasp_generator)
     }
 
     pub async fn try_get_workspace_by_id(&self, id: Uuid) -> Result<Option<Workspace>> {
@@ -3295,7 +3408,7 @@ impl OctopusDatabase {
             "UPDATE wasp_apps
             SET code = $2, description = $3, formatted_name = $4, instance_type = $5, is_enabled = $6, name = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(code)
@@ -3304,6 +3417,39 @@ impl OctopusDatabase {
         .bind(instance_type)
         .bind(is_enabled)
         .bind(name)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_app)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_wasp_app_from_wasp_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        code: &[u8],
+        description: &str,
+        formatted_name: &str,
+        instance_type: WaspAppInstanceType,
+        is_enabled: bool,
+        name: &str,
+        wasp_generator_id: Uuid,
+    ) -> Result<WaspApp> {
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
+            "UPDATE wasp_apps
+            SET code = $2, description = $3, formatted_name = $4, instance_type = $5, is_enabled = $6, name = $7, wasp_generator_id = $8, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(code)
+        .bind(description)
+        .bind(formatted_name)
+        .bind(instance_type)
+        .bind(is_enabled)
+        .bind(name)
+        .bind(wasp_generator_id)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -3321,7 +3467,7 @@ impl OctopusDatabase {
             r#"UPDATE wasp_apps
             SET allowed_user_ids = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at"#,
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at"#,
             id,
             allowed_user_ids,
         )
@@ -3346,7 +3492,7 @@ impl OctopusDatabase {
             "UPDATE wasp_apps
             SET description = $2, formatted_name = $3, instance_type = $4, is_enabled = $5, name = $6, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(description)
@@ -3358,6 +3504,101 @@ impl OctopusDatabase {
         .await?;
 
         Ok(wasp_app)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_wasp_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        api_access_secret: Option<String>,
+        api_access_url: Option<String>,
+        description: &str,
+        name: &str,
+        status: WaspGeneratorStatus,
+        version: i32,
+    ) -> Result<WaspGenerator> {
+        let wasp_generator = sqlx::query_as::<_, WaspGenerator>(
+            "UPDATE wasp_generators
+            SET api_access_secret = $2, api_access_url = $3, description = $4, name = $5, status = $6, version = $7, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(api_access_secret)
+        .bind(api_access_url)
+        .bind(description)
+        .bind(name)
+        .bind(status)
+        .bind(version)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_generator)
+    }
+
+    pub async fn update_wasp_generator_generated(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        code: &[u8],
+        log: &str,
+        status: WaspGeneratorStatus,
+    ) -> Result<WaspGenerator> {
+        let wasp_generator = sqlx::query_as::<_, WaspGenerator>(
+            "UPDATE wasp_generators
+            SET code = $2, log = $3, status = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(code)
+        .bind(log)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_generator)
+    }
+
+    pub async fn update_wasp_generator_status(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: WaspGeneratorStatus,
+    ) -> Result<WaspGenerator> {
+        let wasp_generator = sqlx::query_as::<_, WaspGenerator>(
+            "UPDATE wasp_generators
+            SET status = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_generator)
+    }
+
+    pub async fn update_wasp_generator_wasp_app_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        wasp_app_id: Uuid,
+    ) -> Result<WaspGenerator> {
+        let wasp_generator = sqlx::query_as::<_, WaspGenerator>(
+            "UPDATE wasp_generators
+            SET wasp_app_id = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, wasp_app_id, api_access_secret, api_access_url, code, description, log, name, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(wasp_app_id)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_generator)
     }
 
     pub async fn update_workspace(

@@ -452,6 +452,7 @@ pub enum WaspAppInstanceType {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct WaspApp {
     pub id: Uuid,
+    pub wasp_generator_id: Option<Uuid>,
     pub allowed_user_ids: Option<Vec<Uuid>>,
     #[serde(skip_serializing)]
     pub code: Vec<u8>,
@@ -460,6 +461,34 @@ pub struct WaspApp {
     pub instance_type: WaspAppInstanceType,
     pub is_enabled: bool,
     pub name: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "wasp_generator_statuses", rename_all = "snake_case")]
+pub enum WaspGeneratorStatus {
+    Changed,
+    Generated,
+    Generating,
+    Initial,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct WaspGenerator {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub wasp_app_id: Option<Uuid>,
+    pub api_access_secret: Option<String>,
+    pub api_access_url: Option<String>,
+    #[serde(skip_serializing)]
+    pub code: Option<Vec<u8>>,
+    pub description: String,
+    pub log: Option<String>,
+    pub name: String,
+    pub status: WaspGeneratorStatus,
+    pub version: i32,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,

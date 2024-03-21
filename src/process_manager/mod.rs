@@ -14,6 +14,7 @@ use uuid::Uuid;
 
 pub mod ai_service;
 pub mod wasp_app;
+pub mod wasp_generator;
 
 #[derive(Clone, Debug)]
 pub struct Process {
@@ -172,6 +173,7 @@ pub enum ProcessState {
 pub enum ProcessType {
     AiService,
     WaspApp,
+    WaspGenerator,
 }
 
 pub async fn start(context: Arc<Context>) -> Result<()> {
@@ -191,6 +193,9 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
                         }
                         ProcessType::WaspApp => {
                             wasp_app::manage_running(context.clone(), process).await?;
+                        }
+                        ProcessType::WaspGenerator => {
+                            wasp_generator::manage_running(context.clone(), process).await?;
                         }
                     }
                 }

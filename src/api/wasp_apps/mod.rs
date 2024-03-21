@@ -373,7 +373,7 @@ pub async fn proxy_backend(
             if let Some(server_port) = process.server_port {
                 let response = wasp_app::request(
                     context.clone(),
-                    chat_message_id,
+                    Some(chat_message_id),
                     pass,
                     server_port,
                     "proxy-backend",
@@ -381,7 +381,8 @@ pub async fn proxy_backend(
                     server_port,
                     uri_append,
                     false,
-                    id,
+                    Some(id),
+                    None,
                 )
                 .await?;
 
@@ -394,7 +395,7 @@ pub async fn proxy_backend(
         if let Some(server_port) = process.server_port {
             let response = wasp_app::request(
                 context.clone(),
-                chat_message_id,
+                Some(chat_message_id),
                 pass,
                 server_port,
                 "proxy-backend",
@@ -402,7 +403,8 @@ pub async fn proxy_backend(
                 server_port,
                 uri_append,
                 true,
-                id,
+                Some(id),
+                None,
             )
             .await?;
 
@@ -576,7 +578,7 @@ pub async fn proxy_frontend(
             {
                 let response = wasp_app::request(
                     context.clone(),
-                    chat_message_id,
+                    Some(chat_message_id),
                     pass,
                     client_port,
                     "proxy-frontend",
@@ -584,7 +586,8 @@ pub async fn proxy_frontend(
                     server_port,
                     uri_append,
                     false,
-                    id,
+                    Some(id),
+                    None,
                 )
                 .await?;
 
@@ -597,7 +600,7 @@ pub async fn proxy_frontend(
         if let (Some(client_port), Some(server_port)) = (process.client_port, process.server_port) {
             let response = wasp_app::request(
                 context.clone(),
-                chat_message_id,
+                Some(chat_message_id),
                 pass,
                 client_port,
                 "proxy-frontend",
@@ -605,7 +608,8 @@ pub async fn proxy_frontend(
                 server_port,
                 uri_append,
                 true,
-                id,
+                Some(id),
+                None,
             )
             .await?;
 

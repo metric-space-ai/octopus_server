@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.19"
+async-openai = "0.20"
 async-recursion = "1.1"
 axum = { version = "0.7", features = ["multipart", "ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
@@ -31,7 +31,7 @@ port-selector = "0.1"
 rand = "0.8"
 rand_core = { version = "0.6", features = ["std"] }
 regex = "1.10"
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 rev_buf_reader = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -45,7 +45,7 @@ sqlx = { version = "0.7", features = [
 strum_macros = "0.26"
 systemstat = "0.2"
 tempfile = "3.10"
-tokio = { version = "1.36", features = ["rt-multi-thread", "time"] }
+tokio = { version = "1.37", features = ["rt-multi-thread", "time"] }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
 tower = { version = "0.4", features = ["timeout", "util"] }
 tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "trace"] }
@@ -54,10 +54,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 uuid = { version = "1.8", features = ["serde", "v4"] }
-validator = { version = "0.16", features = ["derive"] }
+walkdir = "2.5"
+validator = { version = "0.17", features = ["derive"] }
 zip = "0.6"
 
 [profile.release]
 lto = true
-opt-level = "s"
+opt-level = "z"
 strip = true
