@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE wasp_apps\n            SET allowed_user_ids = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, code, description, formatted_name, instance_type AS \"instance_type: _\", is_enabled, name, created_at, deleted_at, updated_at",
+  "query": "SELECT id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS \"instance_type: _\", is_enabled, name, created_at, deleted_at, updated_at\n            FROM wasp_apps\n            WHERE deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -10,26 +10,31 @@
       },
       {
         "ordinal": 1,
+        "name": "wasp_generator_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
         "name": "allowed_user_ids",
         "type_info": "UuidArray"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "code",
         "type_info": "Bytea"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "description",
         "type_info": "Text"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "formatted_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "instance_type: _",
         "type_info": {
           "Custom": {
@@ -44,39 +49,37 @@
         }
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid",
-        "UuidArray"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
+      true,
       true,
       false,
       false,
@@ -89,5 +92,5 @@
       false
     ]
   },
-  "hash": "a2389e3687096075bcc095fe3a6f7e6eeadcee52e785763a81cea7ca7f870a4e"
+  "hash": "3801bf222cfc5af4e76d3b36623fc891ec43af4647257fbf5c8fef17ac2aacc4"
 }
