@@ -50,42 +50,42 @@ RUN set -eux; \
     rustc --version;
 # https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
 ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.1
+ENV GOLANG_VERSION 1.22.2
 RUN set -eux; \
     arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
     url=; \
     case "$arch" in \
         'amd64') \
-            url='https://dl.google.com/go/go1.22.1.linux-amd64.tar.gz'; \
-            sha256='aab8e15785c997ae20f9c88422ee35d962c4562212bb0f879d052a35c8307c7f'; \
+            url='https://dl.google.com/go/go1.22.2.linux-amd64.tar.gz'; \
+            sha256='5901c52b7a78002aeff14a21f93e0f064f74ce1360fce51c6ee68cd471216a17'; \
             ;; \
         'armhf') \
-            url='https://dl.google.com/go/go1.22.1.linux-armv6l.tar.gz'; \
-            sha256='8cb7a90e48c20daed39a6ac8b8a40760030ba5e93c12274c42191d868687c281'; \
+            url='https://dl.google.com/go/go1.22.2.linux-armv6l.tar.gz'; \
+            sha256='9243dfafde06e1efe24d59df6701818e6786b4adfdf1191098050d6d023c5369'; \
             ;; \
         'arm64') \
-            url='https://dl.google.com/go/go1.22.1.linux-arm64.tar.gz'; \
-            sha256='e56685a245b6a0c592fc4a55f0b7803af5b3f827aaa29feab1f40e491acf35b8'; \
+            url='https://dl.google.com/go/go1.22.2.linux-arm64.tar.gz'; \
+            sha256='36e720b2d564980c162a48c7e97da2e407dfcc4239e1e58d98082dfa2486a0c1'; \
             ;; \
         'i386') \
-            url='https://dl.google.com/go/go1.22.1.linux-386.tar.gz'; \
-            sha256='8484df36d3d40139eaf0fe5e647b006435d826cc12f9ae72973bf7ec265e0ae4'; \
+            url='https://dl.google.com/go/go1.22.2.linux-386.tar.gz'; \
+            sha256='586d9eb7fe0489ab297ad80dd06414997df487c5cf536c490ffeaa8d8f1807a7'; \
             ;; \
         'mips64el') \
-            url='https://dl.google.com/go/go1.22.1.linux-mips64le.tar.gz'; \
-            sha256='a52386492ee3147d37f7dd80b7b5d41252bc4dbb0e28ce29e730dd095848caa8'; \
+            url='https://dl.google.com/go/go1.22.2.linux-mips64le.tar.gz'; \
+            sha256='eecf1389fcf0d658a1289ea00773057ddc4e5d8825ad3387acedcc55ed8d4d9d'; \
             ;; \
         'ppc64el') \
-            url='https://dl.google.com/go/go1.22.1.linux-ppc64le.tar.gz'; \
-            sha256='ac775e19d93cc1668999b77cfe8c8964abfbc658718feccfe6e0eb87663cd668'; \
+            url='https://dl.google.com/go/go1.22.2.linux-ppc64le.tar.gz'; \
+            sha256='251a8886c5113be6490bdbb955ddee98763b49c9b1bf4c8364c02d3b482dab00'; \
             ;; \
         'riscv64') \
-            url='https://dl.google.com/go/go1.22.1.linux-riscv64.tar.gz'; \
-            sha256='77f7c8d2a8ea10c413c1f86c1c42001cd98bf428239cabceda2cdaff2cf29330'; \
+            url='https://dl.google.com/go/go1.22.2.linux-riscv64.tar.gz'; \
+            sha256='2e0447ed3294729232e012898a43145defaf2ffbfece2e934edda8bd2775c400'; \
             ;; \
         's390x') \
-            url='https://dl.google.com/go/go1.22.1.linux-s390x.tar.gz'; \
-            sha256='7bb7dd8e10f95c9a4cc4f6bef44c816a6e7c9e03f56ac6af6efbb082b19b379f'; \
+            url='https://dl.google.com/go/go1.22.2.linux-s390x.tar.gz'; \
+            sha256='2b39019481c28c560d65e9811a478ae10e3ef765e0f59af362031d386a71bfef'; \
             ;; \
         *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
     esac; \
@@ -131,7 +131,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.20.0
+ENV NODE_VERSION 18.20.1
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -156,6 +156,7 @@ RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
         C82FA3AE1CBEDC6BE46B9360C43CEC45C17AB93C \
         108F52B48DB57BB0CC439B2997B01419BD92F80A \
         A363A499291CBBC940DD62E41F10027AF002F8B0 \
+        CC68F5A3106FF448322E48ED27F5E38D5B0A215F \
     ; do \
         gpg --batch --keyserver hkps://keys.openpgp.org --recv-keys "$key" || \
         gpg --batch --keyserver keyserver.ubuntu.com --recv-keys "$key" ; \
@@ -221,7 +222,7 @@ RUN npm run build
 WORKDIR /
 RUN git clone https://github.com/ollama/ollama.git
 WORKDIR /ollama/
-RUN git checkout v0.1.29
+RUN git checkout v0.1.31
 WORKDIR /ollama/llm/generate
 ARG CGO_CFLAGS
 RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
