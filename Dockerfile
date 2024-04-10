@@ -1,6 +1,6 @@
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
 RUN apt-get update --fix-missing && \
-    apt-get update && \
+    apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
@@ -268,7 +268,7 @@ RUN apt-get update --fix-missing && \
         libxrender1 \
         locales \
         mercurial \
-        nvidia-utils-535 \
+        nvidia-utils-550 \
         openjdk-11-jre-headless \
         openssh-client \
         procps \
@@ -278,6 +278,7 @@ RUN apt-get update --fix-missing && \
         sudo \
         supervisor \
         tzdata \
+        ubuntu-drivers-common \
         unzip \
         x11vnc \
         x11-utils \
@@ -290,6 +291,7 @@ RUN apt-get update --fix-missing && \
     && apt-get -qyy autoremove \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+RUN ubuntu-drivers install nvidia-driver-550
 # https://github.com/ContinuumIO/docker-images/blob/main/miniconda3/debian/Dockerfile
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH /opt/conda/bin:$PATH
