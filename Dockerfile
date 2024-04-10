@@ -1,5 +1,6 @@
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
 RUN apt-get update --fix-missing && \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
         ca-certificates \
@@ -550,9 +551,11 @@ RUN chmod +x docker-entrypoint.sh && \
     chmod +x wasp-mage-start.sh && \
     mkdir ./public/ && \
     mkdir ./services/ && \
-    mkdir ./wasp_apps/
+    mkdir ./wasp_apps/ && \
+    mkdir ./wasp_generator/
 VOLUME /octopus_server/public
 VOLUME /octopus_server/services
 VOLUME /octopus_server/wasp_apps
+VOLUME /octopus_server/wasp_generator
 EXPOSE 3000
 ENTRYPOINT ["./docker-entrypoint.sh"]
