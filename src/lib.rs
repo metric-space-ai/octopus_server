@@ -1,6 +1,6 @@
 use crate::error::AppError;
 use clap::Parser;
-use std::{error::Error, net::SocketAddr, process::Command};
+use std::{error::Error, fs::File, net::SocketAddr, process::Command};
 use tokio::task;
 use tracing::{error, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -54,13 +54,14 @@ pub struct Args {
 }
 
 pub async fn run() -> Result<()> {
+    let log_file = File::create("octopus_server.log")?;
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
                 "octopus_server=error,runtime=error,tokio=error,tower_http=error".into()
             }),
         )
-        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_subscriber::fmt::layer().with_writer(log_file))
         .init();
 
     let args = Args::parse();
