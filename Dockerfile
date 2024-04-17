@@ -24,11 +24,11 @@ RUN apt-get update --fix-missing && \
         zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
-# https://github.com/rust-lang/docker-rust/blob/master/1.77.1/bookworm/Dockerfile
+# https://github.com/rust-lang/docker-rust/blob/master/1.77.2/bookworm/Dockerfile
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.77.1
+    RUST_VERSION=1.77.2
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -132,7 +132,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.20.1
+ENV NODE_VERSION 18.20.2
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -192,7 +192,8 @@ RUN set -ex \
     && ln -s /opt/yarn-v$YARN_VERSION/bin/yarn /usr/local/bin/yarn \
     && ln -s /opt/yarn-v$YARN_VERSION/bin/yarnpkg /usr/local/bin/yarnpkg \
     && rm yarn-v$YARN_VERSION.tar.gz.asc yarn-v$YARN_VERSION.tar.gz \
-    && yarn --version
+    && yarn --version \
+    && rm -rf /tmp/*
 RUN cargo install cargo-chef
 WORKDIR /octopus_server
 
