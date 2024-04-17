@@ -35,7 +35,7 @@ pub const AZURE_OPENAI_API_VERSION: &str = "2023-12-01-preview";
 pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/";
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 pub const MODEL: &str = "gpt-4-0613";
-pub const MODEL128K: &str = "gpt-4-0125-preview";
+pub const MODEL128K: &str = "gpt-4-turbo-2024-04-09";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Serialize)]
