@@ -426,10 +426,17 @@ pub async fn logs(
     let logs = if file_exists {
         let file = File::open(path)?;
         let buf = RevBufReader::new(file);
-        buf.lines()
+        let mut result = String::new();
+        let iterator = buf
+            .lines()
             .take(limit)
-            .map(|l| l.expect("Could not parse line"))
-            .collect()
+            .map(|l| l.expect("Could not parse line"));
+
+        for item in iterator {
+            result.push_str(&format!("{item}\n"));
+        }
+
+        result
     } else {
         String::new()
     };
