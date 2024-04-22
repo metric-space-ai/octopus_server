@@ -259,13 +259,12 @@ pub async fn update_chat_message(
         AiFunctionResponse::File(ai_function_file_response) => {
             let chat_message = context
                 .octopus_database
-                .update_chat_message_from_function(
+                .update_chat_message_from_function_status(
                     &mut transaction,
                     chat_message.id,
                     ai_function.id,
                     ChatMessageStatus::Answered,
                     100,
-                    None,
                 )
                 .await?;
 
@@ -304,6 +303,8 @@ pub async fn update_chat_message(
                     && data[3] == 70
                 {
                     extension = Some("glb");
+                } else {
+                    extension = Some("txt");
                 }
 
                 if let Some(extension) = extension {
