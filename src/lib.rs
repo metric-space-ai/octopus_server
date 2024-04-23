@@ -15,6 +15,7 @@ mod email_service;
 mod entity;
 mod error;
 mod multipart;
+mod ollama;
 mod parser;
 mod process_manager;
 mod scraper;
@@ -81,6 +82,15 @@ pub async fn run() -> Result<()> {
                     running = false;
                 }
             }
+        }
+    });
+
+    let cloned_context = app.context.clone();
+    task::spawn(async move {
+        let result = ollama::pull_on_start(cloned_context.clone());
+
+        if let Err(e) = result.await {
+            error!("Error: {:?}", e);
         }
     });
 

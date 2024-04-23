@@ -21,6 +21,7 @@ use crate::{
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         inspection_disablings::InspectionDisablingPost,
+        ollama_models::{OllamaModelPost, OllamaModelPut},
         parameters::{ParameterPost, ParameterPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
@@ -37,9 +38,9 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
         AiServiceStatus, AiServiceType, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, Parameter, PasswordResetToken,
-        Profile, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType,
+        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, OllamaModel, OllamaModelStatus,
+        Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended, WaspApp,
+        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -78,6 +79,7 @@ mod chats;
 mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
+mod ollama_models;
 mod parameters;
 mod password_resets;
 mod profile_pictures;
@@ -143,6 +145,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 InspectionDisabling,
                 InspectionDisablingPost,
                 LoginPost,
+                OllamaModel,
+                OllamaModelPost,
+                OllamaModelPut,
+                OllamaModelStatus,
                 Parameter,
                 ParameterPost,
                 ParameterPut,
@@ -247,6 +253,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             inspection_disablings::read,
             login::login,
             logout::logout,
+            ollama_models::create,
+            ollama_models::delete,
+            ollama_models::list,
+            ollama_models::read,
+            ollama_models::update,
             parameters::create,
             parameters::delete,
             parameters::list,
@@ -316,6 +327,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
+            (name = "ollama_models", description = "Ollama models API."),
             (name = "parameters", description = "Parameters API."),
             (name = "password_resets", description = "Password resets API."),
             (name = "profiles", description = "Profiles API."),
@@ -501,6 +513,16 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
+        )
+        .route(
+            "/api/v1/ollama-models",
+            get(ollama_models::list).post(ollama_models::create),
+        )
+        .route(
+            "/api/v1/ollama-models/:id",
+            delete(ollama_models::delete)
+                .get(ollama_models::read)
+                .put(ollama_models::update),
         )
         .route(
             "/api/v1/parameters",

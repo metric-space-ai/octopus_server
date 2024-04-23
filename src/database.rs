@@ -5,9 +5,9 @@ use crate::{
         AiServiceStatus, AiServiceType, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        Parameter, PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
-        WorkspacesType,
+        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, Session,
+        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
+        WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -475,6 +475,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_categories)
+    }
+
+    pub async fn get_ollama_models(&self) -> Result<Vec<OllamaModel>> {
+        let ollama_models = sqlx::query_as!(
+            OllamaModel,
+            r#"SELECT id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS "status: _ ", created_at, deleted_at, updated_at
+            FROM ollama_models
+            WHERE deleted_at IS NULL
+            ORDER BY name ASC"#
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ollama_models)
     }
 
     pub async fn get_parameters(&self) -> Result<Vec<Parameter>> {
@@ -978,6 +992,25 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn insert_ollama_model(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        name: &str,
+    ) -> Result<OllamaModel> {
+        let ollama_model = sqlx::query_as!(
+            OllamaModel,
+            r#"INSERT INTO ollama_models
+            (name)
+            VALUES ($1)
+            RETURNING id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS "status: _ ", created_at, deleted_at, updated_at"#,
+            name
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ollama_model)
     }
 
     pub async fn insert_parameter(
@@ -1563,6 +1596,25 @@ impl OctopusDatabase {
         Ok(inspection_disabling)
     }
 
+    pub async fn try_delete_ollama_model_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let ollama_model = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE ollama_models
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(ollama_model)
+    }
+
     pub async fn try_delete_parameter_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2106,6 +2158,35 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn try_get_ollama_model_by_id(&self, id: Uuid) -> Result<Option<OllamaModel>> {
+        let ollama_model = sqlx::query_as!(
+            OllamaModel,
+            r#"SELECT id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS "status: _ ", created_at, deleted_at, updated_at
+            FROM ollama_models
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ollama_model)
+    }
+
+    pub async fn try_get_ollama_model_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
+        let ollama_model_id = sqlx::query_scalar::<_, Uuid>(
+            "SELECT id
+            FROM ollama_models
+            WHERE id = $1
+            AND deleted_at IS NULL",
+        )
+        .bind(id)
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ollama_model_id)
     }
 
     pub async fn try_get_parameter_by_id(&self, id: Uuid) -> Result<Option<Parameter>> {
@@ -3229,6 +3310,70 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn update_ollama_model(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        name: &str,
+    ) -> Result<OllamaModel> {
+        let ollama_model = sqlx::query_as!(
+            OllamaModel,
+            r#"UPDATE ollama_models
+            SET name = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS "status: _ ", created_at, deleted_at, updated_at"#,
+            id,
+            name
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ollama_model)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_ollama_model_pull(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        o_name: &str,
+        o_details_family: &str,
+        o_details_families: Vec<String>,
+        o_details_format: &str,
+        o_details_parameter_size: &str,
+        o_details_parent_model: Option<String>,
+        o_details_quantization_level: &str,
+        o_digest: &str,
+        o_model: &str,
+        o_modified_at: &str,
+        o_size: &str,
+        status: OllamaModelStatus,
+    ) -> Result<OllamaModel> {
+        let ollama_model = sqlx::query_as::<_, OllamaModel>(
+            "UPDATE ollama_models
+            SET o_name = $2, o_details_family = $3, o_details_families = $4, o_details_format = $5, o_details_parameter_size = $6, o_details_parent_model = $7, o_details_quantization_level = $8, o_digest = $9, o_model = $10, o_modified_at = $11, o_size = $12, status = $13, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(o_name)
+        .bind(o_details_family)
+        .bind(o_details_families)
+        .bind(o_details_format)
+        .bind(o_details_parameter_size)
+        .bind(o_details_parent_model)
+        .bind(o_details_quantization_level)
+        .bind(o_digest)
+        .bind(o_model)
+        .bind(o_modified_at)
+        .bind(o_size)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ollama_model)
     }
 
     pub async fn update_parameter(

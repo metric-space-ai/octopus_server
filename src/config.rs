@@ -14,6 +14,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
+    pub ollama_host: Option<String>,
     pub parameters: Vec<Parameter>,
     pub pepper: String,
     pub pepper_id: i32,
@@ -28,6 +29,7 @@ impl Config {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         database_url: String,
+        ollama_host: Option<String>,
         parameters: Vec<Parameter>,
         pepper: String,
         pepper_id: i32,
@@ -39,6 +41,7 @@ impl Config {
     ) -> Self {
         Self {
             database_url,
+            ollama_host,
             parameters,
             pepper,
             pepper_id,
@@ -214,6 +217,7 @@ impl Config {
 
 pub fn load(args: Args) -> Result<Config> {
     let mut database_url: Option<String> = None;
+    let mut ollama_host = None;
     let parameters = vec![];
     let mut port = 8080;
     let mut test_mode = false;
@@ -227,6 +231,10 @@ pub fn load(args: Args) -> Result<Config> {
 
     if let Some(val) = args.database_url {
         database_url = Some(val);
+    }
+
+    if let Ok(val) = std::env::var("OLLAMA_HOST") {
+        ollama_host = Some(val);
     }
 
     let pepper = std::env::var("OCTOPUS_PEPPER")?;
@@ -262,6 +270,7 @@ pub fn load(args: Args) -> Result<Config> {
 
     let config = Config::new(
         database_url.expect("Unknown database url"),
+        ollama_host,
         parameters,
         pepper,
         pepper_id,

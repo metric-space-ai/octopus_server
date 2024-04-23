@@ -511,6 +511,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 ENV WASP_MAGE_BACKEND_PORT 4031
 ENV WASP_MAGE_PORT 4030
+ENV OLLAMA_HOST http://localhost:5050
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba

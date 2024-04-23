@@ -93,6 +93,12 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
         parameters.push_str(&format!("NC_PASSWORD={nextcloud_password} "));
     }
 
+    let ollama_host = context.get_config().await?.ollama_host;
+
+    if let Some(ollama_host) = ollama_host {
+        parameters.push_str(&format!("OLLAMA_HOST={ollama_host} "));
+    }
+
     let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
 
     if let Some(openai_api_key) = openai_api_key {

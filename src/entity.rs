@@ -335,6 +335,34 @@ pub struct InspectionDisabling {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ollama_models_statuses", rename_all = "snake_case")]
+pub enum OllamaModelStatus {
+    Initial,
+    Pulled,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct OllamaModel {
+    pub id: Uuid,
+    pub name: String,
+    pub o_name: Option<String>,
+    pub o_details_family: Option<String>,
+    pub o_details_families: Option<Vec<String>>,
+    pub o_details_format: Option<String>,
+    pub o_details_parameter_size: Option<String>,
+    pub o_details_parent_model: Option<String>,
+    pub o_details_quantization_level: Option<String>,
+    pub o_digest: Option<String>,
+    pub o_model: Option<String>,
+    pub o_modified_at: Option<String>,
+    pub o_size: Option<String>,
+    pub status: OllamaModelStatus,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 pub const PARAMETER_NAME_AI_MODEL: &str = "AI_MODEL";
 pub const PARAMETER_NAME_AI_SYSTEM_PROMPT: &str = "AI_SYSTEM_PROMPT";
 pub const PARAMETER_NAME_AZURE_OPENAI_API_KEY: &str = "AZURE_OPENAI_API_KEY";

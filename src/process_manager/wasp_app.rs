@@ -205,6 +205,12 @@ pub async fn create_environment(
 
     parameters.push_str(&format!("REACT_APP_OCTOPUS_TOKEN={} ", session.id));
 
+    let ollama_host = context.get_config().await?.ollama_host;
+
+    if let Some(ollama_host) = ollama_host {
+        parameters.push_str(&format!("OLLAMA_HOST={ollama_host} "));
+    }
+
     let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
 
     if let Some(openai_api_key) = openai_api_key {
