@@ -1,0 +1,62 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, cache_key, file_name, media_type, original_file_name, created_at, expires_at, updated_at\n            FROM cached_files\n            ORDER BY cache_key ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "cache_key",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "media_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "original_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 6,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "33966bf0339c187e2eeb80891f98c0c8b54cecb86348b695372391e6cfe91fa0"
+}

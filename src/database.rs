@@ -2,7 +2,7 @@ use crate::{
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
-        AiServiceStatus, AiServiceType, Chat, ChatActivity, ChatAudit, ChatMessage,
+        AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
         OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, Session,
@@ -142,6 +142,19 @@ impl OctopusDatabase {
             .await?;
 
         Ok(port)
+    }
+
+    pub async fn get_cached_files(&self) -> Result<Vec<CachedFile>> {
+        let cached_files = sqlx::query_as!(
+            CachedFile,
+            "SELECT id, cache_key, file_name, media_type, original_file_name, created_at, expires_at, updated_at
+            FROM cached_files
+            ORDER BY cache_key ASC",
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(cached_files)
     }
 
     pub async fn get_chats_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Chat>> {
@@ -832,6 +845,33 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn insert_cached_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        cache_key: &str,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<CachedFile> {
+        let cached_file = sqlx::query_as!(
+            CachedFile,
+            "INSERT INTO cached_files
+            (cache_key, file_name, media_type, original_file_name, expires_at)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, cache_key, file_name, media_type, original_file_name, created_at, expires_at, updated_at",
+            cache_key,
+            file_name,
+            media_type,
+            original_file_name,
+            expires_at,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(cached_file)
+    }
+
     pub async fn insert_chat_message_file(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -1407,6 +1447,23 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn try_delete_cached_file_by_cache_key(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        cache_key: &str,
+    ) -> Result<Option<Uuid>> {
+        let cached_file = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM cached_files
+                WHERE cache_key = $1
+                RETURNING id",
+        )
+        .bind(cache_key)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(cached_file)
+    }
+
     pub async fn try_delete_chat_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -1876,6 +1933,23 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_service_id)
+    }
+
+    pub async fn try_get_cached_file_by_cache_key(
+        &self,
+        cache_key: &str,
+    ) -> Result<Option<CachedFile>> {
+        let cached_file = sqlx::query_as!(
+            CachedFile,
+            "SELECT id, cache_key, file_name, media_type, original_file_name, created_at, expires_at, updated_at
+            FROM cached_files
+            WHERE cache_key = $1",
+            cache_key
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(cached_file)
     }
 
     pub async fn try_get_hash_for_user_id(&self, id: Uuid) -> Result<Option<String>> {
@@ -2848,6 +2922,33 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_service)
+    }
+
+    pub async fn update_cached_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        cache_key: &str,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<CachedFile> {
+        let cached_file = sqlx::query_as!(
+            CachedFile,
+            "UPDATE cached_files
+            SET file_name = $2, media_type = $3, original_file_name = $4, expires_at = $5, updated_at = current_timestamp(0)
+            WHERE cache_key = $1
+            RETURNING id, cache_key, file_name, media_type, original_file_name, created_at, expires_at, updated_at",
+            cache_key,
+            file_name,
+            media_type,
+            original_file_name,
+            expires_at,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(cached_file)
     }
 
     pub async fn update_chat(

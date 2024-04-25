@@ -24,3 +24,17 @@ CREATE TABLE ollama_models(
 
 CREATE INDEX ollama_models_deleted_at ON ollama_models(deleted_at);
 CREATE INDEX ollama_models_name ON ollama_models(name);
+
+CREATE TABLE cached_files(
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    cache_key VARCHAR(256) NOT NULL,
+    file_name VARCHAR(256) NOT NULL,
+    media_type VARCHAR(256) NOT NULL,
+    original_file_name VARCHAR(256) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    expires_at TIMESTAMP WITH TIME ZONE,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT current_timestamp(0),
+    UNIQUE(cache_key)
+);
+
+CREATE INDEX cached_files_expires_at ON cached_files(expires_at);

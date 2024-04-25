@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS \"status: _ \", created_at, deleted_at, updated_at\n            FROM ollama_models\n            WHERE deleted_at IS NULL\n            ORDER BY name ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "o_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "o_details_family",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "o_details_families",
+        "type_info": "VarcharArray"
+      },
+      {
+        "ordinal": 5,
+        "name": "o_details_format",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "o_details_parameter_size",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "o_details_parent_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "o_details_quantization_level",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "o_digest",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "o_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "o_modified_at",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 12,
+        "name": "o_size",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 13,
+        "name": "status: _ ",
+        "type_info": {
+          "Custom": {
+            "name": "ollama_models_statuses",
+            "kind": {
+              "Enum": [
+                "initial",
+                "pulled"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "373a0a8cc8b0d083ad4995a020e4552a697b99ed8d367d23b2634ced8ba15230"
+}

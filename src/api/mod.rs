@@ -36,7 +36,7 @@ use crate::{
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
-        AiServiceStatus, AiServiceType, Chat, ChatActivity, ChatAudit, ChatMessage,
+        AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         ExamplePrompt, ExamplePromptCategory, InspectionDisabling, OllamaModel, OllamaModelStatus,
         Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended, WaspApp,
@@ -69,6 +69,7 @@ use utoipa_swagger_ui::SwaggerUi;
 mod ai_functions;
 mod ai_services;
 mod auth;
+mod cached_files;
 mod chat_activities;
 mod chat_audits;
 mod chat_message_files;
@@ -121,6 +122,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 AiServiceSetupStatus,
                 AiServiceStatus,
                 AiServiceType,
+                CachedFile,
                 ChangePasswordPut,
                 Chat,
                 ChatActivity,
@@ -204,6 +206,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             ai_services::priority,
             ai_services::read,
             ai_services::update,
+            cached_files::create,
+            cached_files::delete,
+            cached_files::list,
+            cached_files::read,
+            cached_files::update,
             change_password::change_password,
             chat_activities::create,
             chat_activities::list,
@@ -314,6 +321,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         tags(
             (name = "ai_functions", description = "AI functions API."),
             (name = "ai_services", description = "AI services API."),
+            (name = "cached_files", description = "Cached files API."),
             (name = "change_password", description = "Change password API."),
             (name = "chats", description = "Chats API."),
             (name = "chat_activities", description = "Chat activities API."),
@@ -409,6 +417,16 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .get(ai_services::read)
                 .post(ai_services::operation)
                 .put(ai_services::update),
+        )
+        .route(
+            "/api/v1/cached-files",
+            get(cached_files::list).post(cached_files::create),
+        )
+        .route(
+            "/api/v1/cached-files/:cache_key",
+            delete(cached_files::delete)
+                .get(cached_files::read)
+                .put(cached_files::update),
         )
         .route(
             "/api/v1/chat-activities/:chat_id",

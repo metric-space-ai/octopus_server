@@ -511,7 +511,6 @@ ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
 ENV WASP_MAGE_BACKEND_PORT 4031
 ENV WASP_MAGE_PORT 4030
-ENV OLLAMA_HOST http://localhost:5050
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
@@ -532,7 +531,7 @@ RUN ./run install
 ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
 COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
-ENV OLLAMA_HOST 0.0.0.0
+ENV OLLAMA_HOST http://localhost:5050
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 WORKDIR /wasp_mage
 COPY octopus_server/wasp_mage /wasp_mage

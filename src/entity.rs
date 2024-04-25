@@ -153,6 +153,18 @@ pub struct AiService {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct CachedFile {
+    pub id: Uuid,
+    pub cache_key: String,
+    pub file_name: String,
+    pub media_type: String,
+    pub original_file_name: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Chat {
     pub id: Uuid,
     pub user_id: Uuid,
