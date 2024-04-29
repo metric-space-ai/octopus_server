@@ -295,14 +295,14 @@ pub async fn update_chat_message(
                     extension = Some(kind.extension());
                 }
 
-                if extension.is_none()
-                    && data.len() >= 4
-                    && data[0] == 103
-                    && data[1] == 108
-                    && data[2] == 84
-                    && data[3] == 70
-                {
-                    extension = Some("glb");
+                if extension.is_none() && data.len() >= 4 {
+                    if data[0] == 103 && data[1] == 108 && data[2] == 84 && data[3] == 70 {
+                        extension = Some("glb");
+                    } else if data[0] == 25 && data[1] == 50 && data[2] == 44 && data[3] == 46 {
+                        extension = Some("pdf");
+                    } else {
+                        extension = Some("txt");
+                    }
                 } else {
                     extension = Some("txt");
                 }
