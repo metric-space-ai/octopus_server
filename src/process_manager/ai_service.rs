@@ -3,14 +3,16 @@ use crate::{
     context::Context,
     entity::{
         AiService, AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion,
-        AiServiceSetupStatus, AiServiceStatus,
+        AiServiceSetupStatus, AiServiceStatus, ROLE_COMPANY_ADMIN_USER,
     },
+    error::AppError,
     get_pwd, parser,
     process_manager::{
         try_get_pid, try_kill_cgroup, try_kill_process, Process, ProcessState, ProcessType,
     },
     Result, SERVICES_DIR,
 };
+use chrono::{Duration as ChronoDuration, Utc};
 use std::{
     fs::{create_dir, remove_dir_all, File, OpenOptions},
     io::Write,
@@ -103,6 +105,33 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
 
     if let Some(openai_api_key) = openai_api_key {
         parameters.push_str(&format!("OPENAI_API_KEY={openai_api_key} "));
+    }
+
+    let company = context.octopus_database.try_get_company_primary().await?;
+
+    if let Some(company) = company {
+        let user = context
+            .octopus_database
+            .try_get_user_by_company_id_and_role(company.id, ROLE_COMPANY_ADMIN_USER)
+            .await?;
+
+        if let Some(user) = user {
+            let expired_at =
+                Utc::now() + ChronoDuration::try_days(365).ok_or(AppError::FromTime)?;
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
+            let session = context
+                .octopus_database
+                .insert_session(&mut transaction, user.id, "", expired_at)
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
+            parameters.push_str(&format!("OCTOPUS_TOKEN={} ", session.id));
+        }
     }
 
     file.write_fmt(format_args!("{parameters} nohup python3 {full_service_dir_path}/{ai_service_id}.py --host=0.0.0.0 --port={ai_service_port} &\n"))?;

@@ -2441,6 +2441,29 @@ impl OctopusDatabase {
         Ok(simple_app)
     }
 
+    pub async fn try_get_user_by_company_id_and_role(
+        &self,
+        company_id: Uuid,
+        role: &str,
+    ) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
+            FROM users
+            WHERE company_id = $1
+            AND $2 = ANY(roles)
+            AND deleted_at IS NULL
+            ORDER BY created_at ASC
+            LIMIT 1",
+            company_id,
+            role
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
     pub async fn try_get_user_by_email(&self, email: &str) -> Result<Option<User>> {
         let user = sqlx::query_as!(
             User,
