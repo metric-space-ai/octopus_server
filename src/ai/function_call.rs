@@ -303,7 +303,7 @@ pub async fn update_chat_message(
                     } else {
                         extension = Some("txt");
                     }
-                } else {
+                } else if extension.is_none() {
                     extension = Some("txt");
                 }
 
