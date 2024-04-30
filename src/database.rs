@@ -5,9 +5,9 @@ use crate::{
         AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, Session,
-        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType,
+        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
+        Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
+        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -488,6 +488,19 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_categories)
+    }
+
+    pub async fn get_nextcloud_files(&self) -> Result<Vec<NextcloudFile>> {
+        let nextcloud_files = sqlx::query_as!(
+            NextcloudFile,
+            "SELECT id, file_name, media_type, original_file_name, created_at, updated_at
+            FROM nextcloud_files
+            ORDER BY original_file_name ASC",
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(nextcloud_files)
     }
 
     pub async fn get_ollama_models(&self) -> Result<Vec<OllamaModel>> {
@@ -1032,6 +1045,29 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn insert_nextcloud_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+    ) -> Result<NextcloudFile> {
+        let nextcloud_file = sqlx::query_as!(
+            NextcloudFile,
+            "INSERT INTO nextcloud_files
+            (file_name, media_type, original_file_name)
+            VALUES ($1, $2, $3)
+            RETURNING id, file_name, media_type, original_file_name, created_at, updated_at",
+            file_name,
+            media_type,
+            original_file_name,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(nextcloud_file)
     }
 
     pub async fn insert_ollama_model(
@@ -1653,6 +1689,23 @@ impl OctopusDatabase {
         Ok(inspection_disabling)
     }
 
+    pub async fn try_delete_nextcloud_file_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let nextcloud_file = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM nextcloud_files
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(nextcloud_file)
+    }
+
     pub async fn try_delete_ollama_model_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2232,6 +2285,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn try_get_nextcloud_file_by_id(&self, id: Uuid) -> Result<Option<NextcloudFile>> {
+        let nextcloud_file = sqlx::query_as!(
+            NextcloudFile,
+            "SELECT id, file_name, media_type, original_file_name, created_at, updated_at
+            FROM nextcloud_files
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(nextcloud_file)
     }
 
     pub async fn try_get_ollama_model_by_id(&self, id: Uuid) -> Result<Option<OllamaModel>> {
@@ -3434,6 +3501,31 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn update_nextcloud_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+    ) -> Result<NextcloudFile> {
+        let nextcloud_file = sqlx::query_as!(
+            NextcloudFile,
+            "UPDATE nextcloud_files
+            SET file_name = $2, media_type = $3, original_file_name = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, file_name, media_type, original_file_name, created_at, updated_at",
+            id,
+            file_name,
+            media_type,
+            original_file_name,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(nextcloud_file)
     }
 
     pub async fn update_ollama_model(

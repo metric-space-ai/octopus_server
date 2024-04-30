@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.8.4"
+version = "0.8.5"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -55,8 +55,8 @@ utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
 uuid = { version = "1.8", features = ["serde", "v4"] }
 walkdir = "2.5"
-validator = { version = "0.17", features = ["derive"] }
-zip = "0.6"
+validator = { version = "0.18", features = ["derive"] }
+zip = "1.1"
 
 [profile.release]
 lto = true

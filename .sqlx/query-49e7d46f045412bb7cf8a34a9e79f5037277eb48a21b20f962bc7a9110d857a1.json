@@ -1,0 +1,50 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, file_name, media_type, original_file_name, created_at, updated_at\n            FROM nextcloud_files\n            ORDER BY original_file_name ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "media_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "original_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "49e7d46f045412bb7cf8a34a9e79f5037277eb48a21b20f962bc7a9110d857a1"
+}

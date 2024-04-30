@@ -34,6 +34,7 @@ pub enum AppError {
     Multipart(MultipartError),
     NotFound,
     NotRegistered,
+    NotUtf8,
     OpenAI(OpenAIError),
     Parsing,
     PasswordDoesNotMatch,
@@ -79,6 +80,7 @@ impl IntoResponse for AppError {
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
+            AppError::NotUtf8 => (StatusCode::INTERNAL_SERVER_ERROR, "Not Utf8 error."),
             AppError::OpenAI(error) => {
                 error!("Error: {:?}", error);
 

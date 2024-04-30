@@ -247,6 +247,7 @@ RUN apt-get update --fix-missing && \
         acl \
         bzip2 \
         cgroup-tools \
+        davfs2 \
         eterm \
         feh \
         fluxbox \
@@ -505,6 +506,11 @@ ARG SENDGRID_API_KEY
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXT_PUBLIC_DOMAIN
 ARG WASP_MAGE_DATABASE_URL
+ARG NEXTCLOUD_PASSWORD
+ARG NEXTCLOUD_SUBDIR
+ARG NEXTCLOUD_URL
+ARG NEXTCLOUD_USERNAME
+ENV NEXTCLOUD_MOUNT_POINT "/octopus_server/nextcloud_files/"
 ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES all
 ENV NEXT_TELEMETRY_DISABLED 1
@@ -548,10 +554,13 @@ COPY --from=octopus_server_builder /octopus_server/target/release/octopus_server
 COPY --from=octopus_server_builder /octopus_server/migrations ./migrations
 COPY --from=octopus_server_builder /octopus_server/docker-entrypoint.sh ./
 COPY --from=octopus_server_builder /octopus_server/frontend-start.sh ./
+COPY --from=octopus_server_builder /octopus_server/mount-nextcloud.sh ./
 COPY --from=octopus_server_builder /octopus_server/wasp-mage-start.sh ./
 RUN chmod +x docker-entrypoint.sh && \
     chmod +x frontend-start.sh && \
+    chmod +x mount-nextcloud.sh && \
     chmod +x wasp-mage-start.sh && \
+    mkdir ./nextcloud_files/ && \
     mkdir ./public/ && \
     mkdir ./services/ && \
     mkdir ./wasp_apps/ && \

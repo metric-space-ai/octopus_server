@@ -25,6 +25,7 @@ mod wasp_app;
 
 type Result<T> = std::result::Result<T, Box<dyn Error + Send + Sync>>;
 
+pub const NEXTCLOUD_FILES_DIR: &str = "nextcloud_files";
 pub const PUBLIC_DIR: &str = "public";
 pub const SERVICES_DIR: &str = "services";
 pub const WASP_APPS_DIR: &str = "wasp_apps";

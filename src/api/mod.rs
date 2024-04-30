@@ -38,9 +38,10 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
         AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
         ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, OllamaModel, OllamaModelStatus,
-        Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended, WaspApp,
-        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
+        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel,
+        OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended,
+        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        WorkspacesType,
     },
     error::ResponseError,
     server_resources::{Gpu, ServerResources},
@@ -80,6 +81,7 @@ mod chats;
 mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
+mod nextcloud_files;
 mod ollama_models;
 mod parameters;
 mod password_resets;
@@ -147,6 +149,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 InspectionDisabling,
                 InspectionDisablingPost,
                 LoginPost,
+                NextcloudFile,
                 OllamaModel,
                 OllamaModelPost,
                 OllamaModelPut,
@@ -260,6 +263,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             inspection_disablings::read,
             login::login,
             logout::logout,
+            nextcloud_files::create,
+            nextcloud_files::delete,
+            nextcloud_files::list,
+            nextcloud_files::read,
+            nextcloud_files::update,
             ollama_models::create,
             ollama_models::delete,
             ollama_models::list,
@@ -335,6 +343,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
+            (name = "nextcloud_files", description = "Nextcloud files API."),
             (name = "ollama_models", description = "Ollama models API."),
             (name = "parameters", description = "Parameters API."),
             (name = "password_resets", description = "Password resets API."),
@@ -531,6 +540,16 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
+        )
+        .route(
+            "/api/v1/nextcloud-files",
+            get(nextcloud_files::list).post(nextcloud_files::create),
+        )
+        .route(
+            "/api/v1/nextcloud-files/:id",
+            delete(nextcloud_files::delete)
+                .get(nextcloud_files::read)
+                .put(nextcloud_files::update),
         )
         .route(
             "/api/v1/ollama-models",

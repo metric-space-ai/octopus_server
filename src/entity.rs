@@ -347,6 +347,16 @@ pub struct InspectionDisabling {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct NextcloudFile {
+    pub id: Uuid,
+    pub file_name: String,
+    pub media_type: String,
+    pub original_file_name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
 #[sqlx(type_name = "ollama_models_statuses", rename_all = "snake_case")]
 pub enum OllamaModelStatus {

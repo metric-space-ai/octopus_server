@@ -1,6 +1,7 @@
 use crate::{
     context::Context,
     entity::{WaspGenerator, WaspGeneratorStatus},
+    error::AppError,
     get_pwd, Result, WASP_GENERATOR_DIR,
 };
 use std::{
@@ -11,7 +12,7 @@ use std::{
     process::Command,
     sync::Arc,
 };
-use zip::{result::ZipError, write::FileOptions};
+use zip::{result::ZipError, write::SimpleFileOptions};
 
 use walkdir::{DirEntry, WalkDir};
 
@@ -89,26 +90,26 @@ where
     T: Write + Seek,
 {
     let mut zip = zip::ZipWriter::new(writer);
-    let options = FileOptions::default()
+    let options = SimpleFileOptions::default()
         .compression_method(method)
         .unix_permissions(0o755);
 
+    let prefix = Path::new(prefix);
     let mut buffer = Vec::new();
     for entry in it {
         let path = entry.path();
-        let name = path.strip_prefix(Path::new(prefix)).unwrap();
+        let name = path.strip_prefix(prefix)?;
+        let path_as_string = name.to_str().map(str::to_owned).ok_or(AppError::NotUtf8)?;
 
         if path.is_file() {
-            #[allow(deprecated)]
-            zip.start_file_from_path(name, options)?;
+            zip.start_file(path_as_string, options)?;
             let mut f = File::open(path)?;
 
             f.read_to_end(&mut buffer)?;
             zip.write_all(&buffer)?;
             buffer.clear();
         } else if !name.as_os_str().is_empty() {
-            #[allow(deprecated)]
-            zip.add_directory_from_path(name, options)?;
+            zip.add_directory(path_as_string, options)?;
         }
     }
     zip.finish()?;
@@ -118,7 +119,7 @@ where
 
 fn create_archive(src_dir: &str, dst_file: &str, method: zip::CompressionMethod) -> Result<()> {
     if !Path::new(src_dir).is_dir() {
-        return Err(Box::new(ZipError::FileNotFound));
+        return Err(ZipError::FileNotFound.into());
     }
 
     let path = Path::new(dst_file);

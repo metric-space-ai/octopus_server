@@ -14,6 +14,7 @@ use crate::{
 #[derive(Clone, Debug)]
 pub struct Config {
     pub database_url: String,
+    pub nextcloud_subdir: String,
     pub ollama_host: Option<String>,
     pub parameters: Vec<Parameter>,
     pub pepper: String,
@@ -29,6 +30,7 @@ impl Config {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
         database_url: String,
+        nextcloud_subdir: String,
         ollama_host: Option<String>,
         parameters: Vec<Parameter>,
         pepper: String,
@@ -41,6 +43,7 @@ impl Config {
     ) -> Self {
         Self {
             database_url,
+            nextcloud_subdir,
             ollama_host,
             parameters,
             pepper,
@@ -217,6 +220,7 @@ impl Config {
 
 pub fn load(args: Args) -> Result<Config> {
     let mut database_url: Option<String> = None;
+    let mut nextcloud_subdir = String::new();
     let mut ollama_host = None;
     let parameters = vec![];
     let mut port = 8080;
@@ -231,6 +235,10 @@ pub fn load(args: Args) -> Result<Config> {
 
     if let Some(val) = args.database_url {
         database_url = Some(val);
+    }
+
+    if let Ok(val) = std::env::var("NEXTCLOUD_SUBDIR") {
+        nextcloud_subdir = val;
     }
 
     if let Ok(val) = std::env::var("OLLAMA_HOST") {
@@ -270,6 +278,7 @@ pub fn load(args: Args) -> Result<Config> {
 
     let config = Config::new(
         database_url.expect("Unknown database url"),
+        nextcloud_subdir,
         ollama_host,
         parameters,
         pepper,
