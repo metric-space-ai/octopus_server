@@ -96,8 +96,10 @@ pub async fn create_environment(
             let parent = outpath.parent();
             if let Some(parent) = parent {
                 let parent = parent.to_str().ok_or(AppError::Parsing)?.to_string();
-                if shortest_parent.is_empty()
-                    || (!shortest_parent.is_empty() && shortest_parent.len() > parent.len())
+
+                if !parent.starts_with("src")
+                    && (shortest_parent.is_empty()
+                        || (!shortest_parent.is_empty() && shortest_parent.len() > parent.len()))
                 {
                     shortest_parent = parent;
                 }
