@@ -185,6 +185,7 @@ pub async fn function_call(
                     AiFunctionResponse::Text(ai_function_text_response)
                 }
                 AiFunctionResponseContentType::ApplicationPdf
+                | AiFunctionResponseContentType::AudioAac
                 | AiFunctionResponseContentType::AudioMpeg
                 | AiFunctionResponseContentType::ImageJpeg
                 | AiFunctionResponseContentType::ImagePng
