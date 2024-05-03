@@ -5,26 +5,32 @@ use crate::{
         ChatMessageStatus, User,
     },
     error::AppError,
-    Result, PUBLIC_DIR,
+    get_pwd, Result, PUBLIC_DIR,
 };
 #[allow(deprecated)]
 use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
         ChatCompletionFunctions, ChatCompletionFunctionsArgs,
-        ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestMessage,
+        ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestFunctionMessageArgs,
+        ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImageArgs,
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         ChatCompletionTool, ChatCompletionToolArgs, ChatCompletionToolType,
-        CreateChatCompletionRequestArgs, FunctionObjectArgs,
+        CreateChatCompletionRequestArgs, FunctionObjectArgs, ImageUrlArgs, ImageUrlDetail,
     },
     Client,
 };
+use base64::{alphabet, engine, Engine};
 use chrono::{DateTime, Utc};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{Postgres, Transaction};
-use std::sync::Arc;
+use std::{
+    fs::{read, read_to_string},
+    path::Path,
+    sync::Arc,
+};
 use uuid::Uuid;
 
 pub mod code_tools;
@@ -373,6 +379,11 @@ pub async fn get_messages(
 ) -> Result<Vec<ChatCompletionRequestMessage>> {
     let mut chat_audit_trails = vec![];
     let mut messages = vec![];
+    let model = context
+        .get_config()
+        .await?
+        .get_parameter_ai_model()
+        .unwrap_or(MODEL.to_string());
 
     let ai_system_prompt = context.get_config().await?.get_parameter_ai_system_prompt();
 
@@ -397,6 +408,12 @@ pub async fn get_messages(
             || chat_message.is_anonymized
             || chat_message.is_marked_as_not_sensitive
         {
+            let function_name = if let Some(ai_function_id) = chat_message_tmp.ai_function_id {
+                ai_function_id.to_string()
+            } else {
+                "unknown".to_string()
+            };
+
             let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
                 .content(chat_message_tmp.message.clone())
                 .build()?;
@@ -430,7 +447,9 @@ pub async fn get_messages(
                     created_at: chat_message_tmp.created_at,
                 };
                 chat_audit_trails.push(chat_audit_trail);
-            } else if !chat_message_tmp.chat_message_files.is_empty() {
+            }
+
+            if !chat_message_tmp.chat_message_files.is_empty() {
                 let mut urls = String::new();
                 let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
@@ -444,29 +463,105 @@ pub async fn get_messages(
                         octopus_api_url
                     };
 
-                    for chat_message_file in chat_message_tmp.chat_message_files {
-                        urls.push_str(&format!("{api_url}/{}", chat_message_file.file_name));
+                    for chat_message_file in &chat_message_tmp.chat_message_files {
+                        urls.push_str(&format!("{api_url}/{} ", chat_message_file.file_name));
                     }
                 }
 
                 if !urls.is_empty() {
                     let chat_completion_request_message =
-                        ChatCompletionRequestAssistantMessageArgs::default()
+                        ChatCompletionRequestFunctionMessageArgs::default()
                             .content(urls.clone())
+                            .name(function_name.clone())
                             .build()?;
 
-                    messages.push(ChatCompletionRequestMessage::Assistant(
+                    messages.push(ChatCompletionRequestMessage::Function(
                         chat_completion_request_message,
                     ));
 
                     let chat_audit_trail = ChatAuditTrail {
                         id: chat_message_tmp.id,
                         content: urls,
-                        role: "assistant".to_string(),
+                        role: "function".to_string(),
                         created_at: chat_message_tmp.created_at,
                     };
                     chat_audit_trails.push(chat_audit_trail);
                 };
+            }
+
+            if !chat_message_tmp.chat_message_files.is_empty() {
+                for chat_message_file in chat_message_tmp.chat_message_files {
+                    let pwd = get_pwd()?;
+                    let file_path = format!("{pwd}/{}", chat_message_file.file_name);
+
+                    if chat_message_file.media_type == "image/png" && model.contains("turbo") {
+                        let file_exists = Path::new(&file_path).is_file();
+                        if file_exists {
+                            let content = read(file_path)?;
+
+                            let engine = engine::GeneralPurpose::new(
+                                &alphabet::URL_SAFE,
+                                engine::general_purpose::PAD,
+                            );
+                            let content = engine.encode(content);
+                            let image_url =
+                                format!("data:{};base64,{}", chat_message_file.media_type, content);
+
+                            let chat_completion_request_message_content_part_image =
+                                ChatCompletionRequestMessageContentPartImageArgs::default()
+                                    .image_url(
+                                        ImageUrlArgs::default()
+                                            .url(image_url)
+                                            .detail(ImageUrlDetail::High)
+                                            .build()?,
+                                    )
+                                    .build()?
+                                    .into();
+
+                            let chat_completion_request_message =
+                                ChatCompletionRequestUserMessageArgs::default()
+                                    .content(vec![
+                                        chat_completion_request_message_content_part_image,
+                                    ])
+                                    .build()?;
+
+                            messages.push(ChatCompletionRequestMessage::User(
+                                chat_completion_request_message,
+                            ));
+
+                            let chat_audit_trail = ChatAuditTrail {
+                                id: chat_message_tmp.id,
+                                content,
+                                role: "function".to_string(),
+                                created_at: chat_message_tmp.created_at,
+                            };
+                            chat_audit_trails.push(chat_audit_trail);
+                        }
+                    } else if chat_message_file.media_type == "text/plain" {
+                        let file_exists = Path::new(&file_path).is_file();
+                        if file_exists {
+                            let content = read_to_string(file_path)?;
+
+                            let chat_completion_request_message =
+                                ChatCompletionRequestFunctionMessageArgs::default()
+                                    .content(content.clone())
+                                    .name(function_name.clone())
+                                    .build()?;
+
+                            messages.push(ChatCompletionRequestMessage::Function(
+                                chat_completion_request_message,
+                            ));
+
+                            let chat_audit_trail = ChatAuditTrail {
+                                id: chat_message_tmp.id,
+                                content,
+                                role: "function".to_string(),
+                                created_at: chat_message_tmp.created_at,
+                            };
+                            chat_audit_trails.push(chat_audit_trail);
+                        }
+                    }
+                }
             }
         }
     }
@@ -483,7 +578,7 @@ pub async fn get_messages(
             trail,
         )
         .await?;
-
+    tracing::info!("MESSAGES = {:?}", messages);
     Ok(messages)
 }
 
