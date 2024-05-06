@@ -22,6 +22,7 @@ use uuid::Uuid;
 
 pub async fn create_environment(
     context: Arc<Context>,
+    chat_message_id: Uuid,
     id: Uuid,
     mut process: Process,
     user_id: Uuid,
@@ -221,6 +222,8 @@ pub async fn create_environment(
         file.write_fmt(format_args!("{parameters} PORT={wasp_app_server_port} DATABASE_URL=\"{wasp_database_url}\" REACT_APP_API_URL=http://127.0.0.1:{wasp_app_server_port} wasp start\n"))?;
     }
 
+    parameters.push_str(&format!("REACT_APP_CHAT_MESSAGE_ID={chat_message_id} "));
+
     process.client_port = wasp_app_client_port;
     process.server_port = wasp_app_server_port;
     process.state = ProcessState::EnvironmentPrepared;
@@ -295,6 +298,7 @@ pub fn delete_environment(id: Uuid) -> Result<bool> {
 
 pub async fn install(
     context: &Arc<Context>,
+    chat_message_id: Uuid,
     id: Uuid,
     user_id: Uuid,
     wasp_app: WaspApp,
@@ -313,7 +317,15 @@ pub async fn install(
     let process = context.process_manager.insert_process(&process)?;
 
     if let Some(process) = process {
-        let process = create_environment(context.clone(), id, process, user_id, &wasp_app).await?;
+        let process = create_environment(
+            context.clone(),
+            chat_message_id,
+            id,
+            process,
+            user_id,
+            &wasp_app,
+        )
+        .await?;
 
         if process.state == ProcessState::EnvironmentPrepared {
             context.process_manager.insert_process(&process)?;
@@ -334,7 +346,14 @@ pub async fn install_and_run(
             WaspAppInstanceType::Shared => wasp_app.id,
         };
         stop_and_remove(context.clone(), id).await?;
-        let wasp_app = install(&context.clone(), id, chat_message.user_id, wasp_app).await?;
+        let wasp_app = install(
+            &context.clone(),
+            chat_message.id,
+            id,
+            chat_message.user_id,
+            wasp_app,
+        )
+        .await?;
         run(context, id).await?;
 
         return Ok(wasp_app);

@@ -578,7 +578,7 @@ pub async fn get_messages(
             trail,
         )
         .await?;
-    tracing::info!("MESSAGES = {:?}", messages);
+
     Ok(messages)
 }
 
