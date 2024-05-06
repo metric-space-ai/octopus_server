@@ -210,6 +210,8 @@ pub async fn delete(
         return Err(AppError::Forbidden);
     }
 
+    let path = format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     context
@@ -218,7 +220,6 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let path = format!("{PUBLIC_DIR}/{}", chat_message_picture.file_name);
     remove_file(path)?;
 
     context

@@ -11,7 +11,10 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
-use std::{fs::read_to_string, sync::Arc};
+use std::{
+    fs::{read_to_string, remove_file},
+    sync::Arc,
+};
 use utoipa::IntoParams;
 use uuid::Uuid;
 
@@ -69,6 +72,8 @@ pub async fn delete(
         return Err(AppError::Forbidden);
     }
 
+    let path = format!("{PUBLIC_DIR}/{}", chat_message_file.file_name);
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     context
@@ -76,6 +81,8 @@ pub async fn delete(
         .try_delete_chat_message_file_by_id(&mut transaction, chat_message_file.id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    remove_file(path)?;
 
     context
         .octopus_database
