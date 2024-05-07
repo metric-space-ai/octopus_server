@@ -50,6 +50,7 @@ use crate::{
 };
 use axum::{
     error_handling::HandleErrorLayer,
+    extract::DefaultBodyLimit,
     http::{header, Method, StatusCode},
     routing::{delete, get, post, put},
     Router,
@@ -58,6 +59,7 @@ use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
 use tower_http::{
     cors::{Any, CorsLayer},
+    limit::RequestBodyLimitLayer,
     services::ServeDir,
     trace::TraceLayer,
 };
@@ -723,6 +725,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .get(workspaces::read)
                 .put(workspaces::update),
         )
+        .layer(DefaultBodyLimit::disable())
+        .layer(RequestBodyLimitLayer::new(512 * 1024 * 1024))
         .layer(
             CorsLayer::new()
                 .allow_origin(Any)

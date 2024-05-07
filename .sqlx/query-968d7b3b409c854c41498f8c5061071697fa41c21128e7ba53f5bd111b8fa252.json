@@ -62,6 +62,7 @@
               "Enum": [
                 "application_json",
                 "application_pdf",
+                "audio_aac",
                 "audio_mpeg",
                 "image_jpeg",
                 "image_png",

@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.8.9"
+version = "0.8.10"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -48,7 +48,7 @@ tempfile = "3.10"
 tokio = { version = "1.37", features = ["rt-multi-thread", "time"] }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
 tower = { version = "0.4", features = ["timeout", "util"] }
-tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "trace"] }
+tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "limit", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
