@@ -82,7 +82,11 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    remove_file(path)?;
+    let file_exists = std::path::Path::new(&path).is_file();
+
+    if file_exists {
+        remove_file(path)?;
+    }
 
     context
         .octopus_database

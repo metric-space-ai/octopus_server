@@ -58,7 +58,6 @@ pub async fn open_ai_malicious_code_check(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();
@@ -165,7 +164,6 @@ pub async fn open_ai_post_parsing_code_check(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();
@@ -272,7 +270,6 @@ pub async fn open_ai_pre_parsing_code_check(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();
@@ -382,7 +379,6 @@ pub async fn open_ai_simple_app_meta_extraction(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();
@@ -479,7 +475,6 @@ pub async fn open_ai_simple_app_advanced_meta_extraction(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();
@@ -582,7 +577,6 @@ pub async fn open_ai_wasp_app_advanced_meta_extraction(
     }
 
     let request = CreateChatCompletionRequestArgs::default()
-        .max_tokens(512u16)
         .model(MODEL128K)
         .messages(messages)
         .build();

@@ -800,13 +800,11 @@ pub async fn open_ai_request(
 
                 if functions.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .max_tokens(512u16)
                         .model(model)
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .max_tokens(512u16)
                         .model(model)
                         .messages(messages)
                         .functions(functions)
@@ -818,13 +816,11 @@ pub async fn open_ai_request(
 
                 if tools.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .max_tokens(512u16)
                         .model(model)
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .max_tokens(512u16)
                         .model(model)
                         .messages(messages)
                         .tools(tools)
