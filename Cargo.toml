@@ -1,13 +1,13 @@
 [package]
 name = "octopus_server"
-version = "0.8.10"
+version = "0.8.11"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.20"
+async-openai = "0.21"
 async-recursion = "1.1"
 axum = { version = "0.7", features = ["multipart", "ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }
@@ -52,7 +52,7 @@ tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "limi
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 utoipa = { version = "4.2", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "6.0", features = ["axum"] }
+utoipa-swagger-ui = { version = "7.0", features = ["axum"] }
 uuid = { version = "1.8", features = ["serde", "v4"] }
 walkdir = "2.5"
 validator = { version = "0.18", features = ["derive"] }

@@ -75,7 +75,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<AiFunction>> {
         let ai_functions = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE ai_service_id = $1
             AND deleted_at IS NULL
@@ -713,6 +713,7 @@ impl OctopusDatabase {
         ai_service_id: Uuid,
         description: &str,
         formatted_name: &str,
+        generated_description: Option<String>,
         name: &str,
         parameters: serde_json::Value,
         request_content_type: AiFunctionRequestContentType,
@@ -720,13 +721,14 @@ impl OctopusDatabase {
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "INSERT INTO ai_functions
-            (ai_service_id, description, formatted_name, name, parameters, request_content_type, response_content_type)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
+            (ai_service_id, description, formatted_name, generated_description, name, parameters, request_content_type, response_content_type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
         )
         .bind(ai_service_id)
         .bind(description)
         .bind(formatted_name)
+        .bind(generated_description)
         .bind(name)
         .bind(parameters)
         .bind(request_content_type)
@@ -1932,7 +1934,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_id(&self, id: Uuid) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -1947,7 +1949,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_function_by_name(&self, name: &str) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
-            r#"SELECT id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
+            r#"SELECT id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
             FROM ai_functions
             WHERE name = $1
             AND deleted_at IS NULL"#,
@@ -2655,6 +2657,7 @@ impl OctopusDatabase {
         id: Uuid,
         description: &str,
         formatted_name: &str,
+        generated_description: Option<String>,
         name: &str,
         parameters: serde_json::Value,
         request_content_type: AiFunctionRequestContentType,
@@ -2662,13 +2665,14 @@ impl OctopusDatabase {
     ) -> Result<AiFunction> {
         let ai_function = sqlx::query_as::<_, AiFunction>(
             "UPDATE ai_functions
-            SET description = $2, formatted_name = $3, name = $4, parameters = $5, request_content_type = $6, response_content_type = $7, updated_at = current_timestamp(0)
+            SET description = $2, formatted_name = $3, generated_description = $4, name = $5, parameters = $6, request_content_type = $7, response_content_type = $8, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
+            RETURNING id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type, response_content_type, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(description)
         .bind(formatted_name)
+        .bind(generated_description)
         .bind(name)
         .bind(parameters)
         .bind(request_content_type)
@@ -2690,7 +2694,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_functions
             SET is_enabled = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
             id,
             is_enabled,
         )
@@ -2711,7 +2715,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_functions
             SET is_enabled = $2, updated_at = current_timestamp(0)
             WHERE ai_service_id = $1
-            RETURNING id, ai_service_id, description, formatted_name, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at"#,
             ai_service_id,
             is_enabled,
         )

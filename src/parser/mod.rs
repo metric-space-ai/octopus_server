@@ -11,7 +11,7 @@ use crate::{
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 
 mod addons;
-mod configuration;
+pub mod configuration;
 mod detectors;
 mod fixes;
 mod replacers;
@@ -230,18 +230,26 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
         )
         .await?;
 
-    let ai_service = if let Some(required_python_version) = configuration.required_python_version {
-        context
-            .octopus_database
-            .update_ai_service_required_python_version(
-                &mut transaction,
-                ai_service.id,
-                required_python_version,
-            )
-            .await?
-    } else {
-        ai_service
-    };
+    let ai_service =
+        if let Some(ref required_python_version) = configuration.required_python_version {
+            context
+                .octopus_database
+                .update_ai_service_required_python_version(
+                    &mut transaction,
+                    ai_service.id,
+                    required_python_version.clone(),
+                )
+                .await?
+        } else {
+            ai_service
+        };
+
+    let describe_functions_response = ai::code_tools::open_ai_describe_functions(
+        &processed_function_body,
+        &configuration,
+        context.clone(),
+    )
+    .await?;
 
     for function in configuration.functions {
         let ai_function_exists = context
@@ -260,6 +268,18 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
             .replace('-', "_")
             .to_lowercase();
 
+        let generated_description =
+            if let Some(ref describe_functions_response) = describe_functions_response {
+                describe_functions_response
+                    .functions
+                    .iter()
+                    .filter(|x| x.name == Some(function.name.clone()))
+                    .map(|x| x.description.clone())
+                    .collect::<Option<String>>()
+            } else {
+                None
+            };
+
         match ai_function_exists {
             None => {
                 context
@@ -269,6 +289,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                         ai_service.id,
                         &function.description,
                         &formatted_name,
+                        generated_description,
                         &function.name,
                         function.parameters,
                         AiFunctionRequestContentType::from_str(&request_content_type)?,
@@ -284,6 +305,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                         ai_function_exists.id,
                         &function.description,
                         &formatted_name,
+                        generated_description,
                         &function.name,
                         function.parameters,
                         AiFunctionRequestContentType::from_str(&request_content_type)?,

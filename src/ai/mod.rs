@@ -273,9 +273,13 @@ pub async fn get_functions_ai_functions(
             && ai_function.formatted_name != "querycontent"
             && ai_function.formatted_name != "sensitive_information"
         {
+            let description = ai_function
+                .generated_description
+                .unwrap_or(ai_function.description);
+
             let function = ChatCompletionFunctionsArgs::default()
                 .name(ai_function.name)
-                .description(ai_function.description)
+                .description(description)
                 .parameters(json!(ai_function.parameters))
                 .build()?;
 
@@ -598,12 +602,15 @@ pub async fn get_tools_ai_functions(
             && ai_function.formatted_name != "querycontent"
             && ai_function.formatted_name != "sensitive_information"
         {
+            let description = ai_function
+                .generated_description
+                .unwrap_or(ai_function.description);
             let tool = ChatCompletionToolArgs::default()
                 .r#type(ChatCompletionToolType::Function)
                 .function(
                     FunctionObjectArgs::default()
                         .name(ai_function.name)
-                        .description(ai_function.description)
+                        .description(description)
                         .parameters(json!(ai_function.parameters))
                         .build()?,
                 )
