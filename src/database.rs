@@ -95,7 +95,7 @@ impl OctopusDatabase {
         let status = AiServiceStatus::Running;
 
         let ai_functions = sqlx::query_as::<_, AiFunction>(
-            "SELECT aif.id, aif.ai_service_id, aif.description, aif.formatted_name, aif.is_enabled, aif.name, aif.parameters, aif.request_content_type, aif.response_content_type, aif.created_at, aif.deleted_at, aif.updated_at
+            "SELECT aif.id, aif.ai_service_id, aif.description, aif.formatted_name, aif.generated_description, aif.is_enabled, aif.name, aif.parameters, aif.request_content_type, aif.response_content_type, aif.created_at, aif.deleted_at, aif.updated_at
             FROM ai_functions AS aif
             LEFT JOIN ai_services ais ON ai_service_id = ais.id
             WHERE aif.is_enabled = $1
