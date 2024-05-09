@@ -36,6 +36,7 @@ pub struct OllamaModelPut {
     responses(
         (status = 201, description = "Ollama model created.", body = OllamaModel),
         (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -49,29 +50,39 @@ pub async fn create(
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
     input.validate()?;
 
-    let mut transaction = context.octopus_database.transaction_begin().await?;
-
-    let ollama_model = context
+    let ollama_model_exists = context
         .octopus_database
-        .insert_ollama_model(&mut transaction, &input.name)
+        .try_get_ollama_model_by_name(&input.name)
         .await?;
 
-    context
-        .octopus_database
-        .transaction_commit(transaction)
-        .await?;
+    match ollama_model_exists {
+        None => {
+            let mut transaction = context.octopus_database.transaction_begin().await?;
 
-    let cloned_context = context.clone();
-    let cloned_ollama_model = ollama_model.clone();
-    tokio::spawn(async move {
-        let ollama_model = ollama::pull(cloned_context, cloned_ollama_model).await;
+            let ollama_model = context
+                .octopus_database
+                .insert_ollama_model(&mut transaction, &input.name)
+                .await?;
 
-        if let Err(e) = ollama_model {
-            debug!("Error: {:?}", e);
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
+            let cloned_context = context.clone();
+            let cloned_ollama_model = ollama_model.clone();
+            tokio::spawn(async move {
+                let ollama_model = ollama::pull(cloned_context, cloned_ollama_model).await;
+
+                if let Err(e) = ollama_model {
+                    debug!("Error: {:?}", e);
+                }
+            });
+
+            Ok((StatusCode::CREATED, Json(ollama_model)).into_response())
         }
-    });
-
-    Ok((StatusCode::CREATED, Json(ollama_model)).into_response())
+        Some(_ollama_model_exists) => Err(AppError::Conflict),
+    }
 }
 
 #[axum_macros::debug_handler]
@@ -177,6 +188,7 @@ pub async fn read(
         (status = 200, description = "Ollama model updated.", body = OllamaModel),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Ollama model not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "Ollama model id")
@@ -199,6 +211,17 @@ pub async fn update(
         .try_get_ollama_model_id_by_id(id)
         .await?
         .ok_or(AppError::NotFound)?;
+
+    let ollama_model_exists = context
+        .octopus_database
+        .try_get_ollama_model_by_name(&input.name)
+        .await?;
+
+    if let Some(ollama_model_exists) = ollama_model_exists {
+        if ollama_model_exists.id != id {
+            return Err(AppError::Conflict);
+        }
+    }
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -233,6 +256,7 @@ mod tests {
         http::{self, Request, StatusCode},
         Router,
     };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;
@@ -240,7 +264,11 @@ mod tests {
     use uuid::Uuid;
 
     pub fn get_ollama_model_create_params() -> String {
-        let name = "llama3".to_string();
+        let name = format!(
+            "llama3{}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
 
         name
     }

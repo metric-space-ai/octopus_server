@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::Duration;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Details1 {
     families: Vec<String>,
     family: String,
@@ -16,7 +16,7 @@ struct Details1 {
     parent_model: Option<String>,
     quantization_level: String,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Models1 {
     details: Details1,
     digest: String,
@@ -25,7 +25,7 @@ struct Models1 {
     name: String,
     size: i64,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Root1 {
     models: Vec<Models1>,
 }
@@ -62,7 +62,9 @@ pub async fn pull(context: Arc<Context>, ollama_model: OllamaModel) -> Result<Ol
                 .await?;
 
             for model in response.models {
-                if model.name == ollama_model.name {
+                let ollama_model_name = format!("{}:latest", ollama_model.name);
+
+                if model.name == ollama_model_name {
                     let mut transaction = context.octopus_database.transaction_begin().await?;
 
                     let ollama_model = context

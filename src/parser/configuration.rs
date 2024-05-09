@@ -5,6 +5,7 @@ use serde::Deserialize;
 pub struct Configuration {
     pub required_python_version: Option<AiServiceRequiredPythonVersion>,
     pub functions: Vec<Function>,
+    pub models: Option<Vec<Model>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -14,6 +15,11 @@ pub struct Function {
     pub name: String,
     pub parameters: serde_json::Value,
     pub return_type: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Model {
+    pub name: Option<String>,
 }
 
 pub fn locate_config(code_lines: &[String]) -> Vec<String> {

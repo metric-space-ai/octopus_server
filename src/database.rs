@@ -2318,6 +2318,21 @@ impl OctopusDatabase {
         Ok(ollama_model)
     }
 
+    pub async fn try_get_ollama_model_by_name(&self, name: &str) -> Result<Option<OllamaModel>> {
+        let ollama_model = sqlx::query_as!(
+            OllamaModel,
+            r#"SELECT id, name, o_name, o_details_family, o_details_families, o_details_format, o_details_parameter_size, o_details_parent_model, o_details_quantization_level, o_digest, o_model, o_modified_at, o_size, status AS "status: _ ", created_at, deleted_at, updated_at
+            FROM ollama_models
+            WHERE name = $1
+            AND deleted_at IS NULL"#,
+            name
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ollama_model)
+    }
+
     pub async fn try_get_ollama_model_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
         let ollama_model_id = sqlx::query_scalar::<_, Uuid>(
             "SELECT id
