@@ -84,6 +84,7 @@ mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
 mod nextcloud_files;
+mod nextcloud_raw_files;
 mod ollama_models;
 mod parameters;
 mod password_resets;
@@ -270,6 +271,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             nextcloud_files::list,
             nextcloud_files::read,
             nextcloud_files::update,
+            nextcloud_raw_files::create,
+            nextcloud_raw_files::list,
             ollama_models::create,
             ollama_models::delete,
             ollama_models::list,
@@ -346,6 +349,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "nextcloud_files", description = "Nextcloud files API."),
+            (name = "nextcloud_raw_files", description = "Nextcloud raw files API."),
             (name = "ollama_models", description = "Ollama models API."),
             (name = "parameters", description = "Parameters API."),
             (name = "password_resets", description = "Password resets API."),
@@ -552,6 +556,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(nextcloud_files::delete)
                 .get(nextcloud_files::read)
                 .put(nextcloud_files::update),
+        )
+        .route(
+            "/api/v1/nextcloud-raw-files",
+            get(nextcloud_raw_files::list).post(nextcloud_raw_files::create),
         )
         .route(
             "/api/v1/ollama-models",

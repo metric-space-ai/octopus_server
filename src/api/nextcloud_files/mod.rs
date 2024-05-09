@@ -131,7 +131,11 @@ pub async fn delete(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    remove_file(old_path)?;
+    let file_exists = std::path::Path::new(&old_path).is_file();
+
+    if file_exists {
+        remove_file(old_path)?;
+    }
 
     context
         .octopus_database
@@ -272,7 +276,11 @@ pub async fn update(
             )
             .await?;
 
-        remove_file(old_path)?;
+        let file_exists = std::path::Path::new(&old_path).is_file();
+
+        if file_exists {
+            remove_file(old_path)?;
+        }
 
         context
             .octopus_database
