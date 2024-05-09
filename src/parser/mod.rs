@@ -97,23 +97,40 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
-            /*
-                        if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
-                            let fixing_proposal = format!("Pre parsing code check: {}", fixing_proposal);
+            if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
+                let fixing_proposal = format!("Pre parsing code check: {}", fixing_proposal);
 
-                            let ai_service = context
-                                .octopus_database
-                                .update_ai_service_parser_feedback(
-                                    ai_service.id,
-                                    &fixing_proposal,
-                                    100,
-                                    AiServiceStatus::Error,
-                                )
-                                .await?;
+                let ai_service_tmp = context
+                    .octopus_database
+                    .try_get_ai_service_by_id(ai_service.id)
+                    .await?;
 
-                            return Ok(ai_service);
-                        }
-            */
+                let fixing_proposal = if let Some(ai_service_tmp) = ai_service_tmp {
+                    if let Some(parser_feedback) = ai_service_tmp.parser_feedback {
+                        format!("{parser_feedback} \n\n {fixing_proposal}")
+                    } else {
+                        fixing_proposal
+                    }
+                } else {
+                    fixing_proposal
+                };
+
+                let mut transaction = context.octopus_database.transaction_begin().await?;
+
+                context
+                    .octopus_database
+                    .update_ai_service_parser_feedback2(
+                        &mut transaction,
+                        ai_service.id,
+                        &fixing_proposal,
+                    )
+                    .await?;
+
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await?;
+            }
         }
     }
 
@@ -197,23 +214,40 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
-            /*
-                        if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
-                            let fixing_proposal = format!("Post parsing code check: {}", fixing_proposal);
+            if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
+                let fixing_proposal = format!("Post parsing code check: {}", fixing_proposal);
 
-                            let ai_service = context
-                                .octopus_database
-                                .update_ai_service_parser_feedback(
-                                    ai_service.id,
-                                    &fixing_proposal,
-                                    100,
-                                    AiServiceStatus::Error,
-                                )
-                                .await?;
+                let ai_service_tmp = context
+                    .octopus_database
+                    .try_get_ai_service_by_id(ai_service.id)
+                    .await?;
 
-                            return Ok(ai_service);
-                        }
-            */
+                let fixing_proposal = if let Some(ai_service_tmp) = ai_service_tmp {
+                    if let Some(parser_feedback) = ai_service_tmp.parser_feedback {
+                        format!("{parser_feedback} \n\n {fixing_proposal}")
+                    } else {
+                        fixing_proposal
+                    }
+                } else {
+                    fixing_proposal
+                };
+
+                let mut transaction = context.octopus_database.transaction_begin().await?;
+
+                context
+                    .octopus_database
+                    .update_ai_service_parser_feedback2(
+                        &mut transaction,
+                        ai_service.id,
+                        &fixing_proposal,
+                    )
+                    .await?;
+
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await?;
+            }
         }
     }
 
