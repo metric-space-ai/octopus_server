@@ -5,7 +5,7 @@ use serde::Deserialize;
 pub struct Configuration {
     pub required_python_version: Option<AiServiceRequiredPythonVersion>,
     pub functions: Vec<Function>,
-    pub models: Option<Vec<Model>>,
+    pub models: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]

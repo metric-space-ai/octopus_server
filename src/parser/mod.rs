@@ -6,7 +6,7 @@ use crate::{
     },
     error::AppError,
     ollama,
-    parser::configuration::Configuration,
+    parser::configuration::{Configuration, Model},
     server_resources, Result,
 };
 use std::{collections::HashMap, str::FromStr, sync::Arc};
@@ -287,8 +287,58 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     )
     .await?;
 
-    if let Some(models) = configuration.models {
-        for model in models {
+    if let Some(value) = configuration.models {
+        let models: std::result::Result<Vec<Model>, serde_json::error::Error> =
+            serde_json::from_value(value.clone());
+
+        if let Ok(models) = models {
+            for model in models {
+                if let Some(name) = model.name {
+                    if name.starts_with("ollama:") {
+                        let model_name = name
+                            .strip_prefix("ollama:")
+                            .ok_or(AppError::Parsing)?
+                            .to_string();
+
+                        let ollama_model_exists = context
+                            .octopus_database
+                            .try_get_ollama_model_by_name(&model_name)
+                            .await?;
+
+                        if ollama_model_exists.is_none() {
+                            let mut transaction =
+                                context.octopus_database.transaction_begin().await?;
+
+                            let ollama_model = context
+                                .octopus_database
+                                .insert_ollama_model(&mut transaction, &model_name)
+                                .await?;
+
+                            context
+                                .octopus_database
+                                .transaction_commit(transaction)
+                                .await?;
+
+                            let cloned_context = context.clone();
+                            let cloned_ollama_model = ollama_model.clone();
+                            tokio::spawn(async move {
+                                let ollama_model =
+                                    ollama::pull(cloned_context, cloned_ollama_model).await;
+
+                                if let Err(e) = ollama_model {
+                                    debug!("Error: {:?}", e);
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        let model: std::result::Result<Model, serde_json::error::Error> =
+            serde_json::from_value(value);
+
+        if let Ok(model) = model {
             if let Some(name) = model.name {
                 if name.starts_with("ollama:") {
                     let model_name = name
