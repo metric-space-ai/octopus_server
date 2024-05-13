@@ -32,6 +32,26 @@ pub async fn scraper(
     Ok((StatusCode::OK, result).into_response())
 }
 
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/scraper-service",
+    responses(
+        (status = 200, description = "Scraper service.", body = String),
+    ),
+    security(
+        ()
+    )
+)]
+pub async fn scraper_service(
+    State(context): State<Arc<Context>>,
+    scraper_parameters: Query<ScraperParameters>,
+) -> Result<impl IntoResponse, AppError> {
+    let result = scraper::scraper_service(context, &scraper_parameters.url).await?;
+
+    Ok((StatusCode::OK, result).into_response())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::app;

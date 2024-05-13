@@ -598,6 +598,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(profiles::read).put(profiles::update),
         )
         .route("/api/v1/scraper", get(scraper::scraper))
+        .route("/api/v1/scraper-service", get(scraper::scraper_service))
         .route("/api/v1/server-resources", get(server_resources::info))
         .route("/api/v1/setup", get(setup::info).post(setup::setup))
         .route(

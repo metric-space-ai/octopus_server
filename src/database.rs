@@ -93,6 +93,7 @@ impl OctopusDatabase {
         let health_check_status = AiServiceHealthCheckStatus::Ok;
         let setup_status = AiServiceSetupStatus::Performed;
         let status = AiServiceStatus::Running;
+        let service_type = AiServiceType::Normal;
 
         let ai_functions = sqlx::query_as::<_, AiFunction>(
             "SELECT aif.id, aif.ai_service_id, aif.description, aif.formatted_name, aif.generated_description, aif.is_enabled, aif.name, aif.parameters, aif.request_content_type, aif.response_content_type, aif.created_at, aif.deleted_at, aif.updated_at
@@ -103,15 +104,17 @@ impl OctopusDatabase {
             AND ais.health_check_status = $2
             AND ais.setup_status = $3
             AND ais.status = $4
+            AND ais.type = $5
             AND aif.deleted_at IS NULL
             AND ais.deleted_at IS NULL
-            AND (ais.allowed_user_ids IS NULL OR $5 = ANY(ais.allowed_user_ids))
+            AND (ais.allowed_user_ids IS NULL OR $6 = ANY(ais.allowed_user_ids))
             ORDER BY name ASC",
         )
         .bind(is_enabled)
         .bind(health_check_status)
         .bind(setup_status)
         .bind(status)
+        .bind(service_type)
         .bind(user_id)
         .fetch_all(&*self.pool)
         .await?;

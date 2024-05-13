@@ -270,7 +270,9 @@ pub async fn get_functions_ai_functions(
 
     for ai_function in ai_functions {
         if ai_function.formatted_name != "anonymization"
+            && ai_function.formatted_name != "google_search"
             && ai_function.formatted_name != "querycontent"
+            && ai_function.formatted_name != "scrape_url"
             && ai_function.formatted_name != "sensitive_information"
         {
             let description = ai_function
@@ -599,7 +601,9 @@ pub async fn get_tools_ai_functions(
 
     for ai_function in ai_functions {
         if ai_function.formatted_name != "anonymization"
+            && ai_function.formatted_name != "google_search"
             && ai_function.formatted_name != "querycontent"
+            && ai_function.formatted_name != "scrape_url"
             && ai_function.formatted_name != "sensitive_information"
         {
             let description = ai_function
