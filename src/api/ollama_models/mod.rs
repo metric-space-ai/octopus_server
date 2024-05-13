@@ -150,6 +150,29 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
+    path = "/api/v1/ollama-models/models",
+    responses(
+        (status = 200, description = "Models read.", body = [String]),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn models(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let models = ollama::get_models();
+
+    Ok((StatusCode::OK, Json(models)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
     path = "/api/v1/ollama-models/:id",
     responses(
         (status = 200, description = "Ollama model read.", body = OllamaModel),

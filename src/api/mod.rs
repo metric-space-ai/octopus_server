@@ -275,6 +275,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             nextcloud_raw_files::list,
             ollama_models::create,
             ollama_models::delete,
+            ollama_models::models,
             ollama_models::list,
             ollama_models::read,
             ollama_models::update,
@@ -565,6 +566,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/ollama-models",
             get(ollama_models::list).post(ollama_models::create),
         )
+        .route("/api/v1/ollama-models/models", get(ollama_models::models))
         .route(
             "/api/v1/ollama-models/:id",
             delete(ollama_models::delete)
