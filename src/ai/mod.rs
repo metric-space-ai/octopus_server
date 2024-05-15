@@ -137,6 +137,7 @@ pub async fn check_information_retrieval_service(
                                     ChatMessageStatus::Answered,
                                     100,
                                     Some(result),
+                                    ai_service.color.clone(),
                                 )
                                 .await?;
 

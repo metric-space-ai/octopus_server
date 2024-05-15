@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, chat_id, simple_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "SELECT id, ai_function_id, chat_id, simple_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -70,51 +70,56 @@
       },
       {
         "ordinal": 13,
+        "name": "color",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "is_marked_as_not_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "is_not_checked_by_system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "simple_app_data",
         "type_info": "Json"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -129,17 +134,17 @@
         }
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -163,6 +168,7 @@
       false,
       false,
       false,
+      true,
       false,
       false,
       false,
@@ -178,5 +184,5 @@
       false
     ]
   },
-  "hash": "cc3f4dc8fc5a2690a649591925fa45b3a895ec09c77a6bc47ea99a180156929d"
+  "hash": "a5fb3dda57d94ec31e5cdb77c35fb4fc4adfa7775e659271a0729d6547186c6e"
 }

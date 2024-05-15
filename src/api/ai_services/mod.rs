@@ -29,6 +29,7 @@ pub struct AiServiceAllowedUsersPut {
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiServiceConfigurationPut {
+    pub color: Option<String>,
     pub device_map: serde_json::Value,
     pub r#type: Option<AiServiceType>,
 }
@@ -159,6 +160,7 @@ pub async fn configuration(
             input.device_map,
             AiServiceStatus::ParsingStarted,
             r#type,
+            input.color,
         )
         .await?;
 

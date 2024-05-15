@@ -132,6 +132,7 @@ pub enum AiServiceType {
 pub struct AiService {
     pub id: Uuid,
     pub allowed_user_ids: Option<Vec<Uuid>>,
+    pub color: Option<String>,
     pub device_map: Option<serde_json::Value>,
     pub health_check_execution_time: i32,
     pub health_check_status: AiServiceHealthCheckStatus,
@@ -221,6 +222,7 @@ pub struct ChatMessage {
     pub bad_reply_is_not_helpful: bool,
     pub bad_reply_is_not_true: bool,
     pub bypass_sensitive_information_filter: bool,
+    pub color: Option<String>,
     pub estimated_response_at: DateTime<Utc>,
     pub is_anonymized: bool,
     pub is_marked_as_not_sensitive: bool,
@@ -254,6 +256,7 @@ pub struct ChatMessageExtended {
     pub bypass_sensitive_information_filter: bool,
     pub chat_message_files: Vec<ChatMessageFile>,
     pub chat_message_pictures: Vec<ChatMessagePicture>,
+    pub color: Option<String>,
     pub estimated_response_at: DateTime<Utc>,
     pub is_anonymized: bool,
     pub is_marked_as_not_sensitive: bool,

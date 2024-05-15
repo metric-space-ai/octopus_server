@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE chat_messages\n            SET is_not_checked_by_system = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "INSERT INTO chat_messages\n            (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message)\n            VALUES ($1, $2, $3, $4, $5)\n            RETURNING id, ai_function_id, chat_id, simple_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -70,51 +70,56 @@
       },
       {
         "ordinal": 13,
+        "name": "color",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 14,
         "name": "estimated_response_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "is_anonymized",
         "type_info": "Bool"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "is_marked_as_not_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "is_not_checked_by_system",
         "type_info": "Bool"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "is_sensitive",
         "type_info": "Bool"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "simple_app_data",
         "type_info": "Json"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -129,17 +134,17 @@
         }
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -147,7 +152,10 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Bool"
+        "Uuid",
+        "Bool",
+        "Timestamptz",
+        "Text"
       ]
     },
     "nullable": [
@@ -164,6 +172,7 @@
       false,
       false,
       false,
+      true,
       false,
       false,
       false,
@@ -179,5 +188,5 @@
       false
     ]
   },
-  "hash": "44f2c94d85a035bd00ff380931a9180b2c1e8a419eb690a41f91ca3d1bfa1094"
+  "hash": "e398f6393780677d4159146171461a3795c54741f867e5fa2ac0d90551d8c7da"
 }

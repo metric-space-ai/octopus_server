@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE ai_services\n            SET allowed_user_ids = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS \"required_python_version: _\", setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", type AS \"type: _\", created_at, deleted_at, health_check_at, setup_at, updated_at",
+  "query": "UPDATE ai_services\n            SET allowed_user_ids = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS \"health_check_status: _\", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS \"required_python_version: _\", setup_execution_time, setup_status AS \"setup_status: _\", status AS \"status: _\", type AS \"type: _\", created_at, deleted_at, health_check_at, setup_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -15,16 +15,21 @@
       },
       {
         "ordinal": 2,
+        "name": "color",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
         "name": "device_map",
         "type_info": "Json"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "health_check_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "health_check_status: _",
         "type_info": {
           "Custom": {
@@ -39,47 +44,47 @@
         }
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "is_enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "original_file_name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "original_function_body",
         "type_info": "Text"
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "parser_feedback",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "port",
         "type_info": "Int4"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "priority",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "processed_function_body",
         "type_info": "Text"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "required_python_version: _",
         "type_info": {
           "Custom": {
@@ -95,12 +100,12 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "setup_execution_time",
         "type_info": "Int4"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "setup_status: _",
         "type_info": {
           "Custom": {
@@ -115,7 +120,7 @@
         }
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -139,7 +144,7 @@
         }
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -154,27 +159,27 @@
         }
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "health_check_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "setup_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -187,6 +192,7 @@
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -211,5 +217,5 @@
       false
     ]
   },
-  "hash": "829a35cb131d8f20888ae3d3568a6cd6222227359365ab18a2ca0902fe05478c"
+  "hash": "f5d2bd1d7830fdec0e595a23ae714c7c2cd0100bef9a80a5b8b7db50773c5716"
 }

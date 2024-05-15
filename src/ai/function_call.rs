@@ -76,8 +76,14 @@ pub async fn handle_function_call(
         let response = function_call(ai_function, ai_service, function_args).await?;
 
         if let Some(response) = response {
-            let chat_message =
-                update_chat_message(ai_function, &response, context.clone(), chat_message).await?;
+            let chat_message = update_chat_message(
+                ai_function,
+                &response,
+                ai_service,
+                context.clone(),
+                chat_message,
+            )
+            .await?;
 
             return Ok(chat_message);
         }
@@ -231,6 +237,7 @@ pub async fn function_call(
 pub async fn update_chat_message(
     ai_function: &AiFunction,
     ai_function_response: &AiFunctionResponse,
+    ai_service: &AiService,
     context: Arc<Context>,
     chat_message: &ChatMessage,
 ) -> Result<ChatMessage> {
@@ -247,6 +254,7 @@ pub async fn update_chat_message(
                     ai_function_error_response.error.clone(),
                     ChatMessageStatus::Answered,
                     100,
+                    ai_service.color.clone(),
                 )
                 .await?;
 
@@ -266,6 +274,7 @@ pub async fn update_chat_message(
                     ai_function.id,
                     ChatMessageStatus::Answered,
                     100,
+                    ai_service.color.clone(),
                 )
                 .await?;
 
@@ -340,6 +349,7 @@ pub async fn update_chat_message(
                 chat_message = update_chat_message(
                     ai_function,
                     ai_function_response_tmp,
+                    ai_service,
                     context.clone(),
                     &chat_message,
                 )
@@ -358,6 +368,7 @@ pub async fn update_chat_message(
                     ChatMessageStatus::Answered,
                     100,
                     ai_function_text_response.response.clone(),
+                    ai_service.color.clone(),
                 )
                 .await?;
 
