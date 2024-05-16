@@ -3,6 +3,7 @@ use axum::{
     extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
+    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -10,6 +11,11 @@ use std::sync::Arc;
 #[derive(Deserialize)]
 pub struct ScraperParameters {
     url: String,
+}
+
+#[derive(Deserialize)]
+pub struct SearchParameters {
+    prompt: String,
 }
 
 #[axum_macros::debug_handler]
@@ -50,6 +56,28 @@ pub async fn scraper_service(
     let result = scraper::scraper_service(context, &scraper_parameters.url).await?;
 
     Ok((StatusCode::OK, result).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/scraper-search-service",
+    responses(
+        (status = 200, description = "Scraper search service.", body = [String]),
+    ),
+    security(
+        ()
+    )
+)]
+pub async fn scraper_search_service(
+    State(context): State<Arc<Context>>,
+    search_parameters: Query<SearchParameters>,
+) -> Result<impl IntoResponse, AppError> {
+    let result = scraper::scraper_search_service(context, &search_parameters.prompt).await?;
+    let result = result.replace('\'', "\"");
+    let result: Vec<String> = serde_json::from_slice(result.as_bytes())?;
+
+    Ok((StatusCode::OK, Json(result)).into_response())
 }
 
 #[cfg(test)]

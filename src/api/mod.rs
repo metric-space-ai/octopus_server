@@ -294,6 +294,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             profile_pictures::update,
             register::register,
             scraper::scraper,
+            scraper::scraper_search_service,
+            scraper::scraper_service,
             server_resources::info,
             setup::info,
             setup::setup,
@@ -598,6 +600,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(profiles::read).put(profiles::update),
         )
         .route("/api/v1/scraper", get(scraper::scraper))
+        .route(
+            "/api/v1/scraper-search-service",
+            get(scraper::scraper_search_service),
+        )
         .route("/api/v1/scraper-service", get(scraper::scraper_service))
         .route("/api/v1/server-resources", get(server_resources::info))
         .route("/api/v1/setup", get(setup::info).post(setup::setup))
