@@ -2,9 +2,10 @@ use crate::{
     context::Context,
     entity::{WaspAppInstanceType, WaspGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
-    process_manager,
+    get_pwd, process_manager,
     session::{require_authenticated, ExtractedSession},
     wasp_app::{self, generator},
+    WASP_GENERATOR_DIR,
 };
 use axum::{
     body::Body,
@@ -13,8 +14,9 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use rev_buf_reader::RevBufReader;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::{fs::File, io::BufRead, path, sync::Arc};
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
@@ -30,6 +32,12 @@ pub struct BackendProxyParams {
 pub struct FrontendProxyParams {
     id: Uuid,
     pass: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct LogsParams {
+    id: Uuid,
+    limit: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -393,6 +401,72 @@ pub async fn list(
         .await?;
 
     Ok((StatusCode::OK, Json(wasp_generators)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/logs",
+    responses(
+        (status = 200, description = "Wasp app logs.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id"),
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn logs(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(LogsParams { id, limit }): Path<LogsParams>,
+) -> Result<impl IntoResponse, AppError> {
+    require_authenticated(extracted_session).await?;
+
+    let wasp_generator = context
+        .octopus_database
+        .try_get_wasp_generator_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let app_id = wasp_generator.id;
+
+    let limit = limit.unwrap_or(50);
+
+    let pwd = get_pwd()?;
+
+    let path = format!("{pwd}/{WASP_GENERATOR_DIR}/{app_id}/{app_id}.log");
+
+    let file_exists = path::Path::new(&path).is_file();
+
+    let logs = if file_exists {
+        let file = File::open(path)?;
+        let buf = RevBufReader::new(file);
+        let mut reversed = vec![];
+        let mut result = String::new();
+        let iterator = buf
+            .lines()
+            .take(limit)
+            .map(|l| l.expect("Could not parse line"));
+
+        for item in iterator {
+            reversed.push(item);
+        }
+
+        for item in reversed.iter().rev() {
+            result.push_str(&format!("{item}\n"));
+        }
+
+        result
+    } else {
+        String::new()
+    };
+
+    Ok((StatusCode::OK, logs).into_response())
 }
 
 #[axum_macros::debug_handler]

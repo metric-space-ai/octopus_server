@@ -639,6 +639,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             put(wasp_apps::allowed_users),
         )
         .route(
+            "/api/v1/wasp-apps/:id/:chat_message_id/logs",
+            get(wasp_apps::logs),
+        )
+        .route(
             "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
             delete(wasp_apps::proxy_backend)
                 .get(wasp_apps::proxy_backend)
@@ -682,6 +686,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/wasp-generators",
             get(wasp_generators::list).post(wasp_generators::create),
+        )
+        .route(
+            "/api/v1/wasp-generators/:id/logs",
+            get(wasp_generators::logs),
         )
         .route(
             "/api/v1/wasp-generators/:id/proxy-backend",

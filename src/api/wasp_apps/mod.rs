@@ -3,9 +3,9 @@ use crate::{
     context::Context,
     entity::{WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
-    process_manager,
+    get_pwd, process_manager,
     session::{ensure_secured, require_authenticated, ExtractedSession},
-    wasp_app,
+    wasp_app, WASP_APPS_DIR,
 };
 use axum::{
     body::Body,
@@ -14,8 +14,14 @@ use axum::{
     response::IntoResponse,
     Json,
 };
+use rev_buf_reader::RevBufReader;
 use serde::Deserialize;
-use std::{fs::read_to_string, io::Write, sync::Arc};
+use std::{
+    fs::{read_to_string, File},
+    io::{BufRead, Write},
+    path,
+    sync::Arc,
+};
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
@@ -38,6 +44,13 @@ pub struct FrontendProxyParams {
     id: Uuid,
     chat_message_id: Uuid,
     pass: Option<String>,
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct LogsParams {
+    id: Uuid,
+    chat_message_id: Uuid,
+    limit: Option<usize>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -295,6 +308,83 @@ pub async fn list(
     let wasp_apps = context.octopus_database.get_wasp_apps().await?;
 
     Ok((StatusCode::OK, Json(wasp_apps)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/:id/:chat_message_id/logs",
+    responses(
+        (status = 200, description = "Wasp app logs.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 404, description = "Wasp app not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "Wasp app id"),
+        ("chat_message_id" = String, Path, description = "Chat message id"),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn logs(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(LogsParams {
+        id,
+        chat_message_id,
+        limit,
+    }): Path<LogsParams>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let wasp_app = context
+        .octopus_database
+        .try_get_wasp_app_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if !wasp_app.is_enabled {
+        return Err(AppError::NotFound);
+    }
+
+    let app_id = match wasp_app.instance_type {
+        WaspAppInstanceType::Private => chat_message_id,
+        WaspAppInstanceType::Shared => wasp_app.id,
+    };
+
+    let limit = limit.unwrap_or(50);
+
+    let pwd = get_pwd()?;
+
+    let path = format!("{pwd}/{WASP_APPS_DIR}/{app_id}/{app_id}.log");
+
+    let file_exists = path::Path::new(&path).is_file();
+
+    let logs = if file_exists {
+        let file = File::open(path)?;
+        let buf = RevBufReader::new(file);
+        let mut reversed = vec![];
+        let mut result = String::new();
+        let iterator = buf
+            .lines()
+            .take(limit)
+            .map(|l| l.expect("Could not parse line"));
+
+        for item in iterator {
+            reversed.push(item);
+        }
+
+        for item in reversed.iter().rev() {
+            result.push_str(&format!("{item}\n"));
+        }
+
+        result
+    } else {
+        String::new()
+    };
+
+    Ok((StatusCode::OK, logs).into_response())
 }
 
 #[axum_macros::debug_handler]
