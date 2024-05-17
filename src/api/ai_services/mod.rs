@@ -428,6 +428,7 @@ pub async fn logs(
     let logs = if file_exists {
         let file = File::open(path)?;
         let buf = RevBufReader::new(file);
+        let mut reversed = vec![];
         let mut result = String::new();
         let iterator = buf
             .lines()
@@ -435,6 +436,10 @@ pub async fn logs(
             .map(|l| l.expect("Could not parse line"));
 
         for item in iterator {
+            reversed.push(item);
+        }
+
+        for item in reversed.iter().rev() {
             result.push_str(&format!("{item}\n"));
         }
 
