@@ -406,7 +406,7 @@ pub async fn list(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/wasp-apps/:id/:chat_message_id/logs",
+    path = "/api/v1/wasp-generators/:id/logs",
     responses(
         (status = 200, description = "Wasp app logs.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
@@ -414,7 +414,6 @@ pub async fn list(
     ),
     params(
         ("id" = String, Path, description = "Wasp app id"),
-        ("chat_message_id" = String, Path, description = "Chat message id"),
     ),
     security(
         ("api_key" = [])

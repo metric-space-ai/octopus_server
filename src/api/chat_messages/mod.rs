@@ -1,5 +1,5 @@
 use crate::{
-    ai::{self, BASE_AI_FUNCTION_URL},
+    ai::{self, function_call},
     context::Context,
     entity::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessageStatus,
@@ -15,7 +15,6 @@ use axum::{
     Json,
 };
 use chrono::{Duration, Utc};
-use reqwest::StatusCode as ReqwestStatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
@@ -46,11 +45,6 @@ pub struct ChatMessageFlagPut {
 #[derive(Debug, Serialize)]
 pub struct FunctionAnonymizationPost {
     pub value1: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FunctionAnonymizationResponse {
-    pub response: String,
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -185,64 +179,57 @@ pub async fn anonymize(
                     && ai_service.setup_status == AiServiceSetupStatus::Performed
                     && ai_service.status == AiServiceStatus::Running
                 {
-                    let function_sensitive_information_post = FunctionAnonymizationPost {
+                    let function_anonymization_post = FunctionAnonymizationPost {
                         value1: cloned_chat_message.message.clone(),
                     };
-                    let url = format!(
-                        "{BASE_AI_FUNCTION_URL}:{}/{}",
-                        ai_service.port, ai_function.name
-                    );
+                    let function_args = serde_json::to_value(function_anonymization_post);
 
-                    let response = reqwest::Client::new()
-                        .post(url)
-                        .json(&function_sensitive_information_post)
-                        .send()
-                        .await;
+                    if let Ok(function_args) = function_args {
+                        let function_anonymization_response =
+                            function_call::anonymization_function_call(
+                                &ai_function,
+                                &ai_service,
+                                &function_args,
+                            )
+                            .await;
 
-                    if let Ok(response) = response {
-                        if response.status() == ReqwestStatusCode::CREATED {
-                            let function_anonymization_response: Result<
-                                FunctionAnonymizationResponse,
-                                reqwest::Error,
-                            > = response.json().await;
-
-                            if let Ok(function_anonymization_response) =
-                                function_anonymization_response
-                            {
-                                message = function_anonymization_response.response;
-                            }
+                        if let Ok(Some(function_anonymization_response)) =
+                            function_anonymization_response
+                        {
+                            message = function_anonymization_response.response;
                         }
                     }
                 }
             }
-        }
 
-        let transaction = context.octopus_database.transaction_begin().await;
+            let transaction = context.octopus_database.transaction_begin().await;
 
-        if let Ok(mut transaction) = transaction {
-            let cloned_chat_message = cloned_context
-                .octopus_database
-                .update_chat_message_is_anonymized(
-                    &mut transaction,
-                    cloned_chat_message.id,
-                    true,
-                    &message,
-                    ChatMessageStatus::Asked,
-                    0,
-                )
-                .await;
+            if let Ok(mut transaction) = transaction {
+                let cloned_chat_message = cloned_context
+                    .octopus_database
+                    .update_chat_message_is_anonymized(
+                        &mut transaction,
+                        cloned_chat_message.id,
+                        true,
+                        &message,
+                        ChatMessageStatus::Asked,
+                        0,
+                    )
+                    .await;
 
-            let _ = context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await;
+                let _ = context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await;
 
-            if let Ok(cloned_chat_message) = cloned_chat_message {
-                let chat_message =
-                    ai::open_ai_request(cloned_context, cloned_chat_message, session_user).await;
+                if let Ok(cloned_chat_message) = cloned_chat_message {
+                    let chat_message =
+                        ai::open_ai_request(cloned_context, cloned_chat_message, session_user)
+                            .await;
 
-                if let Err(e) = chat_message {
-                    error!("Error: {:?}", e);
+                    if let Err(e) = chat_message {
+                        error!("Error: {:?}", e);
+                    }
                 }
             }
         }

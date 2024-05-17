@@ -102,6 +102,50 @@ pub async fn handle_function_call(
     Ok(chat_message.clone())
 }
 
+#[derive(Debug, Deserialize)]
+pub struct FunctionAnonymizationResponse {
+    pub response: String,
+}
+
+pub async fn anonymization_function_call(
+    ai_function: &AiFunction,
+    ai_service: &AiService,
+    function_args: &Value,
+) -> Result<Option<FunctionAnonymizationResponse>> {
+    let url = format!(
+        "{BASE_AI_FUNCTION_URL}:{}/{}",
+        ai_service.port, ai_function.name
+    );
+
+    let response = reqwest::ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(60))
+        .build()?
+        .post(url)
+        .json(&function_args)
+        .send()
+        .await;
+
+    match response {
+        Err(error) => {
+            tracing::error!("Function call error: {error:?}");
+        }
+        Ok(response) => {
+            if response.status() == StatusCode::CREATED {
+                let function_anonymization_response: std::result::Result<
+                    FunctionAnonymizationResponse,
+                    reqwest::Error,
+                > = response.json().await;
+
+                if let Ok(function_anonymization_response) = function_anonymization_response {
+                    return Ok(Some(function_anonymization_response));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 pub async fn function_call(
     ai_function: &AiFunction,
     ai_service: &AiService,
@@ -112,122 +156,220 @@ pub async fn function_call(
         ai_service.port, ai_function.name
     );
 
-    let response = reqwest::Client::new()
+    let response = reqwest::ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(60))
+        .build()?
         .post(url)
         .json(&function_args)
         .send()
         .await;
 
-    if let Ok(response) = response {
-        if response.status() == StatusCode::CREATED {
-            let ai_function_response = match ai_function.response_content_type {
-                AiFunctionResponseContentType::ApplicationJson => {
-                    let mut ai_function_responses = vec![];
+    match response {
+        Err(error) => {
+            tracing::error!("Function call error: {error:?}");
+        }
+        Ok(response) => {
+            if response.status() == StatusCode::CREATED {
+                let ai_function_response = match ai_function.response_content_type {
+                    AiFunctionResponseContentType::ApplicationJson => {
+                        let mut ai_function_responses = vec![];
 
-                    let response_text = response.text().await?;
-                    let response: ResponseText = serde_json::from_str(&response_text)?;
+                        let response_text = response.text().await?;
+                        let response: ResponseText = serde_json::from_str(&response_text)?;
 
-                    let response_str = match response.response {
-                        Some(TextResponse::Array(array)) => {
-                            let string = array.into_iter().collect::<String>();
+                        let response_str = match response.response {
+                            Some(TextResponse::Array(array)) => {
+                                let string = array.into_iter().collect::<String>();
 
-                            Some(string)
-                        }
-                        Some(TextResponse::String(string)) => Some(string),
-                        None => None,
-                    };
-
-                    if let Some(response_str) = response_str {
-                        let ai_function_text_response = AiFunctionTextResponse {
-                            response: Some(response_str),
+                                Some(string)
+                            }
+                            Some(TextResponse::String(string)) => Some(string),
+                            None => None,
                         };
 
-                        let ai_function_response =
-                            AiFunctionResponse::Text(ai_function_text_response);
-                        ai_function_responses.push(ai_function_response);
-                    }
-
-                    if let Some(file_attachments) = response.file_attachments {
-                        for file_attachment in file_attachments {
-                            let ai_function_file_response = AiFunctionFileResponse {
-                                content: file_attachment.content,
-                                media_type: file_attachment.media_type,
-                                original_file_name: Some(file_attachment.file_name),
+                        if let Some(response_str) = response_str {
+                            let ai_function_text_response = AiFunctionTextResponse {
+                                response: Some(response_str),
                             };
-                            let ai_function_response =
-                                AiFunctionResponse::File(ai_function_file_response);
 
+                            let ai_function_response =
+                                AiFunctionResponse::Text(ai_function_text_response);
                             ai_function_responses.push(ai_function_response);
                         }
+
+                        if let Some(file_attachments) = response.file_attachments {
+                            for file_attachment in file_attachments {
+                                let ai_function_file_response = AiFunctionFileResponse {
+                                    content: file_attachment.content,
+                                    media_type: file_attachment.media_type,
+                                    original_file_name: Some(file_attachment.file_name),
+                                };
+                                let ai_function_response =
+                                    AiFunctionResponse::File(ai_function_file_response);
+
+                                ai_function_responses.push(ai_function_response);
+                            }
+                        }
+
+                        AiFunctionResponse::Mixed(ai_function_responses)
                     }
+                    AiFunctionResponseContentType::TextHtml => {
+                        let content = response.text().await?;
+                        let media_type = "text/html".to_string();
 
-                    AiFunctionResponse::Mixed(ai_function_responses)
-                }
-                AiFunctionResponseContentType::TextHtml => {
-                    let content = response.text().await?;
-                    let media_type = "text/html".to_string();
+                        let engine = engine::GeneralPurpose::new(
+                            &alphabet::URL_SAFE,
+                            engine::general_purpose::PAD,
+                        );
+                        let content = engine.encode(content);
 
-                    let engine = engine::GeneralPurpose::new(
-                        &alphabet::URL_SAFE,
-                        engine::general_purpose::PAD,
-                    );
-                    let content = engine.encode(content);
+                        let ai_function_file_response = AiFunctionFileResponse {
+                            content,
+                            media_type,
+                            original_file_name: None,
+                        };
 
-                    let ai_function_file_response = AiFunctionFileResponse {
-                        content,
-                        media_type,
-                        original_file_name: None,
-                    };
+                        AiFunctionResponse::File(ai_function_file_response)
+                    }
+                    AiFunctionResponseContentType::TextPlain => {
+                        let response = response.text().await?;
 
-                    AiFunctionResponse::File(ai_function_file_response)
-                }
-                AiFunctionResponseContentType::TextPlain => {
-                    let response = response.text().await?;
+                        let ai_function_text_response = AiFunctionTextResponse {
+                            response: Some(response),
+                        };
 
-                    let ai_function_text_response = AiFunctionTextResponse {
-                        response: Some(response),
-                    };
+                        AiFunctionResponse::Text(ai_function_text_response)
+                    }
+                    AiFunctionResponseContentType::ApplicationPdf
+                    | AiFunctionResponseContentType::AudioAac
+                    | AiFunctionResponseContentType::AudioMpeg
+                    | AiFunctionResponseContentType::ImageJpeg
+                    | AiFunctionResponseContentType::ImagePng
+                    | AiFunctionResponseContentType::VideoMp4 => {
+                        let headers_map = response.headers();
+                        let content_type_header =
+                            headers_map.get(CONTENT_TYPE).ok_or(AppError::File)?;
+                        let media_type = content_type_header.to_str()?.to_string();
+                        let content = response.bytes().await?;
 
-                    AiFunctionResponse::Text(ai_function_text_response)
-                }
-                AiFunctionResponseContentType::ApplicationPdf
-                | AiFunctionResponseContentType::AudioAac
-                | AiFunctionResponseContentType::AudioMpeg
-                | AiFunctionResponseContentType::ImageJpeg
-                | AiFunctionResponseContentType::ImagePng
-                | AiFunctionResponseContentType::VideoMp4 => {
-                    let headers_map = response.headers();
-                    let content_type_header =
-                        headers_map.get(CONTENT_TYPE).ok_or(AppError::File)?;
-                    let media_type = content_type_header.to_str()?.to_string();
-                    let content = response.bytes().await?;
+                        let engine = engine::GeneralPurpose::new(
+                            &alphabet::URL_SAFE,
+                            engine::general_purpose::PAD,
+                        );
+                        let content = engine.encode(content);
 
-                    let engine = engine::GeneralPurpose::new(
-                        &alphabet::URL_SAFE,
-                        engine::general_purpose::PAD,
-                    );
-                    let content = engine.encode(content);
+                        let ai_function_file_response = AiFunctionFileResponse {
+                            content,
+                            media_type,
+                            original_file_name: None,
+                        };
 
-                    let ai_function_file_response = AiFunctionFileResponse {
-                        content,
-                        media_type,
-                        original_file_name: None,
-                    };
+                        AiFunctionResponse::File(ai_function_file_response)
+                    }
+                };
 
-                    AiFunctionResponse::File(ai_function_file_response)
-                }
+                return Ok(Some(ai_function_response));
+            }
+
+            let response = response.text().await?;
+
+            let ai_function_error_response = AiFunctionErrorResponse {
+                error: Some(response),
             };
 
-            return Ok(Some(ai_function_response));
+            return Ok(Some(AiFunctionResponse::Error(ai_function_error_response)));
         }
+    }
 
-        let response = response.text().await?;
+    Ok(None)
+}
 
-        let ai_function_error_response = AiFunctionErrorResponse {
-            error: Some(response),
-        };
+#[derive(Debug, Deserialize)]
+pub struct InformationRetrievalResponse {
+    pub result: Option<String>,
+}
 
-        return Ok(Some(AiFunctionResponse::Error(ai_function_error_response)));
+pub async fn querycontent_function_call(
+    ai_function: &AiFunction,
+    ai_service: &AiService,
+    function_args: &Value,
+) -> Result<Option<InformationRetrievalResponse>> {
+    let url = format!(
+        "{BASE_AI_FUNCTION_URL}:{}/{}",
+        ai_service.port, ai_function.name
+    );
+
+    let response = reqwest::ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(60))
+        .build()?
+        .post(url)
+        .json(&function_args)
+        .send()
+        .await;
+
+    match response {
+        Err(error) => {
+            tracing::error!("Function call error: {error:?}");
+        }
+        Ok(response) => {
+            if response.status() == StatusCode::CREATED {
+                let information_retrieval_response: std::result::Result<
+                    InformationRetrievalResponse,
+                    reqwest::Error,
+                > = response.json().await;
+
+                if let Ok(information_retrieval_response) = information_retrieval_response {
+                    return Ok(Some(information_retrieval_response));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FunctionSensitiveInformationResponse {
+    pub is_sensitive: bool,
+    pub sensitive_part: Option<String>,
+}
+
+pub async fn sensitive_information_function_call(
+    ai_function: &AiFunction,
+    ai_service: &AiService,
+    function_args: &Value,
+) -> Result<Option<FunctionSensitiveInformationResponse>> {
+    let url = format!(
+        "{BASE_AI_FUNCTION_URL}:{}/{}",
+        ai_service.port, ai_function.name
+    );
+
+    let response = reqwest::ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(60))
+        .build()?
+        .post(url)
+        .json(&function_args)
+        .send()
+        .await;
+
+    match response {
+        Err(error) => {
+            tracing::error!("Function call error: {error:?}");
+        }
+        Ok(response) => {
+            if response.status() == StatusCode::CREATED {
+                let function_sensitive_information_response: std::result::Result<
+                    FunctionSensitiveInformationResponse,
+                    reqwest::Error,
+                > = response.json().await;
+
+                if let Ok(function_sensitive_information_response) =
+                    function_sensitive_information_response
+                {
+                    return Ok(Some(function_sensitive_information_response));
+                }
+            }
+        }
     }
 
     Ok(None)

@@ -22,7 +22,6 @@ use async_openai::{
 };
 use base64::{alphabet, engine, Engine};
 use chrono::{DateTime, Utc};
-use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::{Postgres, Transaction};
@@ -63,20 +62,9 @@ pub struct FunctionSensitiveInformationPost {
     pub value1: String,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct FunctionSensitiveInformationResponse {
-    pub is_sensitive: bool,
-    pub sensitive_part: Option<String>,
-}
-
 #[derive(Debug, Serialize)]
 pub struct InformationRetrievalPost {
     pub prompt: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct InformationRetrievalResponse {
-    pub result: Option<String>,
 }
 
 #[allow(clippy::module_name_repetitions)]
@@ -112,37 +100,31 @@ pub async fn check_information_retrieval_service(
                 let information_retrieval_post = InformationRetrievalPost {
                     prompt: chat_message.message.clone(),
                 };
-                let url = format!(
-                    "{BASE_AI_FUNCTION_URL}:{}/{}",
-                    ai_service.port, ai_function.name
-                );
-                let response = reqwest::Client::new()
-                    .post(url)
-                    .json(&information_retrieval_post)
-                    .send()
-                    .await;
+                let function_args = serde_json::to_value(information_retrieval_post)?;
 
-                if let Ok(response) = response {
-                    if response.status() == StatusCode::CREATED {
-                        let information_retrieval_response: InformationRetrievalResponse =
-                            response.json().await?;
+                let information_retrieval_response = function_call::querycontent_function_call(
+                    &ai_function,
+                    &ai_service,
+                    &function_args,
+                )
+                .await;
 
-                        if let Some(result) = information_retrieval_response.result {
-                            let chat_message = context
-                                .octopus_database
-                                .update_chat_message_from_function(
-                                    transaction,
-                                    chat_message.id,
-                                    ai_function.id,
-                                    ChatMessageStatus::Answered,
-                                    100,
-                                    Some(result),
-                                    ai_service.color.clone(),
-                                )
-                                .await?;
+                if let Ok(Some(information_retrieval_response)) = information_retrieval_response {
+                    if let Some(result) = information_retrieval_response.result {
+                        let chat_message = context
+                            .octopus_database
+                            .update_chat_message_from_function(
+                                transaction,
+                                chat_message.id,
+                                ai_function.id,
+                                ChatMessageStatus::Answered,
+                                100,
+                                Some(result),
+                                ai_service.color.clone(),
+                            )
+                            .await?;
 
-                            return Ok(chat_message);
-                        }
+                        return Ok(chat_message);
                     }
                 }
             }
@@ -204,34 +186,32 @@ pub async fn check_sensitive_information_service(
                     let function_sensitive_information_post = FunctionSensitiveInformationPost {
                         value1: chat_message.message.clone(),
                     };
-                    let url = format!(
-                        "{BASE_AI_FUNCTION_URL}:{}/{}",
-                        ai_service.port, ai_function.name
-                    );
-                    let response = reqwest::Client::new()
-                        .post(url)
-                        .json(&function_sensitive_information_post)
-                        .send()
+                    let function_args = serde_json::to_value(function_sensitive_information_post)?;
+
+                    let function_sensitive_information_response =
+                        function_call::sensitive_information_function_call(
+                            &ai_function,
+                            &ai_service,
+                            &function_args,
+                        )
                         .await;
 
-                    if let Ok(response) = response {
-                        if response.status() == StatusCode::CREATED {
-                            let function_sensitive_information_response: FunctionSensitiveInformationResponse = response.json().await?;
+                    if let Ok(Some(function_sensitive_information_response)) =
+                        function_sensitive_information_response
+                    {
+                        if function_sensitive_information_response.is_sensitive {
+                            let chat_message = context
+                                .octopus_database
+                                .update_chat_message_is_sensitive(
+                                    transaction,
+                                    chat_message.id,
+                                    true,
+                                    ChatMessageStatus::Answered,
+                                    100,
+                                )
+                                .await?;
 
-                            if function_sensitive_information_response.is_sensitive {
-                                let chat_message = context
-                                    .octopus_database
-                                    .update_chat_message_is_sensitive(
-                                        transaction,
-                                        chat_message.id,
-                                        true,
-                                        ChatMessageStatus::Answered,
-                                        100,
-                                    )
-                                    .await?;
-
-                                return Ok(chat_message);
-                            }
+                            return Ok(chat_message);
                         }
                     }
                 } else {
