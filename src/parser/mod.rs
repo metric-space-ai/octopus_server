@@ -399,12 +399,20 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
 
         let generated_description =
             if let Some(ref describe_functions_response) = describe_functions_response {
-                describe_functions_response
+                let generated_description = describe_functions_response
                     .functions
                     .iter()
                     .filter(|x| x.name == Some(function.name.clone()))
                     .map(|x| x.description.clone())
-                    .collect::<Option<String>>()
+                    .collect::<Option<String>>();
+
+                if let Some(mut generated_description) = generated_description {
+                    generated_description.truncate(1024);
+
+                    Some(generated_description)
+                } else {
+                    None
+                }
             } else {
                 None
             };

@@ -973,12 +973,13 @@ pub async fn open_ai_request(
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
-                                                "Function call error: AI Service not available"
+                                                "Function call error: AI Service not available {:?}", ai_function.ai_service_id
                                             );
                                         }
                                     } else {
                                         tracing::error!(
-                                            "Function call error: AI Function not available"
+                                            "Function call error: AI Function not available {:?}",
+                                            function_name
                                         );
                                     }
 
