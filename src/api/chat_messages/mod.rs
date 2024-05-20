@@ -156,10 +156,7 @@ pub async fn anonymize(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let mut message = format!(
-            "ANONYMIZATION IS STILL NOT IMPLEMENTED {}",
-            cloned_chat_message.message
-        );
+        let mut message = "Sorry, an internal error appears. Anonymization is not available. Please ask your administrator.".to_string();
 
         let ai_function = cloned_context
             .octopus_database
