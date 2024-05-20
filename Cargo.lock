@@ -1798,7 +1798,7 @@ dependencies = [
 
 [[package]]
 name = "octopus_server"
-version = "0.8.24"
+version = "0.8.25"
 dependencies = [
  "argon2",
  "async-openai",

@@ -151,6 +151,7 @@ pub async fn configuration(
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let r#type = input.r#type.unwrap_or(AiServiceType::Normal);
+    let color = input.color.unwrap_or("#b7b7b7".to_string());
 
     let ai_service = context
         .octopus_database
@@ -160,7 +161,7 @@ pub async fn configuration(
             input.device_map,
             AiServiceStatus::ParsingStarted,
             r#type,
-            input.color,
+            &color,
         )
         .await?;
 

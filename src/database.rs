@@ -2797,7 +2797,7 @@ impl OctopusDatabase {
         device_map: serde_json::Value,
         status: AiServiceStatus,
         r#type: AiServiceType,
-        color: Option<String>,
+        color: &str,
     ) -> Result<AiService> {
         let ai_service = sqlx::query_as::<_, AiService>(
             "UPDATE ai_services
