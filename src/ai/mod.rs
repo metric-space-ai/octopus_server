@@ -971,7 +971,15 @@ pub async fn open_ai_request(
                                             .await?;
 
                                             return Ok(chat_message);
+                                        } else {
+                                            tracing::error!(
+                                                "Function call error: AI Service not available"
+                                            );
                                         }
+                                    } else {
+                                        tracing::error!(
+                                            "Function call error: AI Function not available"
+                                        );
                                     }
 
                                     let simple_app = context

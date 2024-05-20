@@ -77,7 +77,7 @@ mod tests {
             .to_vec();
         let body: Vec<Process> = serde_json::from_slice(&body).unwrap();
 
-        assert!(body.len() >= 0);
+        assert_eq!(body.len(), 0);
 
         let mut transaction = app
             .context

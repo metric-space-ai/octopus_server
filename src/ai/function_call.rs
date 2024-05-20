@@ -88,9 +88,13 @@ pub async fn handle_function_call(
             return Ok(chat_message);
         }
 
+        tracing::error!("Function call error: No Response");
+
         failed_connection_attempts += 1;
 
         if failed_connection_attempts > 10 {
+            tracing::error!("Function call error: No Response - health check");
+
             service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
 
             break;
@@ -272,6 +276,8 @@ pub async fn function_call(
             }
 
             let response = response.text().await?;
+
+            tracing::error!("Function call error: bad response: {response:?}");
 
             let ai_function_error_response = AiFunctionErrorResponse {
                 error: Some(response),
