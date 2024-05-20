@@ -44,6 +44,7 @@ use crate::{
         WorkspacesType,
     },
     error::ResponseError,
+    process_manager::{Process, ProcessState, ProcessType},
     server_resources::{Gpu, ServerResources},
     session::{SessionResponse, SessionResponseData},
     Result,
@@ -88,6 +89,7 @@ mod nextcloud_raw_files;
 mod ollama_models;
 mod parameters;
 mod password_resets;
+mod process_manager;
 mod profile_pictures;
 mod profiles;
 mod scraper;
@@ -163,6 +165,9 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 PasswordResetPost,
                 PasswordResetPut,
                 PasswordResetToken,
+                Process,
+                ProcessState,
+                ProcessType,
                 Profile,
                 ProfilePut,
                 RegisterPost,
@@ -288,6 +293,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             password_resets::change_password,
             password_resets::request,
             password_resets::validate,
+            process_manager::list,
             profiles::read,
             profiles::update,
             profile_pictures::delete,
@@ -363,6 +369,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "ollama_models", description = "Ollama models API."),
             (name = "parameters", description = "Parameters API."),
             (name = "password_resets", description = "Password resets API."),
+            (name = "process_manager", description = "Process manager API."),
             (name = "profiles", description = "Profiles API."),
             (name = "profile_pictures", description = "Profile pictures API."),
             (name = "register", description = "Register API."),
@@ -598,6 +605,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/password-resets/:token",
             get(password_resets::validate).put(password_resets::change_password),
         )
+        .route("/api/v1/process-manager", get(process_manager::list))
         .route(
             "/api/v1/profile-pictures/:user_id",
             delete(profile_pictures::delete).put(profile_pictures::update),

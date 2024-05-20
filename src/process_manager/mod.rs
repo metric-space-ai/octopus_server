@@ -1,5 +1,6 @@
 use crate::{context::Context, error::AppError, Result};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     fs::OpenOptions,
@@ -10,13 +11,14 @@ use std::{
 };
 use tokio::time::{sleep, Duration};
 use tracing::error;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 pub mod ai_service;
 pub mod wasp_app;
 pub mod wasp_generator;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct Process {
     pub id: Uuid,
     pub client_port: Option<i32>,
@@ -26,6 +28,21 @@ pub struct Process {
     pub server_port: Option<i32>,
     pub state: ProcessState,
     pub r#type: ProcessType,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
+pub enum ProcessState {
+    Initial,
+    EnvironmentPrepared,
+    HealthCheckProblem,
+    Running,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema)]
+pub enum ProcessType {
+    AiService,
+    WaspApp,
+    WaspGenerator,
 }
 
 #[derive(Debug)]
@@ -161,21 +178,6 @@ impl ProcessManager {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ProcessState {
-    Initial,
-    EnvironmentPrepared,
-    HealthCheckProblem,
-    Running,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum ProcessType {
-    AiService,
-    WaspApp,
-    WaspGenerator,
-}
-
 pub async fn start(context: Arc<Context>) -> Result<()> {
     ai_service::start_or_manage_running(context.clone()).await?;
 
@@ -185,7 +187,6 @@ pub async fn start(context: Arc<Context>) -> Result<()> {
         match res {
             Err(e) => error!("Error: {:?}", e),
             Ok(processes) => {
-                error!("{:?}", processes);
                 for process in processes {
                     match process.r#type {
                         ProcessType::AiService => {
