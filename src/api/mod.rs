@@ -440,6 +440,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/ai-services/:id/configuration",
             put(ai_services::configuration),
         )
+        .route("/api/v1/ai-services/:id/diff", get(ai_services::diff))
         .route(
             "/api/v1/ai-services/:id/download-original-function-body",
             get(ai_services::download_original_function_body),

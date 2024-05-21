@@ -361,6 +361,50 @@ pub async fn delete(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
+    path = "/api/v1/ai-services/:id/diff",
+    responses(
+        (status = 200, description = "AI Service diff.", body = String),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn diff(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let mut result = String::new();
+    let original_function_body = ai_service.original_function_body;
+    let processed_function_body = ai_service.processed_function_body.unwrap_or("".to_string());
+
+    for diff in diff::lines(&original_function_body, &processed_function_body) {
+        match diff {
+            diff::Result::Left(l) => result.push_str(&format!("-{}\n", l)),
+            diff::Result::Both(l, _) => result.push_str(&format!(" {}\n", l)),
+            diff::Result::Right(r) => result.push_str(&format!("+{}\n", r)),
+        }
+    }
+
+    Ok((StatusCode::OK, result).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
     path = "/api/v1/ai-services/:id/download-original-function-body",
     responses(
         (status = 200, description = "AI Service original function body.", body = String),
