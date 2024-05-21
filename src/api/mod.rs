@@ -9,8 +9,9 @@ use crate::{
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
         ai_services::{
-            AiServiceAllowedUsersPut, AiServiceConfigurationPut, AiServiceOperation,
-            AiServiceOperationPost, AiServiceOperationResponse, AiServicePriorityPut,
+            AiServiceAllowedUsersPut, AiServiceColorPut, AiServiceConfigurationPut,
+            AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse,
+            AiServicePriorityPut,
         },
         auth::{
             change_password, change_password::ChangePasswordPut, login, login::LoginPost, logout,
@@ -119,6 +120,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 AiFunctionTextResponse,
                 AiService,
                 AiServiceAllowedUsersPut,
+                AiServiceColorPut,
                 AiServiceConfigurationPut,
                 AiServiceHealthCheckStatus,
                 AiServiceOperation,
@@ -207,6 +209,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             ai_functions::read,
             ai_functions::update,
             ai_services::allowed_users,
+            ai_services::color,
             ai_services::configuration,
             ai_services::create,
             ai_services::delete,
@@ -430,6 +433,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/ai-services/:id/allowed-users",
             put(ai_services::allowed_users),
         )
+        .route("/api/v1/ai-services/:id/color", put(ai_services::color))
         .route(
             "/api/v1/ai-services/:id/configuration",
             put(ai_services::configuration),

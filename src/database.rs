@@ -1935,7 +1935,10 @@ impl OctopusDatabase {
         Ok(ai_function)
     }
 
-    pub async fn try_get_ai_function_by_formatted_name(&self, formatted_name: &str) -> Result<Option<AiFunction>> {
+    pub async fn try_get_ai_function_by_formatted_name(
+        &self,
+        formatted_name: &str,
+    ) -> Result<Option<AiFunction>> {
         let ai_function = sqlx::query_as!(
             AiFunction,
             r#"SELECT id, ai_service_id, description, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS "request_content_type: _", response_content_type AS "response_content_type: _", created_at, deleted_at, updated_at
@@ -2800,6 +2803,27 @@ impl OctopusDatabase {
             RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             allowed_user_ids,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service)
+    }
+
+    pub async fn update_ai_service_color(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        color: &str,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as!(
+            AiService,
+            r#"UPDATE ai_services
+            SET color = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            color,
         )
         .fetch_one(&mut **transaction)
         .await?;
