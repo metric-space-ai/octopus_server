@@ -8,9 +8,10 @@ use crate::{
     SERVICES_DIR,
 };
 use axum::{
+    body::Body,
     extract::{Multipart, Path, Query, State},
-    http::StatusCode,
-    response::IntoResponse,
+    http::{header, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
     Json,
 };
 use chrono::{DateTime, Duration, Utc};
@@ -123,7 +124,6 @@ pub async fn allowed_users(
         (status = 200, description = "AI Service configured.", body = AiService),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Service not found.", body = ResponseError),
-        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("id" = String, Path, description = "AI Service id")
@@ -356,6 +356,100 @@ pub async fn delete(
         .await?;
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/ai-services/:id/download-original-function-body",
+    responses(
+        (status = 200, description = "AI Service original function body.", body = String),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn download_original_function_body(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let original_function_body = ai_service.original_function_body;
+
+    Ok((StatusCode::OK, PyFile(original_function_body)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/ai-services/:id/download-processed-function-body",
+    responses(
+        (status = 200, description = "AI Service processed function body.", body = String),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "AI Service not found.", body = ResponseError),
+    ),
+    params(
+        ("id" = String, Path, description = "AI Service id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn download_processed_function_body(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+
+    let ai_service = context
+        .octopus_database
+        .try_get_ai_service_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let processed_function_body = ai_service.processed_function_body.unwrap_or("".to_string());
+
+    Ok((StatusCode::OK, PyFile(processed_function_body)).into_response())
+}
+
+#[derive(Clone, Copy, Debug)]
+#[must_use]
+pub struct PyFile<T>(pub T);
+
+impl<T> IntoResponse for PyFile<T>
+where
+    T: Into<Body>,
+{
+    fn into_response(self) -> Response {
+        (
+            [
+                (
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::OCTET_STREAM.as_ref()),
+                ),
+                (
+                    header::CONTENT_DISPOSITION,
+                    HeaderValue::from_static("attachment; filename=\"file.py\""),
+                ),
+            ],
+            self.0.into(),
+        )
+            .into_response()
+    }
 }
 
 #[axum_macros::debug_handler]

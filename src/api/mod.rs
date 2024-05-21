@@ -212,6 +212,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             ai_services::color,
             ai_services::configuration,
             ai_services::create,
+            ai_services::download_original_function_body,
+            ai_services::download_processed_function_body,
             ai_services::delete,
             ai_services::installation,
             ai_services::list,
@@ -437,6 +439,14 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/ai-services/:id/configuration",
             put(ai_services::configuration),
+        )
+        .route(
+            "/api/v1/ai-services/:id/download-original-function-body",
+            get(ai_services::download_original_function_body),
+        )
+        .route(
+            "/api/v1/ai-services/:id/download-processed-function-body",
+            get(ai_services::download_processed_function_body),
         )
         .route(
             "/api/v1/ai-services/:id/installation",
