@@ -97,7 +97,7 @@ pub async fn create_environment(
         if let Some(parent) = parent {
             let parent = parent.to_str().ok_or(AppError::Parsing)?.to_string();
 
-            if !parent.starts_with("src")
+            if !(parent.starts_with("src") || parent.starts_with("__MACOSX"))
                 && (shortest_parent.is_empty()
                     || (!shortest_parent.is_empty() && shortest_parent.len() > parent.len()))
             {
@@ -115,19 +115,44 @@ pub async fn create_environment(
 
         if (*file.name()).ends_with('/') {
             let path = outpath.to_str().ok_or(AppError::Parsing)?.to_string();
-            let path = if path.starts_with(&shortest_parent) {
-                path.strip_prefix(&shortest_parent)
-                    .ok_or(AppError::Parsing)?
-                    .to_string()
-            } else {
-                path
-            };
-            let path = format!("{full_wasp_app_dir_path}/{path}");
 
-            std::fs::create_dir_all(&path)?;
+            if !path.starts_with("__MACOSX") {
+                let path = if path.starts_with(&shortest_parent) {
+                    path.strip_prefix(&shortest_parent)
+                        .ok_or(AppError::Parsing)?
+                        .to_string()
+                } else {
+                    path
+                };
+                let path = format!("{full_wasp_app_dir_path}/{path}");
+
+                std::fs::create_dir_all(&path)?;
+            }
         } else {
             if let Some(parent) = outpath.parent() {
                 let path = parent.to_str().ok_or(AppError::Parsing)?.to_string();
+
+                if !path.starts_with("__MACOSX") {
+                    let path = if path.starts_with(&shortest_parent) {
+                        path.strip_prefix(&shortest_parent)
+                            .ok_or(AppError::Parsing)?
+                            .to_string()
+                    } else {
+                        path
+                    };
+
+                    let path = format!("{full_wasp_app_dir_path}/{path}");
+                    let dir_exists = Path::new(&path).is_dir();
+
+                    if !dir_exists {
+                        std::fs::create_dir_all(path)?;
+                    }
+                }
+            }
+
+            let path = outpath.to_str().ok_or(AppError::Parsing)?.to_string();
+
+            if !path.starts_with("__MACOSX") {
                 let path = if path.starts_with(&shortest_parent) {
                     path.strip_prefix(&shortest_parent)
                         .ok_or(AppError::Parsing)?
@@ -137,25 +162,9 @@ pub async fn create_environment(
                 };
 
                 let path = format!("{full_wasp_app_dir_path}/{path}");
-                let dir_exists = Path::new(&path).is_dir();
-
-                if !dir_exists {
-                    std::fs::create_dir_all(path)?;
-                }
+                let mut outfile = std::fs::File::create(&path)?;
+                std::io::copy(&mut file, &mut outfile)?;
             }
-
-            let path = outpath.to_str().ok_or(AppError::Parsing)?.to_string();
-            let path = if path.starts_with(&shortest_parent) {
-                path.strip_prefix(&shortest_parent)
-                    .ok_or(AppError::Parsing)?
-                    .to_string()
-            } else {
-                path
-            };
-
-            let path = format!("{full_wasp_app_dir_path}/{path}");
-            let mut outfile = std::fs::File::create(&path)?;
-            std::io::copy(&mut file, &mut outfile)?;
         }
     }
 
