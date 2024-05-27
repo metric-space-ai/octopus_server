@@ -395,11 +395,42 @@ pub async fn get_messages(
             || chat_message.is_anonymized
             || chat_message.is_marked_as_not_sensitive
         {
+            let suggested_ai_function_id = chat_message.suggested_ai_function_id;
+            let suggested_ai_function =
+                if let Some(suggested_ai_function_id) = suggested_ai_function_id {
+                    context
+                        .octopus_database
+                        .try_get_ai_function_by_id(suggested_ai_function_id)
+                        .await?
+                } else {
+                    None
+                };
+
             let function_name = if let Some(ai_function_id) = chat_message_tmp.ai_function_id {
                 ai_function_id.to_string()
             } else {
                 "unknown".to_string()
             };
+
+            if let Some(suggested_ai_function) = suggested_ai_function {
+                let suggested_ai_function_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_ai_function.name);
+                let chat_completion_request_message =
+                    ChatCompletionRequestSystemMessageArgs::default()
+                        .content(&suggested_ai_function_message)
+                        .build()?;
+
+                messages.push(ChatCompletionRequestMessage::System(
+                    chat_completion_request_message,
+                ));
+
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: suggested_ai_function_message,
+                    role: "system".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            }
 
             let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
                 .content(chat_message_tmp.message.clone())

@@ -11,6 +11,7 @@ pub struct Configuration {
 #[derive(Debug, Deserialize)]
 pub struct Function {
     pub description: String,
+    pub display_name: Option<String>,
     pub input_type: String,
     pub name: String,
     pub parameters: serde_json::Value,

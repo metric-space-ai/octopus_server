@@ -26,12 +26,14 @@ use validator::Validate;
 pub struct ChatMessagePost {
     pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
+    pub suggested_ai_function_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct ChatMessagePut {
     pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
+    pub suggested_ai_function_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -338,6 +340,7 @@ pub async fn create(
             bypass_sensitive_information_filter,
             estimated_response_at,
             &input.message,
+            input.suggested_ai_function_id,
         )
         .await?;
 
@@ -1029,6 +1032,7 @@ pub async fn update(
             bypass_sensitive_information_filter,
             estimated_response_at,
             &input.message,
+            input.suggested_ai_function_id,
         )
         .await?;
 

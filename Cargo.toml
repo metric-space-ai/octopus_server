@@ -57,7 +57,7 @@ utoipa-swagger-ui = { version = "7.1", features = ["axum"] }
 uuid = { version = "1.8", features = ["serde", "v4"] }
 walkdir = "2.5"
 validator = { version = "0.18", features = ["derive"] }
-zip = "1.1"
+zip = "2.1"
 
 [profile.release]
 lto = true

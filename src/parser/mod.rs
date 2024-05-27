@@ -397,6 +397,11 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
             .replace('-', "_")
             .to_lowercase();
 
+        let display_name = match function.display_name {
+            None => Some(formatted_name.replace('_', " ")),
+            Some(display_name) => Some(display_name),
+        };
+
         let generated_description =
             if let Some(ref describe_functions_response) = describe_functions_response {
                 let generated_description = describe_functions_response
@@ -425,6 +430,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                         &mut transaction,
                         ai_service.id,
                         &function.description,
+                        display_name,
                         &formatted_name,
                         generated_description,
                         &function.name,

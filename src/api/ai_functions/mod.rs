@@ -147,7 +147,7 @@ pub async fn direct_call(
     get,
     path = "/api/v1/ai-functions/:ai_service_id",
     responses(
-        (status = 200, description = "List of AI Functions.", body = [AiFunction]),
+        (status = 200, description = "List of AI Functions from AI Service.", body = [AiFunction]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Function not found.", body = ResponseError),
@@ -176,6 +176,30 @@ pub async fn list(
         .octopus_database
         .get_ai_functions_by_ai_service_id(ai_service.id)
         .await?;
+
+    Ok((StatusCode::OK, Json(ai_functions)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/ai-functions",
+    responses(
+        (status = 200, description = "List of AI Functions.", body = [AiFunction]),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn list_all(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+) -> Result<impl IntoResponse, AppError> {
+    require_authenticated(extracted_session).await?;
+
+    let ai_functions = context.octopus_database.get_ai_functions().await?;
 
     Ok((StatusCode::OK, Json(ai_functions)).into_response())
 }
@@ -706,6 +730,136 @@ mod tests {
             .context
             .octopus_database
             .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn list_all_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let ai_service =
+            api::ai_services::tests::ai_service_create_and_configure(router.clone(), session_id)
+                .await;
+        let ai_service_id = ai_service.id;
+
+        sleep(Duration::from_secs(4)).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/ai-functions"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: Vec<AiFunction> = serde_json::from_slice(&body).unwrap();
+
+        assert!(!body.is_empty());
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_ai_service_by_id(&mut transaction, ai_service_id)
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn list_all_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let ai_service =
+            api::ai_services::tests::ai_service_create_and_configure(router.clone(), session_id)
+                .await;
+        let ai_service_id = ai_service.id;
+
+        sleep(Duration::from_secs(4)).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/ai-functions"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_ai_service_by_id(&mut transaction, ai_service_id)
             .await
             .unwrap();
 

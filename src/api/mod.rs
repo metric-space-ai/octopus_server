@@ -206,6 +206,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             ai_functions::delete,
             ai_functions::direct_call,
             ai_functions::list,
+            ai_functions::list_all,
             ai_functions::read,
             ai_functions::update,
             ai_services::allowed_users,
@@ -414,6 +415,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/auth/:user_id",
             put(change_password::change_password),
         )
+        .route("/api/v1/ai-functions", get(ai_functions::list_all))
         .route(
             "/api/v1/ai-functions/direct-call",
             post(ai_functions::direct_call),
