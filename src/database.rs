@@ -1,13 +1,14 @@
 use crate::{
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
-        AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
-        AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
-        ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling,
-        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
-        Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
-        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
+        AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
+        AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
+        CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
+        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile,
+        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, Session,
+        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
+        WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -136,10 +137,23 @@ impl OctopusDatabase {
         Ok(ai_functions)
     }
 
+    pub async fn get_ai_service_generators(&self) -> Result<Vec<AiServiceGenerator>> {
+        let ai_service_generators = sqlx::query_as!(
+            AiServiceGenerator,
+            r#"SELECT id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status AS "status: _", version, created_at, deleted_at, updated_at
+            FROM ai_service_generators
+            WHERE deleted_at IS NULL"#,
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ai_service_generators)
+    }
+
     pub async fn get_ai_services(&self) -> Result<Vec<AiService>> {
         let ai_services = sqlx::query_as!(
             AiService,
-            r#"SELECT id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_services
             WHERE deleted_at IS NULL
             ORDER BY priority DESC, original_file_name ASC"#
@@ -770,7 +784,7 @@ impl OctopusDatabase {
             r#"INSERT INTO ai_services
             (original_file_name, original_function_body, port)
             VALUES ($1, $2, $3)
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             original_file_name,
             original_function_body,
             port,
@@ -779,6 +793,33 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_service)
+    }
+
+    pub async fn insert_ai_service_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        user_id: Uuid,
+        description: &str,
+        name: &str,
+        sample_code: Option<String>,
+        version: i32,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as!(
+            AiServiceGenerator,
+            r#"INSERT INTO ai_service_generators
+            (user_id, description, name, sample_code, version)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status AS "status: _", version, created_at, deleted_at, updated_at"#,
+            user_id,
+            description,
+            name,
+            sample_code,
+            version,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
     }
 
     pub async fn insert_chat(
@@ -1510,6 +1551,25 @@ impl OctopusDatabase {
         Ok(ai_service)
     }
 
+    pub async fn try_delete_ai_service_generator_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let ai_service_generator = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE ai_service_generators
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
+    }
+
     pub async fn try_delete_cached_file_by_cache_key(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2009,7 +2069,7 @@ impl OctopusDatabase {
     pub async fn try_get_ai_service_by_id(&self, id: Uuid) -> Result<Option<AiService>> {
         let ai_service = sqlx::query_as!(
             AiService,
-            r#"SELECT id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at
+            r#"SELECT id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at
             FROM ai_services
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -2019,6 +2079,24 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_service)
+    }
+
+    pub async fn try_get_ai_service_generator_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<AiServiceGenerator>> {
+        let ai_service_generator = sqlx::query_as!(
+            AiServiceGenerator,
+            r#"SELECT id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status AS "status: _", version, created_at, deleted_at, updated_at
+            FROM ai_service_generators
+            WHERE id = $1
+            AND deleted_at IS NULL"#,
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(ai_service_generator)
     }
 
     pub async fn try_get_ai_service_id_by_id(&self, id: Uuid) -> Result<Option<Uuid>> {
@@ -2798,11 +2876,32 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET is_enabled = $2, original_file_name = $3, original_function_body = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             is_enabled,
             original_file_name,
             original_function_body,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service)
+    }
+
+    pub async fn update_ai_service_ai_service_generator_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        ai_service_generator_id: Uuid,
+    ) -> Result<AiService> {
+        let ai_service = sqlx::query_as!(
+            AiService,
+            r#"UPDATE ai_services
+            SET ai_service_generator_id = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            id,
+            ai_service_generator_id,
         )
         .fetch_one(&mut **transaction)
         .await?;
@@ -2821,7 +2920,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET allowed_user_ids = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             allowed_user_ids,
         )
@@ -2842,7 +2941,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET color = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             color,
         )
@@ -2865,7 +2964,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET device_map = $2, status = $3, type = $4, color = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(device_map)
@@ -2890,7 +2989,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET device_map = $2, processed_function_body = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             device_map,
             processed_function_body,
@@ -2899,6 +2998,117 @@ impl OctopusDatabase {
         .await?;
 
         Ok(ai_service)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_ai_service_generator(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        description: &str,
+        name: &str,
+        sample_code: Option<String>,
+        status: AiServiceGeneratorStatus,
+        version: i32,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as::<_, AiServiceGenerator>(
+            "UPDATE ai_service_generators
+            SET description = $2, name = $3, sample_code = $4, status = $5, version = $6, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(description)
+        .bind(name)
+        .bind(sample_code)
+        .bind(status)
+        .bind(version)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
+    }
+
+    pub async fn update_ai_service_generator_ai_service_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        ai_service_id: Uuid,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as::<_, AiServiceGenerator>(
+            "UPDATE ai_service_generators
+            SET ai_service_id = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(ai_service_id)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
+    }
+
+    pub async fn update_ai_service_generator_internet_research_results(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        internet_research_results: &str,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as::<_, AiServiceGenerator>(
+            "UPDATE ai_service_generators
+            SET internet_research_results = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(internet_research_results)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
+    }
+
+    pub async fn update_ai_service_generator_original_function_body(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        original_function_body: &str,
+        status: AiServiceGeneratorStatus,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as::<_, AiServiceGenerator>(
+            "UPDATE ai_service_generators
+            SET original_function_body = $2, status = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(original_function_body)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
+    }
+
+    pub async fn update_ai_service_generator_status(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: AiServiceGeneratorStatus,
+    ) -> Result<AiServiceGenerator> {
+        let ai_service_generator = sqlx::query_as::<_, AiServiceGenerator>(
+            "UPDATE ai_service_generators
+            SET status = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status, version, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(ai_service_generator)
     }
 
     pub async fn update_ai_service_health_check_status(
@@ -2912,7 +3122,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET health_check_execution_time = $2, health_check_status = $3, health_check_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(health_check_execution_time)
@@ -2934,7 +3144,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET is_enabled = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             is_enabled,
         )
@@ -2956,7 +3166,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET is_enabled = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(is_enabled)
@@ -2980,7 +3190,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET parser_feedback = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(parser_feedback)
@@ -3002,7 +3212,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET parser_feedback = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(parser_feedback)
@@ -3023,7 +3233,7 @@ impl OctopusDatabase {
             r#"UPDATE ai_services
             SET priority = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
             priority,
         )
@@ -3045,7 +3255,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET processed_function_body = $2, progress = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(processed_function_body)
@@ -3067,7 +3277,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET required_python_version = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(required_python_version)
@@ -3088,7 +3298,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET setup_execution_time = $2, setup_status = $3, setup_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(setup_execution_time)
@@ -3110,7 +3320,7 @@ impl OctopusDatabase {
             "UPDATE ai_services
             SET progress = $2, status = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
+            RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status, is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version, setup_execution_time, setup_status, status, type, created_at, deleted_at, health_check_at, setup_at, updated_at",
         )
         .bind(id)
         .bind(progress)

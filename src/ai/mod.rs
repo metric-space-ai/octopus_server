@@ -16,7 +16,7 @@ use async_openai::{
         ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImageArgs,
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
         ChatCompletionTool, ChatCompletionToolArgs, ChatCompletionToolType,
-        CreateChatCompletionRequestArgs, FunctionObjectArgs, ImageUrlArgs, ImageUrlDetail,
+        CreateChatCompletionRequestArgs, FunctionObjectArgs, ImageDetail, ImageUrlArgs,
     },
     Client,
 };
@@ -34,6 +34,7 @@ use uuid::Uuid;
 
 pub mod code_tools;
 pub mod function_call;
+pub mod generator;
 pub mod service;
 
 pub const AZURE_OPENAI_API_VERSION: &str = "2023-12-01-preview";
@@ -531,7 +532,7 @@ pub async fn get_messages(
                                     .image_url(
                                         ImageUrlArgs::default()
                                             .url(image_url)
-                                            .detail(ImageUrlDetail::High)
+                                            .detail(ImageDetail::High)
                                             .build()?,
                                     )
                                     .build()?

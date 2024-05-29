@@ -554,9 +554,11 @@ COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.
 COPY /octopus_client/public public/
 COPY /octopus_client/src src/
 WORKDIR /octopus_server
+RUN mkdir -p data/generate/services
 COPY --from=octopus_server_builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=octopus_server_builder /usr/local/cargo/bin/sqlx ./
 COPY --from=octopus_server_builder /octopus_server/target/release/octopus_server ./
+COPY --from=octopus_server_builder /octopus_server/data/generate/services ./data/generate/services
 COPY --from=octopus_server_builder /octopus_server/migrations ./migrations
 COPY --from=octopus_server_builder /octopus_server/docker-entrypoint.sh ./
 COPY --from=octopus_server_builder /octopus_server/frontend-start.sh ./

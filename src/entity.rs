@@ -132,6 +132,7 @@ pub enum AiServiceType {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct AiService {
     pub id: Uuid,
+    pub ai_service_generator_id: Option<Uuid>,
     pub allowed_user_ids: Option<Vec<Uuid>>,
     pub color: Option<String>,
     pub device_map: Option<serde_json::Value>,
@@ -154,6 +155,36 @@ pub struct AiService {
     pub deleted_at: Option<DateTime<Utc>>,
     pub health_check_at: Option<DateTime<Utc>>,
     pub setup_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "ai_service_generator_statuses", rename_all = "snake_case")]
+pub enum AiServiceGeneratorStatus {
+    Changed,
+    Deployed,
+    Generated,
+    Generating,
+    Initial,
+    InternetResearchEnded,
+    InternetResearchStarted,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct AiServiceGenerator {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub ai_service_id: Option<Uuid>,
+    pub description: String,
+    pub internet_research_results: Option<String>,
+    pub log: Option<String>,
+    pub name: String,
+    pub original_function_body: Option<String>,
+    pub sample_code: Option<String>,
+    pub status: AiServiceGeneratorStatus,
+    pub version: i32,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
 }
 
@@ -403,6 +434,7 @@ pub const PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID: &str = "AZURE_OPENAI_DEPLOY
 pub const PARAMETER_NAME_AZURE_OPENAI_ENABLED: &str = "AZURE_OPENAI_ENABLED";
 pub const PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS: &str = "HUGGING_FACE_TOKEN_ACCESS";
 pub const PARAMETER_NAME_NEXTCLOUD_PASSWORD: &str = "NEXTCLOUD_PASSWORD";
+pub const PARAMETER_NAME_NEXTCLOUD_URL: &str = "NEXTCLOUD_URL";
 pub const PARAMETER_NAME_NEXTCLOUD_USERNAME: &str = "NEXTCLOUD_USERNAME";
 pub const PARAMETER_NAME_OCTOPUS_API_URL: &str = "OCTOPUS_API_URL";
 pub const PARAMETER_NAME_OCTOPUS_WS_URL: &str = "OCTOPUS_WS_URL";

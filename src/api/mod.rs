@@ -8,6 +8,9 @@ use crate::{
     },
     api::{
         ai_functions::{AiFunctionDirectCallPost, AiFunctionPut},
+        ai_service_generators::{
+            AiServiceGeneratorGeneratePost, AiServiceGeneratorPost, AiServiceGeneratorPut,
+        },
         ai_services::{
             AiServiceAllowedUsersPut, AiServiceColorPut, AiServiceConfigurationPut,
             AiServiceOperation, AiServiceOperationPost, AiServiceOperationResponse,
@@ -36,13 +39,13 @@ use crate::{
     context::Context,
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
-        AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion, AiServiceSetupStatus,
-        AiServiceStatus, AiServiceType, CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage,
-        ChatMessageExtended, ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture,
-        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel,
-        OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
-        WorkspacesType,
+        AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
+        AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
+        CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt,
+        ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel, OllamaModelStatus,
+        Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended, WaspApp,
+        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -72,6 +75,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod ai_functions;
+mod ai_service_generators;
 mod ai_services;
 mod auth;
 mod cached_files;
@@ -122,6 +126,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 AiServiceAllowedUsersPut,
                 AiServiceColorPut,
                 AiServiceConfigurationPut,
+                AiServiceGenerator,
+                AiServiceGeneratorGeneratePost,
+                AiServiceGeneratorPost,
+                AiServiceGeneratorPut,
+                AiServiceGeneratorStatus,
                 AiServiceHealthCheckStatus,
                 AiServiceOperation,
                 AiServiceOperationPost,
@@ -209,6 +218,14 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             ai_functions::list_all,
             ai_functions::read,
             ai_functions::update,
+            ai_service_generators::create,
+            ai_service_generators::delete,
+            ai_service_generators::deploy,
+            ai_service_generators::download_original_function_body,
+            ai_service_generators::generate,
+            ai_service_generators::list,
+            ai_service_generators::read,
+            ai_service_generators::update,
             ai_services::allowed_users,
             ai_services::color,
             ai_services::configuration,
@@ -356,6 +373,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         ),
         tags(
             (name = "ai_functions", description = "AI functions API."),
+            (name = "ai_service_generators", description = "AI service generators API."),
             (name = "ai_services", description = "AI services API."),
             (name = "cached_files", description = "Cached files API."),
             (name = "change_password", description = "Change password API."),
@@ -429,6 +447,28 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(ai_functions::delete)
                 .get(ai_functions::read)
                 .put(ai_functions::update),
+        )
+        .route(
+            "/api/v1/ai-service-generators",
+            get(ai_service_generators::list).post(ai_service_generators::create),
+        )
+        .route(
+            "/api/v1/ai-service-generators/:id",
+            delete(ai_service_generators::delete)
+                .get(ai_service_generators::read)
+                .put(ai_service_generators::update),
+        )
+        .route(
+            "/api/v1/ai-service-generators/:id/deploy",
+            post(ai_service_generators::deploy),
+        )
+        .route(
+            "/api/v1/ai-service-generators/:id/download-original-function-body",
+            get(ai_service_generators::download_original_function_body),
+        )
+        .route(
+            "/api/v1/ai-service-generators/:id/generate",
+            post(ai_service_generators::generate),
         )
         .route(
             "/api/v1/ai-services",

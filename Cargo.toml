@@ -1,13 +1,13 @@
 [package]
 name = "octopus_server"
-version = "0.8.33"
+version = "0.9.0-pre"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 argon2 = "0.5"
-async-openai = "0.21"
+async-openai = "0.23"
 async-recursion = "1.1"
 axum = { version = "0.7", features = ["multipart", "ws"] }
 axum-extra = { version = "0.9", features = ["typed-header"] }

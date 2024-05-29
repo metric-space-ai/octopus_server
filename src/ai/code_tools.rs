@@ -32,6 +32,179 @@ pub struct ParsingCodeCheckResponse {
     pub reason: Option<String>,
 }
 
+pub async fn open_ai_create_ai_service(
+    context: Arc<Context>,
+    description: &str,
+    internet_research_results: Option<String>,
+    sample_code: Option<String>,
+    sample_services: &[String],
+) -> Result<Option<String>> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
+    let mut messages = vec![];
+
+    let mut text = String::new();
+
+    text.push_str(r#"I will give you a set of example code, a user input and an internet search result to do the task. Generate me now a matching python code. It is important to build the app like this. Make sure you use latest Flask version. Use only "application/json" as "input_type" and "return_type". Only output the final python file in markdown. Do not explain yourself.\n\n"#);
+
+    text.push_str(r#"Here is a desired response format for Flask Python service: {"response": string, "file_attachments": [{"content": string, "file_name": string, "media_type": string}]} both response and file_attachments fields are optional. Make sure that response field is always string. Convert numbers to string. Convert arrays to string. You can use both response and file_attachments in case you want to save both text response and files. You can send only response field or only file_attachments. content field in file_attachments must be base64 encoded. Even if you want to save plain text file, make sure that you encode it with base64. Also binary files like mp3, png, jpg must be encoded with base64. Setup endpoint should have the following response format {"setup": "Performed"}\n\n"#);
+
+    text.push_str(
+        "Make sure that you place imports from installed libraries after installation section.\n\n",
+    );
+
+    text.push_str("Make sure that you have a proper imports for all used functions.\n\n");
+
+    text.push_str(r#"When generating code related to OpenAI make sure that you use OPENAI_API_KEY ENV value. You can just define client this way client = OpenAI(). Also make sure that you have a proper "models": {"model": "gpt-4o-2024-05-13"} section in service configuration.\n\n"#);
+
+    text.push_str(
+        "When a user wants to use the scraper make sure that you thread all scraped data as HTML.\n\n",
+    );
+
+    text.push_str(
+        "When a user wants to use Nextcloud make sure that you use NC_USERNAME, NC_URL and NC_PASSWORD environment variables values to access it. Use nc_py_api library for Nextcloud.\n\n",
+    );
+
+    text.push_str(
+        r#"Make sure that everything related to AI model load/setup is done in setup endpoint. Make sure you use a correct information about CUDA/CPU device selecteb by user and defined in device_map section in configuration. Use code similar to the following to select a proper device:
+def command_result_as_int(command):
+    return int(subprocess.check_output(command, shell=True).decode('utf-8').strip())
+
+def select_device_with_larger_free_memory(available_devices):
+    device = None
+    memory = 0
+
+    for available_device in available_devices:
+        id = available_device.split(":")
+        id = id[-1]
+        free_memory = command_result_as_int(f"nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
+        if free_memory > memory:
+            memory = free_memory
+            device = available_device
+
+    return device if device else "cpu"
+
+def select_device():
+    if not torch.cuda.is_available():
+        return "cpu"
+
+    device_map = config.get('device_map', {})
+    available_devices = list(device_map.keys())
+    return select_device_with_larger_free_memory(available_devices)
+
+device = select_device()"#,
+    );
+
+    text.push_str("Here is a list of example templates that demonstrate how to build a plugin for the octopus system:");
+
+    for sample_service in sample_services {
+        let sample = format!("\n\n\nSample:\n\n{sample_service}");
+        text.push_str(&sample);
+    }
+
+    text.push_str(&format!("\n\n\nHere is the user input:\n\n{description}"));
+
+    if let Some(sample_code) = sample_code {
+        text.push_str(&format!(
+            "\n\n\nHere is the sample code provided by user. In terms of used libraries try to reuse as much technology as you can:\n\n{sample_code}"
+        ));
+    }
+
+    if let Some(internet_research_results) = internet_research_results {
+        text.push_str(&format!("\n\n\nHere is the internet research with addition information to do the task:\n\n{internet_research_results}"));
+    }
+
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
+
+    let ai_system_prompt = context.get_config().await?.get_parameter_ai_system_prompt();
+
+    if let Some(ai_system_prompt) = ai_system_prompt {
+        let chat_completion_request_system_message =
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(ai_system_prompt)
+                .build()?;
+
+        messages.push(ChatCompletionRequestMessage::System(
+            chat_completion_request_system_message,
+        ));
+    }
+
+    if context.get_config().await?.test_mode {
+        return Ok(Some("".to_string()));
+    }
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .model(MODEL128K)
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::error!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
+
+            match response_message {
+                Err(e) => {
+                    tracing::error!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.first();
+
+                    match response_message {
+                        None => {
+                            tracing::error!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(response_content) = response_message.content {
+                                let response_content = if response_content.starts_with("```python")
+                                    && response_content.ends_with("```")
+                                {
+                                    response_content
+                                        .strip_prefix("```python")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                        .strip_suffix("```")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                } else if response_content.starts_with("```markdown")
+                                    && response_content.ends_with("```")
+                                {
+                                    response_content
+                                        .strip_prefix("```markdown")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                        .strip_suffix("```")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                } else {
+                                    response_content
+                                };
+
+                                return Ok(Some(response_content));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 pub async fn open_ai_describe_functions(
     code: &str,
     configuration: &Configuration,
