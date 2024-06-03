@@ -46,7 +46,7 @@ sqlx = { version = "0.7", features = [
 strum_macros = "0.26"
 systemstat = "0.2"
 tempfile = "3.10"
-tokio = { version = "1.37", features = ["rt-multi-thread", "time"] }
+tokio = { version = "1.38", features = ["rt-multi-thread", "time"] }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
 tower = { version = "0.4", features = ["timeout", "util"] }
 tower-http = { version = "0.5", features = ["add-extension", "cors", "fs", "limit", "trace"] }
