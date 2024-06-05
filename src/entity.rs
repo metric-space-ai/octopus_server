@@ -211,6 +211,7 @@ pub enum ChatMessageStatus {
 pub struct ChatMessage {
     pub id: Uuid,
     pub ai_function_id: Option<Uuid>,
+    pub ai_service_id: Option<Uuid>,
     pub chat_id: Uuid,
     pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
@@ -243,6 +244,7 @@ pub struct ChatMessage {
 pub struct ChatMessageExtended {
     pub id: Uuid,
     pub ai_function_id: Option<Uuid>,
+    pub ai_service_id: Option<Uuid>,
     pub chat_id: Uuid,
     pub simple_app_id: Option<Uuid>,
     pub user_id: Uuid,
