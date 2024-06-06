@@ -121,6 +121,7 @@ pub async fn check_information_retrieval_service(
                                 100,
                                 Some(result),
                                 ai_service.color.clone(),
+                                ai_service.id,
                             )
                             .await?;
 

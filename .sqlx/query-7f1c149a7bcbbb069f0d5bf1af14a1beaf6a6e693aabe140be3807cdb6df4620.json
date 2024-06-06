@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, ai_service_id, description, display_name, formatted_name, generated_description, is_enabled, name, parameters, request_content_type AS \"request_content_type: _\", response_content_type AS \"response_content_type: _\", created_at, deleted_at, updated_at\n            FROM ai_functions\n            WHERE deleted_at IS NULL\n            ORDER BY name ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ai_service_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "display_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "formatted_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "generated_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "is_enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "parameters",
+        "type_info": "Json"
+      },
+      {
+        "ordinal": 9,
+        "name": "request_content_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_functions_request_content_types",
+            "kind": {
+              "Enum": [
+                "application_json"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "response_content_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "ai_functions_response_content_types",
+            "kind": {
+              "Enum": [
+                "application_json",
+                "application_pdf",
+                "audio_aac",
+                "audio_mpeg",
+                "image_jpeg",
+                "image_png",
+                "text_html",
+                "text_plain",
+                "video_mp4"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "7f1c149a7bcbbb069f0d5bf1af14a1beaf6a6e693aabe140be3807cdb6df4620"
+}

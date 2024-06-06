@@ -403,6 +403,7 @@ pub async fn update_chat_message(
                     ChatMessageStatus::Answered,
                     100,
                     ai_service.color.clone(),
+                    ai_service.id,
                 )
                 .await?;
 
@@ -423,6 +424,7 @@ pub async fn update_chat_message(
                     ChatMessageStatus::Answered,
                     100,
                     ai_service.color.clone(),
+                    ai_service.id,
                 )
                 .await?;
 
@@ -517,6 +519,7 @@ pub async fn update_chat_message(
                     100,
                     ai_function_text_response.response.clone(),
                     ai_service.color.clone(),
+                    ai_service.id,
                 )
                 .await?;
 
