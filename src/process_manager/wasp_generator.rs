@@ -22,7 +22,7 @@ use uuid::Uuid;
 
 pub async fn create_environment(
     context: Arc<Context>,
-    id: Uuid,
+    id: &str,
     mut process: Process,
     user_id: Uuid,
     wasp_generator: &WaspGenerator,
@@ -231,7 +231,7 @@ pub async fn create_environment(
     Ok(process)
 }
 
-pub fn delete_environment(id: Uuid) -> Result<bool> {
+pub fn delete_environment(id: &str) -> Result<bool> {
     let pwd = get_pwd()?;
     let full_wasp_generator_dir_path = format!("{pwd}/{WASP_GENERATOR_DIR}/{id}");
     let dir_exists = Path::new(&full_wasp_generator_dir_path).is_dir();
@@ -298,12 +298,12 @@ pub fn delete_environment(id: Uuid) -> Result<bool> {
 
 pub async fn install(
     context: &Arc<Context>,
-    id: Uuid,
+    id: &str,
     user_id: Uuid,
     wasp_generator: WaspGenerator,
 ) -> Result<WaspGenerator> {
     let process = Process {
-        id,
+        id: id.to_string(),
         client_port: None,
         failed_connection_attempts: 0,
         last_used_at: None,
@@ -332,15 +332,15 @@ pub async fn install_and_run(
     wasp_generator: WaspGenerator,
 ) -> Result<WaspGenerator> {
     if !context.get_config().await?.test_mode {
-        stop_and_remove(context.clone(), wasp_generator.id).await?;
+        stop_and_remove(context.clone(), &wasp_generator.id.to_string()).await?;
         let wasp_generator = install(
             &context.clone(),
-            wasp_generator.id,
+            &wasp_generator.id.to_string(),
             wasp_generator.user_id,
             wasp_generator,
         )
         .await?;
-        run(context, wasp_generator.id).await?;
+        run(context, &wasp_generator.id.to_string()).await?;
 
         return Ok(wasp_generator);
     }
@@ -355,13 +355,14 @@ pub async fn manage_running(context: Arc<Context>, process: Process) -> Result<(
             let duration = now - last_used_at;
 
             if duration.num_hours() >= 4 {
+                let wasp_generator_id = Uuid::parse_str(&process.id)?;
                 let wasp_generator = context
                     .octopus_database
-                    .try_get_wasp_generator_by_id(process.id)
+                    .try_get_wasp_generator_by_id(wasp_generator_id)
                     .await?;
 
                 if let Some(wasp_generator) = wasp_generator {
-                    stop(context, wasp_generator.id).await?;
+                    stop(context, &wasp_generator.id.to_string()).await?;
                 }
             }
         }
@@ -370,7 +371,7 @@ pub async fn manage_running(context: Arc<Context>, process: Process) -> Result<(
     Ok(())
 }
 
-pub async fn run(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn run(context: Arc<Context>, id: &str) -> Result<&str> {
     let process = context.process_manager.get_process(id)?;
 
     if let Some(mut process) = process {
@@ -393,7 +394,7 @@ pub async fn run(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn stop(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn stop(context: Arc<Context>, id: &str) -> Result<&str> {
     let pid = try_get_pid(&format!("{id}.sh"))?;
 
     if let Some(pid) = pid {
@@ -407,7 +408,7 @@ pub async fn stop(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn stop_and_remove(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn stop_and_remove(context: Arc<Context>, id: &str) -> Result<&str> {
     let id = stop(context, id).await?;
 
     delete_environment(id)?;
@@ -415,7 +416,7 @@ pub async fn stop_and_remove(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn try_start(id: Uuid) -> Result<Option<i32>> {
+pub async fn try_start(id: &str) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
 
     let full_wasp_generator_dir_path = format!("{working_dir}/{WASP_GENERATOR_DIR}/{id}");

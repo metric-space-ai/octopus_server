@@ -12,7 +12,6 @@ use std::{
 use tokio::time::{sleep, Duration};
 use tracing::error;
 use utoipa::ToSchema;
-use uuid::Uuid;
 
 pub mod ai_service;
 pub mod wasp_app;
@@ -20,7 +19,7 @@ pub mod wasp_generator;
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub struct Process {
-    pub id: Uuid,
+    pub id: String,
     pub client_port: Option<i32>,
     pub failed_connection_attempts: i32,
     pub last_used_at: Option<DateTime<Utc>>,
@@ -47,7 +46,7 @@ pub enum ProcessType {
 
 #[derive(Debug)]
 pub struct ProcessManager {
-    pub processes: RwLock<HashMap<Uuid, Process>>,
+    pub processes: RwLock<HashMap<String, Process>>,
     pub reserved_ports: RwLock<Vec<i32>>,
 }
 
@@ -59,13 +58,13 @@ impl ProcessManager {
         }
     }
 
-    pub fn get_process(&self, id: Uuid) -> Result<Option<Process>> {
+    pub fn get_process(&self, id: &str) -> Result<Option<Process>> {
         let processes = self
             .processes
             .read()
             .map_err(|_| AppError::ProcessManagerLock)?;
 
-        let process = processes.get(&id);
+        let process = processes.get(id);
 
         match process {
             None => Ok(None),
@@ -79,8 +78,8 @@ impl ProcessManager {
             .write()
             .map_err(|_| AppError::ProcessManagerLock)?;
 
-        let id = process.id;
-        processes.insert(id, process.clone());
+        let id = process.id.clone();
+        processes.insert(id.clone(), process.clone());
         let process = processes.get(&id);
 
         match process {
@@ -137,13 +136,13 @@ impl ProcessManager {
         Ok(reserved_ports.clone())
     }
 
-    pub fn remove_process(&self, id: Uuid) -> Result<bool> {
+    pub fn remove_process(&self, id: &str) -> Result<bool> {
         let mut processes = self
             .processes
             .write()
             .map_err(|_| AppError::ProcessManagerLock)?;
 
-        let process = processes.remove(&id);
+        let process = processes.remove(id);
 
         match process {
             None => Ok(false),
@@ -258,7 +257,7 @@ pub fn try_get_zombie_pids() -> Result<Vec<i32>> {
     Ok(pids)
 }
 
-pub async fn try_kill_cgroup(id: Uuid) -> Result<()> {
+pub async fn try_kill_cgroup(id: &str) -> Result<()> {
     let path = format!("/sys/fs/cgroup/{id}/cgroup.freeze");
     let file_exists = Path::new(&path).is_file();
 
@@ -300,7 +299,7 @@ pub async fn try_kill_process(pid: i32) -> Result<()> {
     Ok(())
 }
 
-pub fn try_update_last_used_at(context: &Arc<Context>, process_id: Uuid) -> Result<()> {
+pub fn try_update_last_used_at(context: &Arc<Context>, process_id: &str) -> Result<()> {
     let process = context.process_manager.get_process(process_id)?;
 
     if let Some(mut process) = process {

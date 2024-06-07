@@ -15,7 +15,8 @@ use axum::{
     Json,
 };
 use rev_buf_reader::RevBufReader;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
+use sha3::{Digest, Sha3_512};
 use std::{
     fs::{read_to_string, File},
     io::{BufRead, Write},
@@ -25,6 +26,13 @@ use std::{
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
+
+#[derive(Serialize, ToSchema)]
+pub struct AutoLoginUser {
+    id: Uuid,
+    email: String,
+    password: String,
+}
 
 #[derive(Deserialize, IntoParams)]
 pub struct BackendProxyParams {
@@ -103,6 +111,45 @@ pub async fn allowed_users(
         .await?;
 
     Ok((StatusCode::OK, Json(wasp_app)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/wasp-apps/auto-login",
+    responses(
+        (status = 200, description = "Wasp app auto login.", body = AutoLoginUser),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn auto_login(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    let password = format!("{}-{}", session_user.id, session_user.created_at);
+
+    let mut hasher = Sha3_512::new();
+    hasher.update(password);
+    let hash = hex::encode(hasher.finalize_reset());
+
+    let auto_login_user = AutoLoginUser {
+        id: session_user.id,
+        email: session_user.email,
+        password: hash,
+    };
+
+    Ok((StatusCode::OK, Json(auto_login_user)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -348,9 +395,20 @@ pub async fn logs(
         return Err(AppError::NotFound);
     }
 
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message.wasp_app_id != Some(wasp_app.id) {
+        return Err(AppError::NotFound);
+    }
+
     let app_id = match wasp_app.instance_type {
-        WaspAppInstanceType::Private => chat_message_id,
-        WaspAppInstanceType::Shared => wasp_app.id,
+        WaspAppInstanceType::Private => chat_message.id.to_string(),
+        WaspAppInstanceType::Shared => wasp_app.id.to_string(),
+        WaspAppInstanceType::User => format!("{}-{}", chat_message.user_id, wasp_app.id),
     };
 
     let limit = limit.unwrap_or(50);
@@ -424,13 +482,24 @@ pub async fn proxy_backend(
         return Err(AppError::NotFound);
     }
 
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message.wasp_app_id != Some(wasp_app.id) {
+        return Err(AppError::NotFound);
+    }
+
     let app_id = match wasp_app.instance_type {
-        WaspAppInstanceType::Private => chat_message_id,
-        WaspAppInstanceType::Shared => wasp_app.id,
+        WaspAppInstanceType::Private => chat_message.id.to_string(),
+        WaspAppInstanceType::Shared => wasp_app.id.to_string(),
+        WaspAppInstanceType::User => format!("{}-{}", chat_message.user_id, wasp_app.id),
     };
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -440,16 +509,6 @@ pub async fn proxy_backend(
     };
 
     if pid.is_none() || process.is_none() {
-        let chat_message = context
-            .octopus_database
-            .try_get_chat_message_by_id(chat_message_id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if chat_message.wasp_app_id != Some(wasp_app.id) {
-            return Err(AppError::NotFound);
-        }
-
         process_manager::wasp_app::install_and_run(
             context.clone(),
             chat_message.clone(),
@@ -457,7 +516,7 @@ pub async fn proxy_backend(
         )
         .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let Some(server_port) = process.server_port {
@@ -476,7 +535,7 @@ pub async fn proxy_backend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, app_id)?;
+                process_manager::try_update_last_used_at(&context, &app_id)?;
 
                 return Ok(response);
             }
@@ -498,7 +557,7 @@ pub async fn proxy_backend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, app_id)?;
+            process_manager::try_update_last_used_at(&context, &app_id)?;
 
             return Ok(response);
         }
@@ -542,25 +601,26 @@ pub async fn proxy_backend_web_socket(
         return Err(AppError::NotFound);
     }
 
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message.wasp_app_id != Some(wasp_app.id) {
+        return Err(AppError::NotFound);
+    }
+
     let app_id = match wasp_app.instance_type {
-        WaspAppInstanceType::Private => chat_message_id,
-        WaspAppInstanceType::Shared => wasp_app.id,
+        WaspAppInstanceType::Private => chat_message.id.to_string(),
+        WaspAppInstanceType::Shared => wasp_app.id.to_string(),
+        WaspAppInstanceType::User => format!("{}-{}", chat_message.user_id, wasp_app.id),
     };
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
 
     if pid.is_none() || process.is_none() {
-        let chat_message = context
-            .octopus_database
-            .try_get_chat_message_by_id(chat_message_id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if chat_message.wasp_app_id != Some(wasp_app.id) {
-            return Err(AppError::NotFound);
-        }
-
         process_manager::wasp_app::install_and_run(
             context.clone(),
             chat_message.clone(),
@@ -568,7 +628,7 @@ pub async fn proxy_backend_web_socket(
         )
         .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let Some(client_port) = process.client_port {
@@ -627,13 +687,24 @@ pub async fn proxy_frontend(
         return Err(AppError::NotFound);
     }
 
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if chat_message.wasp_app_id != Some(wasp_app.id) {
+        return Err(AppError::NotFound);
+    }
+
     let app_id = match wasp_app.instance_type {
-        WaspAppInstanceType::Private => chat_message_id,
-        WaspAppInstanceType::Shared => wasp_app.id,
+        WaspAppInstanceType::Private => chat_message.id.to_string(),
+        WaspAppInstanceType::Shared => wasp_app.id.to_string(),
+        WaspAppInstanceType::User => format!("{}-{}", chat_message.user_id, wasp_app.id),
     };
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -643,16 +714,6 @@ pub async fn proxy_frontend(
     };
 
     if pid.is_none() || process.is_none() {
-        let chat_message = context
-            .octopus_database
-            .try_get_chat_message_by_id(chat_message_id)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if chat_message.wasp_app_id != Some(wasp_app.id) {
-            return Err(AppError::NotFound);
-        }
-
         process_manager::wasp_app::install_and_run(
             context.clone(),
             chat_message.clone(),
@@ -660,7 +721,7 @@ pub async fn proxy_frontend(
         )
         .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let (Some(client_port), Some(server_port)) =
@@ -681,7 +742,7 @@ pub async fn proxy_frontend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, app_id)?;
+                process_manager::try_update_last_used_at(&context, &app_id)?;
 
                 return Ok(response);
             }
@@ -703,7 +764,7 @@ pub async fn proxy_frontend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, app_id)?;
+            process_manager::try_update_last_used_at(&context, &app_id)?;
 
             return Ok(response);
         }

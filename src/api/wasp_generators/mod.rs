@@ -496,10 +496,10 @@ pub async fn proxy_backend(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let app_id = wasp_generator.id;
+    let app_id = wasp_generator.id.to_string();
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -512,7 +512,7 @@ pub async fn proxy_backend(
         process_manager::wasp_generator::install_and_run(context.clone(), wasp_generator.clone())
             .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let Some(server_port) = process.server_port {
@@ -531,7 +531,7 @@ pub async fn proxy_backend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, app_id)?;
+                process_manager::try_update_last_used_at(&context, &app_id)?;
 
                 return Ok(response);
             }
@@ -553,7 +553,7 @@ pub async fn proxy_backend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, app_id)?;
+            process_manager::try_update_last_used_at(&context, &app_id)?;
 
             return Ok(response);
         }
@@ -589,16 +589,16 @@ pub async fn proxy_backend_web_socket(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let app_id = wasp_generator.id;
+    let app_id = wasp_generator.id.to_string();
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
 
     if pid.is_none() || process.is_none() {
         process_manager::wasp_generator::install_and_run(context.clone(), wasp_generator.clone())
             .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let Some(client_port) = process.client_port {
@@ -648,10 +648,10 @@ pub async fn proxy_frontend(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let app_id = wasp_generator.id;
+    let app_id = wasp_generator.id.to_string();
 
     let pid = process_manager::try_get_pid(&format!("{app_id}.sh"))?;
-    let process = context.process_manager.get_process(app_id)?;
+    let process = context.process_manager.get_process(&app_id)?;
     let uri = request.uri().to_string();
 
     let uri_append = if uri.contains('?') {
@@ -664,7 +664,7 @@ pub async fn proxy_frontend(
         process_manager::wasp_generator::install_and_run(context.clone(), wasp_generator.clone())
             .await?;
 
-        let process = context.process_manager.get_process(app_id)?;
+        let process = context.process_manager.get_process(&app_id)?;
 
         if let Some(process) = process {
             if let (Some(client_port), Some(server_port)) =
@@ -685,7 +685,7 @@ pub async fn proxy_frontend(
                 )
                 .await?;
 
-                process_manager::try_update_last_used_at(&context, app_id)?;
+                process_manager::try_update_last_used_at(&context, &app_id)?;
 
                 return Ok(response);
             }
@@ -707,7 +707,7 @@ pub async fn proxy_frontend(
             )
             .await?;
 
-            process_manager::try_update_last_used_at(&context, app_id)?;
+            process_manager::try_update_last_used_at(&context, &app_id)?;
 
             return Ok(response);
         }

@@ -175,7 +175,7 @@ pub async fn install(ai_service: AiService, context: Arc<Context>) -> Result<AiS
         .await?;
 
     let process = Process {
-        id: ai_service.id,
+        id: ai_service.id.to_string(),
         client_port: None,
         failed_connection_attempts: 0,
         last_used_at: None,
@@ -238,8 +238,9 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
     match process.state {
         ProcessState::HealthCheckProblem => {
             if let Some(server_port) = process.server_port {
+                let ai_service_id = Uuid::parse_str(&process.id)?;
                 let ai_service =
-                    ai::service::service_health_check(process.id, context.clone(), server_port)
+                    ai::service::service_health_check(ai_service_id, context.clone(), server_port)
                         .await?;
 
                 if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
@@ -281,8 +282,9 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
         }
         ProcessState::Running => {
             if let Some(server_port) = process.server_port {
+                let ai_service_id = Uuid::parse_str(&process.id)?;
                 let ai_service =
-                    ai::service::service_health_check(process.id, context.clone(), server_port)
+                    ai::service::service_health_check(ai_service_id, context.clone(), server_port)
                         .await?;
 
                 if ai_service.health_check_status != AiServiceHealthCheckStatus::Ok {
@@ -304,7 +306,7 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
 
         if environment_created {
             let process = Process {
-                id: ai_service.id,
+                id: ai_service.id.to_string(),
                 client_port: None,
                 failed_connection_attempts: 0,
                 last_used_at: None,
@@ -322,11 +324,13 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
         || ai_service.status == AiServiceStatus::Setup
         || ai_service.status == AiServiceStatus::Stopped
     {
-        let process = context.process_manager.get_process(ai_service.id)?;
+        let process = context
+            .process_manager
+            .get_process(&ai_service.id.to_string())?;
 
         if let Some(mut process) = process {
             if process.state == ProcessState::EnvironmentPrepared {
-                let pid = try_start(ai_service.id).await?;
+                let pid = try_start(&ai_service.id.to_string()).await?;
 
                 if let Some(_pid) = pid {
                     process.pid = pid;
@@ -417,7 +421,7 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
 
                     if environment_created {
                         let process = Process {
-                            id: ai_service.id,
+                            id: ai_service.id.to_string(),
                             client_port: None,
                             failed_connection_attempts: 0,
                             last_used_at: None,
@@ -436,7 +440,7 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
                 }
                 Some(pid) => {
                     let process = Process {
-                        id: ai_service.id,
+                        id: ai_service.id.to_string(),
                         client_port: None,
                         failed_connection_attempts: 0,
                         last_used_at: None,
@@ -462,9 +466,11 @@ pub async fn stop(ai_service: AiService, context: Arc<Context>) -> Result<AiServ
         try_kill_process(pid).await?;
     }
 
-    try_kill_cgroup(ai_service.id).await?;
+    try_kill_cgroup(&ai_service.id.to_string()).await?;
 
-    context.process_manager.remove_process(ai_service.id)?;
+    context
+        .process_manager
+        .remove_process(&ai_service.id.to_string())?;
 
     Ok(ai_service)
 }
@@ -481,7 +487,7 @@ pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result
     let ai_service = stop(ai_service, context.clone()).await?;
 
     let process = Process {
-        id: ai_service.id,
+        id: ai_service.id.to_string(),
         client_port: None,
         failed_connection_attempts: 0,
         last_used_at: None,
@@ -502,7 +508,7 @@ pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result
     Ok(ai_service)
 }
 
-pub async fn try_start(ai_service_id: Uuid) -> Result<Option<i32>> {
+pub async fn try_start(ai_service_id: &str) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
 
     let path = format!("/sys/fs/cgroup/{ai_service_id}");

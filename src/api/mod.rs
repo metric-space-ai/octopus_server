@@ -32,7 +32,7 @@ use crate::{
         setup::{SetupInfoResponse, SetupPost},
         users::{UserInvitationPost, UserPost, UserPut},
         version::VersionInfoResponse,
-        wasp_apps::WaspAppAllowedUsersPut,
+        wasp_apps::{AutoLoginUser, WaspAppAllowedUsersPut},
         wasp_generators::{WaspGeneratorDeployPost, WaspGeneratorPost, WaspGeneratorPut},
         workspaces::{WorkspacePost, WorkspacePut},
     },
@@ -140,6 +140,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 AiServiceSetupStatus,
                 AiServiceStatus,
                 AiServiceType,
+                AutoLoginUser,
                 CachedFile,
                 ChangePasswordPut,
                 Chat,
@@ -344,6 +345,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             users::update,
             version::info,
             wasp_apps::allowed_users,
+            wasp_apps::auto_login,
             wasp_apps::create,
             wasp_apps::delete,
             wasp_apps::extract_meta,
@@ -703,6 +705,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/wasp-apps",
             get(wasp_apps::list).post(wasp_apps::create),
         )
+        .route("/api/v1/wasp-apps/auto-login", get(wasp_apps::auto_login))
         .route(
             "/api/v1/wasp-apps/extract-meta",
             post(wasp_apps::extract_meta),

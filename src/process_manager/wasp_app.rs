@@ -23,7 +23,7 @@ use uuid::Uuid;
 pub async fn create_environment(
     context: Arc<Context>,
     chat_message_id: Uuid,
-    id: Uuid,
+    id: &str,
     mut process: Process,
     user_id: Uuid,
     wasp_app: &WaspApp,
@@ -240,7 +240,7 @@ pub async fn create_environment(
     Ok(process)
 }
 
-pub fn delete_environment(id: Uuid) -> Result<bool> {
+pub fn delete_environment(id: &str) -> Result<bool> {
     let pwd = get_pwd()?;
     let full_wasp_app_dir_path = format!("{pwd}/{WASP_APPS_DIR}/{id}");
     let dir_exists = Path::new(&full_wasp_app_dir_path).is_dir();
@@ -308,12 +308,12 @@ pub fn delete_environment(id: Uuid) -> Result<bool> {
 pub async fn install(
     context: &Arc<Context>,
     chat_message_id: Uuid,
-    id: Uuid,
+    id: &str,
     user_id: Uuid,
     wasp_app: WaspApp,
 ) -> Result<WaspApp> {
     let process = Process {
-        id,
+        id: id.to_string(),
         client_port: None,
         failed_connection_attempts: 0,
         last_used_at: None,
@@ -351,19 +351,20 @@ pub async fn install_and_run(
 ) -> Result<WaspApp> {
     if !context.get_config().await?.test_mode {
         let id = match wasp_app.instance_type {
-            WaspAppInstanceType::Private => chat_message.id,
-            WaspAppInstanceType::Shared => wasp_app.id,
+            WaspAppInstanceType::Private => chat_message.id.to_string(),
+            WaspAppInstanceType::Shared => wasp_app.id.to_string(),
+            WaspAppInstanceType::User => format!("{}-{}", chat_message.user_id, wasp_app.id),
         };
-        stop_and_remove(context.clone(), id).await?;
+        stop_and_remove(context.clone(), &id).await?;
         let wasp_app = install(
             &context.clone(),
             chat_message.id,
-            id,
+            &id,
             chat_message.user_id,
             wasp_app,
         )
         .await?;
-        run(context, id).await?;
+        run(context, &id).await?;
 
         return Ok(wasp_app);
     }
@@ -378,13 +379,14 @@ pub async fn manage_running(context: Arc<Context>, process: Process) -> Result<(
             let duration = now - last_used_at;
 
             if duration.num_hours() >= 12 {
+                let chat_message_id = Uuid::parse_str(&process.id)?;
                 let chat_message = context
                     .octopus_database
-                    .try_get_chat_message_by_id(process.id)
+                    .try_get_chat_message_by_id(chat_message_id)
                     .await?;
 
                 if let Some(chat_message) = chat_message {
-                    stop(context, chat_message.id).await?;
+                    stop(context, &chat_message.id.to_string()).await?;
                 }
             }
         }
@@ -393,7 +395,7 @@ pub async fn manage_running(context: Arc<Context>, process: Process) -> Result<(
     Ok(())
 }
 
-pub async fn run(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn run(context: Arc<Context>, id: &str) -> Result<&str> {
     let process = context.process_manager.get_process(id)?;
 
     if let Some(mut process) = process {
@@ -416,7 +418,7 @@ pub async fn run(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn stop(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn stop(context: Arc<Context>, id: &str) -> Result<&str> {
     let pid = try_get_pid(&format!("{id}.sh"))?;
 
     if let Some(pid) = pid {
@@ -430,7 +432,7 @@ pub async fn stop(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn stop_and_remove(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
+pub async fn stop_and_remove(context: Arc<Context>, id: &str) -> Result<&str> {
     let id = stop(context, id).await?;
 
     delete_environment(id)?;
@@ -438,7 +440,7 @@ pub async fn stop_and_remove(context: Arc<Context>, id: Uuid) -> Result<Uuid> {
     Ok(id)
 }
 
-pub async fn try_start(id: Uuid) -> Result<Option<i32>> {
+pub async fn try_start(id: &str) -> Result<Option<i32>> {
     let working_dir = get_pwd()?;
     let full_wasp_app_dir_path = format!("{working_dir}/{WASP_APPS_DIR}/{id}");
 

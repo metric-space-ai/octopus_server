@@ -540,6 +540,7 @@ pub struct UserExtended {
 pub enum WaspAppInstanceType {
     Private,
     Shared,
+    User,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
