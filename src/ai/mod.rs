@@ -959,6 +959,18 @@ pub async fn open_ai_request(
                                             .await?
                                     };
 
+                                    let ai_function = if let Some(ai_function) = ai_function {
+                                        Some(ai_function)
+                                    } else {
+                                        let new_function_name = function_name.replace('-', "_");
+                                        context
+                                            .octopus_database
+                                            .try_get_ai_function_by_formatted_name(
+                                                &new_function_name,
+                                            )
+                                            .await?
+                                    };
+
                                     if let Some(ai_function) = ai_function {
                                         let ai_service = context
                                             .octopus_database
