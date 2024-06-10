@@ -189,6 +189,8 @@ pub async fn create(
             let value = (field.text().await?).to_string();
             if value == "Private" {
                 instance_type = WaspAppInstanceType::Private;
+            } else if value == "User" {
+                instance_type = WaspAppInstanceType::User;
             }
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
@@ -857,6 +859,8 @@ pub async fn update(
             let value = (field.text().await?).to_string();
             if value == "Private" {
                 instance_type = WaspAppInstanceType::Private;
+            } else if value == "User" {
+                instance_type = WaspAppInstanceType::User;
             }
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
