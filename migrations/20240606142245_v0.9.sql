@@ -34,3 +34,5 @@ CREATE INDEX ai_services_ai_service_generator_id ON ai_services(ai_service_gener
 ALTER TABLE chat_messages ADD COLUMN suggested_ai_function_id UUID REFERENCES ai_functions ON DELETE CASCADE;
 
 CREATE INDEX chat_messages_suggested_ai_function_id ON chat_messages(suggested_ai_function_id);
+
+ALTER TYPE wasp_apps_instance_types ADD VALUE IF NOT EXISTS 'user' AFTER 'shared';
