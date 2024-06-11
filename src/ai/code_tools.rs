@@ -66,6 +66,10 @@ pub async fn open_ai_create_ai_service(
     );
 
     text.push_str(
+        "Make sure you don't use a names longer than 28 chars for API functions names.\n\n",
+    );
+
+    text.push_str(
         r#"Make sure that everything related to AI model load/setup is done in setup endpoint. Make sure you use a correct information about CUDA/CPU device selecteb by user and defined in device_map section in configuration. Use code similar to the following to select a proper device:
 def command_result_as_int(command):
     return int(subprocess.check_output(command, shell=True).decode('utf-8').strip())

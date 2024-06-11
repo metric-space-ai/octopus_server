@@ -16,10 +16,10 @@ config_str = '''{
         "cuda:0": "10GiB",
         "cpu": "30GiB"
     },
-    "required_python_version": "cp311",
+    "required_python_version": "cp312",
     "functions": [
         {
-            "name": "calculate_area_pentagon",
+            "name": "calculate_area",
             "display_name": "Calculate Area of Pentagon",
             "description": "This function calculates the area of a regular pentagon for a given side length.",
             "parameters": {
@@ -33,7 +33,7 @@ config_str = '''{
             "return_type": "application/json"
         },
         {
-            "name": "calculate_perimeter_pentagon",
+            "name": "calculate_perimeter",
             "display_name": "Calculate Perimeter of Pentagon",
             "description": "This function calculates the perimeter of a regular pentagon for a given side length.",
             "parameters": {
@@ -58,8 +58,8 @@ def calculate_pentagon_area(side_length):
 def calculate_pentagon_perimeter(side_length):
     return 5 * side_length
 
-@app.route('/v1/calculate_area_pentagon', methods=['POST'])
-def calculate_area_pentagon():
+@app.route('/v1/calculate_area', methods=['POST'])
+def calculate_area():
     data = request.json
     side_length = data.get("side_length", None)
 
@@ -72,8 +72,8 @@ def calculate_area_pentagon():
     }
     return jsonify(response), 201
 
-@app.route('/v1/calculate_perimeter_pentagon', methods=['POST'])
-def calculate_perimeter_pentagon():
+@app.route('/v1/calculate_perimeter', methods=['POST'])
+def calculate_perimeter():
     data = request.json
     side_length = data.get("side_length", None)
 

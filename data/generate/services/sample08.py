@@ -4,9 +4,9 @@ dependencies = [
     'pip install -q Flask==3.0.3',
     'pip install -q easyocr==1.7.1',
     'apt-get update --fix-missing && apt-get install -y --no-install-recommends cmake ghostscript git libegl-dev libffi-dev libfreetype6-dev libfribidi-dev libharfbuzz-dev libimagequant-dev libjpeg-turbo-progs libjpeg8-dev liblcms2-dev libopengl-dev libopenjp2-7-dev libssl-dev libtiff5-dev libwebp-dev libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxkbcommon-x11-0 meson netpbm python3-dev python3-numpy python3-setuptools python3-tk sudo tcl8.6-dev tk8.6-dev virtualenv wget xvfb zlib1g-dev # required by Pillow',
-    'pip install -q pillow==9.1.1',
-    'pip install -q requests==2.31.0',
-    'pip install -q torch==2.3.0'
+    'pip install -q Pillow==10.3.0',
+    'pip install -q requests==2.32.3',
+    'pip install -q torch==2.3.1'
 ]
 
 for command in dependencies:
@@ -22,7 +22,7 @@ config_str = '''{
         "cuda:0": "10GiB",
         "cpu": "30GiB"
     },
-    "required_python_version": "cp311",
+    "required_python_version": "cp312",
     "functions": [
         {
             "name": "perform_ocr",

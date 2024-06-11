@@ -19,7 +19,7 @@ config_str = '''{
         "cuda:0": "10GiB",
         "cpu": "30GiB"
     },
-    "required_python_version": "cp311",
+    "required_python_version": "cp312",
     "functions": [
         {
             "name": "generate_lorem_text",

@@ -3,13 +3,13 @@ import os
 dependencies = [
     "pip install -q flash-attn==2.5.8",
     "pip install -q Flask==3.0.3",
-    "pip install -q torch==2.3.0",
-    "pip install -q torchvision==0.18.0",
-    "pip install -q accelerate==0.21.0",
+    "pip install -q torch==2.3.1",
+    "pip install -q torchvision==0.18.1",
+    "pip install -q accelerate==0.31.0",
     "pip install -q transformers==4.41.2",
     "apt-get update --fix-missing && apt-get install -y --no-install-recommends cmake ghostscript git libegl-dev libffi-dev libfreetype6-dev libfribidi-dev libharfbuzz-dev libimagequant-dev libjpeg-turbo-progs libjpeg8-dev liblcms2-dev libopengl-dev libopenjp2-7-dev libssl-dev libtiff5-dev libwebp-dev libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxkbcommon-x11-0 meson netpbm python3-dev python3-numpy python3-setuptools python3-tk sudo tcl8.6-dev tk8.6-dev virtualenv wget xvfb zlib1g-dev # required by Pillow",
-    "pip install -q Pillow==9.1.1",
-    "pip install -q requests==2.31.0"
+    "pip install -q Pillow==10.3.0",
+    "pip install -q requests==2.32.3"
 ]
 
 for command in dependencies:
@@ -33,7 +33,7 @@ config_str = '''{
         "cuda:1": "16GiB",
         "cpu": "32GiB"
     },
-    "required_python_version": "cp311",
+    "required_python_version": "cp312",
     "models": {
         "model": "microsoft/Phi-3-vision-128k-instruct"
     },

@@ -2,7 +2,7 @@ import os
 
 dependencies = [
     "pip install -q Flask==3.0.3",
-    "pip install -q openai==1.30.1",
+    "pip install -q openai==1.33.0",
 ]
 
 for command in dependencies:
@@ -18,7 +18,7 @@ config_str = '''{
         "cuda:0": "10GiB",
         "cpu": "30GiB"
     },
-    "required_python_version": "cp311",
+    "required_python_version": "cp312",
     "models": {
         "model": "gpt-4o-2024-05-13"
     },
