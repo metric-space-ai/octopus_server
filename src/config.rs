@@ -6,7 +6,8 @@ use crate::{
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
         PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
-        PARAMETER_NAME_REGISTRATION_ALLOWED, PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_REGISTRATION_ALLOWED, PARAMETER_NAME_SCRAPINGBEE_API_KEY,
+        PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -186,6 +187,18 @@ impl Config {
                 }
             } else {
                 return Some(true);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_scrapingbee_api_key(&self) -> Option<String> {
+        let scrapingbee_api_key = self.get_parameter_value(PARAMETER_NAME_SCRAPINGBEE_API_KEY);
+
+        if let Some(scrapingbee_api_key) = scrapingbee_api_key {
+            if scrapingbee_api_key != *"default" {
+                return Some(scrapingbee_api_key);
             }
         }
 
