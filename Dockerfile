@@ -544,6 +544,7 @@ ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
 COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
 ENV OLLAMA_HOST http://localhost:5050
+ENV OLLAMA_KEEP_ALIVE 2m
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
 WORKDIR /wasp_mage
 COPY octopus_server/wasp_mage /wasp_mage
