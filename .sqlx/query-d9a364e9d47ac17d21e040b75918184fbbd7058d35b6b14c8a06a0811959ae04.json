@@ -47,7 +47,8 @@
             "kind": {
               "Enum": [
                 "private",
-                "shared"
+                "shared",
+                "user"
               ]
             }
           }
