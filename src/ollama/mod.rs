@@ -267,9 +267,9 @@ pub async fn pull(context: Arc<Context>, ollama_model: OllamaModel) -> Result<Ol
                 .await?;
 
             for model in response.models {
-                let ollama_model_name = format!("{}:latest", ollama_model.name);
+                let ollama_model_name_latest = format!("{}:latest", ollama_model.name);
 
-                if model.name == ollama_model_name {
+                if model.name == ollama_model_name_latest || model.name == ollama_model.name {
                     let mut transaction = context.octopus_database.transaction_begin().await?;
 
                     let ollama_model = context
