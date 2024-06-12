@@ -64,7 +64,7 @@ pub async fn run() -> Result<()> {
                 "octopus_server=error,runtime=error,tokio=error,tower_http=error".into()
             }),
         )
-        .with(tracing_subscriber::fmt::layer().with_writer(log_file))
+        .with(tracing_subscriber::fmt::layer()/* .with_writer(log_file)*/)
         .init();
 
     let args = Args::parse();

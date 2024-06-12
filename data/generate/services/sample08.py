@@ -92,7 +92,7 @@ def perform_ocr():
 
     image_data = response.content
     image = Image.open(io.BytesIO(image_data))
-    image_path = "/tmp/image.png"
+    image_path = f"/tmp/image_{os.urandom(8).hex()}.png"
     image.save(image_path)
 
     reader = easyocr.Reader(languages, gpu=(device != "cpu"))

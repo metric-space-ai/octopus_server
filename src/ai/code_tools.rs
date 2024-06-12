@@ -57,6 +57,10 @@ pub async fn open_ai_create_ai_service(
 
     text.push_str(r#"When generating code related to OpenAI make sure that you use OPENAI_API_KEY ENV value. You can just define client this way client = OpenAI(). Also make sure that you have a proper "models": {"model": "gpt-4o-2024-05-13"} section in service configuration.\n\n"#);
 
+    text.push_str(r#"When generating configuration related to AI models make sure that you have a proper "models" definition like "models": {"model": "microsoft/Phi-3-vision-128k-instruct"} section in service configuration. Don't use outdated "model_setup". Convert "model_setup" to "models".\n\n"#);
+
+    text.push_str(r#"When user wants to use Ollama make sure that you use OLLAMA_HOST enviromental variable for host url. When generating configuration related to Ollama AI models make sure that you have a proper "models" definition like "models": [{"name": "ollama:llama3:8b"}, {"name": "ollama:qwen2:7b"}] section in service configuration. This list of Ollama models will allow octopus_server to pre pull models that are desired by AI service on server start. Generated service should use ollama Python library.\n\n"#);
+
     text.push_str(
         "When a user wants to use the scraper make sure that you thread all scraped data as HTML.\n\n",
     );
@@ -67,6 +71,10 @@ pub async fn open_ai_create_ai_service(
 
     text.push_str(
         "Make sure you don't use a names longer than 28 chars for API functions names.\n\n",
+    );
+
+    text.push_str(
+        "When using a temporary files make sure that you use randomized names that don't collide with other names.\n\n",
     );
 
     text.push_str(
