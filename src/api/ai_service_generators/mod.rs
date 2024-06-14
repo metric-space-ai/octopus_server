@@ -22,6 +22,7 @@ use validator::Validate;
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct AiServiceGeneratorGeneratePost {
+    pub skip_internet_research_results: Option<bool>,
     pub skip_regenerate_internet_research_results: Option<bool>,
 }
 
@@ -348,6 +349,8 @@ pub async fn generate(
 
     input.validate()?;
 
+    let skip_internet_research_results = input.skip_internet_research_results.unwrap_or(false);
+
     let skip_regenerate_internet_research_results = input
         .skip_regenerate_internet_research_results
         .unwrap_or(false);
@@ -395,6 +398,7 @@ pub async fn generate(
         let ai_service_generator = generator::generate(
             cloned_ai_service_generator,
             cloned_context,
+            skip_internet_research_results,
             skip_regenerate_internet_research_results,
         )
         .await;

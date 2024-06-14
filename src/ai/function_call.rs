@@ -337,6 +337,7 @@ pub async fn querycontent_function_call(
 #[derive(Debug, Deserialize)]
 pub struct FunctionSensitiveInformationResponse {
     pub is_sensitive: bool,
+    #[allow(dead_code)]
     pub sensitive_part: Option<String>,
 }
 

@@ -17,6 +17,7 @@ use utoipa::ToSchema;
 pub struct DescribeFunctionResponse {
     pub name: Option<String>,
     pub description: Option<String>,
+    #[allow(dead_code)]
     pub debug: Option<String>,
 }
 
@@ -29,6 +30,7 @@ pub struct DescribeFunctionsResponse {
 pub struct ParsingCodeCheckResponse {
     pub fixing_proposal: Option<String>,
     pub is_passed: bool,
+    #[allow(dead_code)]
     pub reason: Option<String>,
 }
 
@@ -38,6 +40,7 @@ pub async fn open_ai_create_ai_service(
     internet_research_results: Option<String>,
     sample_code: Option<String>,
     sample_services: &[String],
+    skip_internet_research_results: bool,
 ) -> Result<Option<String>> {
     let ai_client = open_ai_get_client(context.clone()).await?;
 
@@ -45,7 +48,7 @@ pub async fn open_ai_create_ai_service(
 
     let mut text = String::new();
 
-    text.push_str(r#"I will give you a set of example code, a user input and an internet search result to do the task. Generate me now a matching python code. It is important to build the app like this. Make sure you use latest Flask version. Use only "application/json" as "input_type" and "return_type". Only output the final python file in markdown. Do not explain yourself.\n\n"#);
+    text.push_str(r#"I will give you a set of example code, a user input and optionally an internet search result and optionally sample code from user to do the task. Generate me now a matching python code. It is important to build the app like this. Make sure you use latest Flask version. Use only "application/json" as "input_type" and "return_type". Only output the final python file in markdown. Do not explain yourself.\n\n"#);
 
     text.push_str(r#"Here is a desired response format for Flask Python service: {"response": string, "file_attachments": [{"content": string, "file_name": string, "media_type": string}]} both response and file_attachments fields are optional. Make sure that response field is always string. Convert numbers to string. Convert arrays to string. You can use both response and file_attachments in case you want to save both text response and files. You can send only response field or only file_attachments. content field in file_attachments must be base64 encoded. Even if you want to save plain text file, make sure that you encode it with base64. Also binary files like mp3, png, jpg must be encoded with base64. Setup endpoint should have the following response format {"setup": "Performed"}\n\n"#);
 
@@ -59,7 +62,7 @@ pub async fn open_ai_create_ai_service(
 
     text.push_str(r#"When generating configuration related to AI models make sure that you have a proper "models" definition like "models": {"model": "microsoft/Phi-3-vision-128k-instruct"} section in service configuration. Don't use outdated "model_setup". Convert "model_setup" to "models".\n\n"#);
 
-    text.push_str(r#"When user wants to use Ollama make sure that you use OLLAMA_HOST enviromental variable for host url. When generating configuration related to Ollama AI models make sure that you have a proper "models" definition like "models": [{"name": "ollama:llama3:8b"}, {"name": "ollama:qwen2:7b"}] section in service configuration. This list of Ollama models will allow octopus_server to pre pull models that are desired by AI service on server start. Generated service should use ollama Python library.\n\n"#);
+    text.push_str(r#"When user wants to use Ollama make sure that you use OLLAMA_HOST enviromental variable for host url. When generating configuration related to Ollama AI models make sure that you have a proper "models" definition like "models": [{"name": "ollama:llama3:8b"}, {"name": "ollama:qwen2:7b"}] section in service configuration. This list of Ollama models will allow octopus_server to pre pull models that are desired by AI service on server start. Generated service should use ollama Python library. If user provided sample Ollama code make sure that you follow samples.\n\n"#);
 
     text.push_str(
         "When a user wants to use the scraper make sure that you thread all scraped data as HTML.\n\n",
@@ -122,8 +125,10 @@ device = select_device()"#,
         ));
     }
 
-    if let Some(internet_research_results) = internet_research_results {
-        text.push_str(&format!("\n\n\nHere is the internet research with addition information to do the task:\n\n{internet_research_results}"));
+    if !skip_internet_research_results {
+        if let Some(internet_research_results) = internet_research_results {
+            text.push_str(&format!("\n\n\nHere is the internet research with addition information to do the task:\n\n{internet_research_results}"));
+        }
     }
 
     let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()

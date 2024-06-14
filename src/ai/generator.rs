@@ -24,11 +24,13 @@ pub struct InternetResearchAgentPost {
 pub async fn generate(
     ai_service_generator: AiServiceGenerator,
     context: Arc<Context>,
+    skip_internet_research_results: bool,
     skip_regenerate_internet_research_results: bool,
 ) -> Result<AiServiceGenerator> {
-    let ai_service_generator = if ai_service_generator.internet_research_results.is_none()
+    let ai_service_generator = if (ai_service_generator.internet_research_results.is_none()
         || (ai_service_generator.internet_research_results.is_some()
-            && !skip_regenerate_internet_research_results)
+            && !skip_regenerate_internet_research_results))
+        && !skip_internet_research_results
     {
         let prompt = format!("Provide internet research that will be needed to create a Python, Flask based service aplication named: {} with the following description: {}", ai_service_generator.name, ai_service_generator.description);
         let mut internet_research_results = None;
@@ -136,6 +138,7 @@ pub async fn generate(
         ai_service_generator.internet_research_results.clone(),
         ai_service_generator.sample_code.clone(),
         &sample_services,
+        skip_internet_research_results,
     )
     .await?;
 
