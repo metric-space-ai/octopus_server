@@ -54,6 +54,12 @@ pub fn replace_function_names(code_lines: &[String], ai_service_id: Uuid) -> Res
         if code_line.contains("\"tokenizer\":") {
             functions_section_identified = false;
         }
+        if code_line.contains("json.loads(") {
+            functions_section_identified = false;
+        }
+        if code_line.contains("app = Flask") {
+            functions_section_identified = false;
+        }
 
         if functions_section_identified && code_line.contains("\"name\":") {
             let name = (*code_line
