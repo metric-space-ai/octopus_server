@@ -7,6 +7,8 @@ use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::time::Duration;
 
+pub mod proxy;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Details1 {
     families: Vec<String>,

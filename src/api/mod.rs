@@ -89,6 +89,7 @@ mod chats;
 mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
+mod llm_proxy;
 mod nextcloud_files;
 mod nextcloud_raw_files;
 mod ollama_models;
@@ -294,6 +295,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             inspection_disablings::create,
             inspection_disablings::delete,
             inspection_disablings::read,
+            llm_proxy::proxy,
             login::login,
             logout::logout,
             nextcloud_files::create,
@@ -389,6 +391,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "inspection_disablings", description = "Inspection disablings API."),
+            (name = "llm_proxy", description = "LLM proxy API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "nextcloud_files", description = "Nextcloud files API."),
@@ -623,6 +626,13 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
+        )
+        .route(
+            "/api/v1/llm-proxy/*pass",
+            delete(llm_proxy::proxy)
+                .get(llm_proxy::proxy)
+                .post(llm_proxy::proxy)
+                .put(llm_proxy::proxy),
         )
         .route(
             "/api/v1/nextcloud-files",
