@@ -22,6 +22,7 @@ use crate::{
         },
         chat_messages::{ChatMessageFlagPut, ChatMessagePost, ChatMessagePut},
         chats::ChatPut,
+        companies::CompanyPut,
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         inspection_disablings::InspectionDisablingPost,
@@ -42,10 +43,11 @@ use crate::{
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
-        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ExamplePrompt,
-        ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel, OllamaModelStatus,
-        Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended, WaspApp,
-        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
+        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel,
+        OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended,
+        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        WorkspacesType,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -86,6 +88,7 @@ mod chat_message_pictures;
 mod chat_messages;
 mod chat_pictures;
 mod chats;
+mod companies;
 mod example_prompt_categories;
 mod example_prompts;
 mod inspection_disablings;
@@ -157,6 +160,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 ChatMessageStatus,
                 ChatPicture,
                 ChatPut,
+                Company,
+                CompanyPut,
                 ExamplePrompt,
                 ExamplePromptCategory,
                 ExamplePromptCategoryPost,
@@ -281,6 +286,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             chats::list,
             chats::read,
             chats::update,
+            companies::read,
+            companies::update,
             example_prompt_categories::create,
             example_prompt_categories::delete,
             example_prompt_categories::list,
@@ -388,6 +395,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_message_pictures", description = "Chat message pictures API."),
             (name = "chat_pictures", description = "Chat pictures API."),
+            (name = "companies", description = "Companies API."),
             (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
             (name = "inspection_disablings", description = "Inspection disablings API."),
@@ -596,6 +604,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/chats/:workspace_id/:chat_id",
             delete(chats::delete).get(chats::read).put(chats::update),
+        )
+        .route(
+            "/api/v1/companies/:id",
+            get(companies::read).put(companies::update),
         )
         .route(
             "/api/v1/example-prompts",

@@ -130,7 +130,7 @@ pub async fn setup(
 
             let company = context
                 .octopus_database
-                .insert_company(&mut transaction, None, &input.company_name)
+                .insert_company(&mut transaction, None, None, &input.company_name)
                 .await?;
 
             let user = context

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, address, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL",
+  "query": "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -15,21 +15,26 @@
       },
       {
         "ordinal": 2,
+        "name": "custom_style",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -40,11 +45,12 @@
     "nullable": [
       false,
       true,
+      true,
       false,
       false,
       true,
       false
     ]
   },
-  "hash": "5d22a161e9030d20f0a2f2737d759c659bdb8462408095f374f6a97bc49e79c9"
+  "hash": "5c8ebc9b400630b808e13228c5e2ac264c4966fa0b61d12e1a74a23ebfc48657"
 }
