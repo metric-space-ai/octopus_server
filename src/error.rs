@@ -43,6 +43,7 @@ pub enum AppError {
     Request(reqwest::Error),
     SqlTransaction,
     StatusCode(InvalidStatusCode),
+    SystemParameter,
     Unauthorized,
     UserAlreadyExists,
     Utf8(FromUtf8Error),
@@ -100,6 +101,9 @@ impl IntoResponse for AppError {
                 (StatusCode::INTERNAL_SERVER_ERROR, "SqlTransaction error.")
             }
             AppError::StatusCode(_error) => (StatusCode::CONFLICT, "Invalid status code."),
+            AppError::SystemParameter => {
+                (StatusCode::INTERNAL_SERVER_ERROR, "System parameter error.")
+            }
             AppError::Unauthorized => (StatusCode::UNAUTHORIZED, "Unauthorized."),
             AppError::UserAlreadyExists => {
                 (StatusCode::CONFLICT, "User with such email already exists.")

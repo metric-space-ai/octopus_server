@@ -5,10 +5,10 @@ use crate::{
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile,
-        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, Session,
-        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType,
+        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, InspectionDisabling,
+        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
+        Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
+        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -519,6 +519,21 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_categories)
+    }
+
+    pub async fn get_files_by_user_id(&self, user_id: Uuid) -> Result<Vec<File>> {
+        let files = sqlx::query_as!(
+            File,
+            "SELECT id, user_id, file_name, media_type, original_file_name, created_at, updated_at
+            FROM files
+            WHERE user_id = $1
+            ORDER BY original_file_name ASC",
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(files)
     }
 
     pub async fn get_nextcloud_files(&self) -> Result<Vec<NextcloudFile>> {
@@ -1091,6 +1106,31 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category)
+    }
+
+    pub async fn insert_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        user_id: Uuid,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+    ) -> Result<File> {
+        let file = sqlx::query_as!(
+            File,
+            "INSERT INTO files
+            (user_id, file_name, media_type, original_file_name)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, user_id, file_name, media_type, original_file_name, created_at, updated_at",
+            user_id,
+            file_name,
+            media_type,
+            original_file_name,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(file)
     }
 
     pub async fn insert_inspection_disabling(
@@ -1761,6 +1801,23 @@ impl OctopusDatabase {
         Ok(example_prompt_category)
     }
 
+    pub async fn try_delete_file_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let file = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM files
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(file)
+    }
+
     pub async fn try_delete_inspection_disabling_by_user_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2410,6 +2467,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category_id)
+    }
+
+    pub async fn try_get_file_by_id(&self, id: Uuid) -> Result<Option<File>> {
+        let file = sqlx::query_as!(
+            File,
+            "SELECT id, user_id, file_name, media_type, original_file_name, created_at, updated_at
+            FROM files
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(file)
     }
 
     pub async fn try_get_inspection_disabling_by_user_id(
@@ -3852,6 +3923,31 @@ impl OctopusDatabase {
         .await?;
 
         Ok(example_prompt_category)
+    }
+
+    pub async fn update_file(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        file_name: &str,
+        media_type: &str,
+        original_file_name: &str,
+    ) -> Result<File> {
+        let file = sqlx::query_as!(
+            File,
+            "UPDATE files
+            SET file_name = $2, media_type = $3, original_file_name = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, file_name, media_type, original_file_name, created_at, updated_at",
+            id,
+            file_name,
+            media_type,
+            original_file_name,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(file)
     }
 
     pub async fn update_inspection_disabling(

@@ -382,6 +382,46 @@ pub struct ExamplePromptCategory {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct File {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub file_name: String,
+    pub media_type: String,
+    pub original_file_name: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct FileWithUrl {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub file_name: String,
+    pub media_type: String,
+    pub original_file_name: String,
+    pub url: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+impl FileWithUrl {
+    pub fn from_file(file: File, url_prefix: &str) -> FileWithUrl {
+        let url = format!("{url_prefix}/{}", file.file_name);
+
+        Self {
+            id: file.id,
+            user_id: file.user_id,
+            file_name: file.file_name,
+            media_type: file.media_type,
+            original_file_name: file.original_file_name,
+            url,
+            created_at: file.created_at,
+            updated_at: file.updated_at,
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct InspectionDisabling {
     pub id: Uuid,
     pub user_id: Uuid,

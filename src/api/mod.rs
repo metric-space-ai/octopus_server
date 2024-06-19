@@ -44,9 +44,9 @@ use crate::{
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        ExamplePrompt, ExamplePromptCategory, InspectionDisabling, NextcloudFile, OllamaModel,
-        OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling, NextcloudFile,
+        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User,
+        UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
         WorkspacesType,
     },
     error::ResponseError,
@@ -91,6 +91,7 @@ mod chats;
 mod companies;
 mod example_prompt_categories;
 mod example_prompts;
+mod files;
 mod inspection_disablings;
 mod llm_proxy;
 mod nextcloud_files;
@@ -168,6 +169,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 ExamplePromptCategoryPut,
                 ExamplePromptPost,
                 ExamplePromptPut,
+                FileWithUrl,
                 Gpu,
                 InspectionDisabling,
                 InspectionDisablingPost,
@@ -299,6 +301,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             example_prompts::list_by_category,
             example_prompts::read,
             example_prompts::update,
+            files::create,
+            files::delete,
+            files::list,
+            files::read,
+            files::update,
             inspection_disablings::create,
             inspection_disablings::delete,
             inspection_disablings::read,
@@ -398,6 +405,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "companies", description = "Companies API."),
             (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
+            (name = "files", description = "Files API."),
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "llm_proxy", description = "LLM proxy API."),
             (name = "login", description = "Login API."),
@@ -632,6 +640,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(example_prompt_categories::delete)
                 .get(example_prompt_categories::read)
                 .put(example_prompt_categories::update),
+        )
+        .route("/api/v1/files", get(files::list).post(files::create))
+        .route(
+            "/api/v1/files/:id",
+            delete(files::delete).get(files::read).put(files::update),
         )
         .route(
             "/api/v1/inspection-disablings/:user_id",
