@@ -3629,6 +3629,82 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn update_chat_message_from_internal_function(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: ChatMessageStatus,
+        progress: i32,
+        response: Option<String>,
+        color: Option<String>,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET status = $2, progress = $3, response = $4, color = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .bind(progress)
+        .bind(response)
+        .bind(color)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_message)
+    }
+
+    pub async fn update_chat_message_from_internal_function_error(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        ai_function_error: Option<String>,
+        status: ChatMessageStatus,
+        progress: i32,
+        color: Option<String>,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET ai_function_error = $2, status = $3, progress = $4, color = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(ai_function_error)
+        .bind(status)
+        .bind(progress)
+        .bind(color)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_message)
+    }
+
+    pub async fn update_chat_message_from_internal_function_status(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: ChatMessageStatus,
+        progress: i32,
+        color: Option<String>,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET status = $2, progress = $3, color = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .bind(progress)
+        .bind(color)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_message)
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub async fn update_chat_message_full(
         &self,

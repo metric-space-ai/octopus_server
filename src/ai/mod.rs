@@ -35,6 +35,7 @@ use uuid::Uuid;
 pub mod code_tools;
 pub mod function_call;
 pub mod generator;
+pub mod internal_function_call;
 pub mod service;
 
 pub const AZURE_OPENAI_API_VERSION: &str = "2023-12-01-preview";
@@ -282,14 +283,36 @@ pub async fn get_functions_all(
 ) -> Result<Vec<ChatCompletionFunctions>> {
     let mut functions = vec![];
 
-    let mut ai_functions_tools = get_functions_ai_functions(context.clone(), user_id).await?;
-    functions.append(&mut ai_functions_tools);
+    let mut internal_functions = get_functions_internal_functions().await?;
+    functions.append(&mut internal_functions);
 
-    let mut simple_apps_tools = get_functions_simple_apps(context.clone()).await?;
-    functions.append(&mut simple_apps_tools);
+    let mut ai_functions = get_functions_ai_functions(context.clone(), user_id).await?;
+    functions.append(&mut ai_functions);
 
-    let mut wasp_apps_tools = get_functions_wasp_apps(context.clone(), user_id).await?;
-    functions.append(&mut wasp_apps_tools);
+    let mut simple_apps_functions = get_functions_simple_apps(context.clone()).await?;
+    functions.append(&mut simple_apps_functions);
+
+    let mut wasp_apps_functions = get_functions_wasp_apps(context.clone(), user_id).await?;
+    functions.append(&mut wasp_apps_functions);
+
+    Ok(functions)
+}
+
+#[allow(deprecated)]
+pub async fn get_functions_internal_functions() -> Result<Vec<ChatCompletionFunctions>> {
+    let mut functions = vec![];
+
+    let function = ChatCompletionFunctionsArgs::default()
+        .name("os_internal_list_user_files".to_string())
+        .description("List user files function returns a comma-separated list of the files that belong to the user.".to_string())
+        .parameters(json!({
+            "type": "object",
+            "properties": {},
+            "required": [],
+        }))
+        .build()?;
+
+    functions.push(function);
 
     Ok(functions)
 }
@@ -647,6 +670,9 @@ pub async fn get_tools_all(
 ) -> Result<Vec<ChatCompletionTool>> {
     let mut tools = vec![];
 
+    let mut internal_functions_tools = get_tools_internal_functions().await?;
+    tools.append(&mut internal_functions_tools);
+
     let mut ai_functions_tools = get_tools_ai_functions(context.clone(), user_id).await?;
     tools.append(&mut ai_functions_tools);
 
@@ -655,6 +681,29 @@ pub async fn get_tools_all(
 
     let mut wasp_apps_tools = get_tools_wasp_apps(context.clone(), user_id).await?;
     tools.append(&mut wasp_apps_tools);
+
+    Ok(tools)
+}
+
+pub async fn get_tools_internal_functions() -> Result<Vec<ChatCompletionTool>> {
+    let mut tools = vec![];
+
+    let tool = ChatCompletionToolArgs::default()
+        .r#type(ChatCompletionToolType::Function)
+        .function(
+            FunctionObjectArgs::default()
+                .name("os_internal_list_user_files".to_string())
+                .description("List user files function returns a comma-separated list of the files that belong to the user.".to_string())
+                .parameters(json!({
+                    "type": "object",
+                    "properties": {},
+                    "required": [],
+                }))
+                .build()?,
+        )
+        .build()?;
+
+    tools.push(tool);
 
     Ok(tools)
 }
@@ -977,6 +1026,25 @@ pub async fn open_ai_request(
                                             ai_function_call,
                                         )
                                         .await?;
+
+                                    if function_name.starts_with("os_internal_") {
+                                        context
+                                            .octopus_database
+                                            .transaction_commit(transaction)
+                                            .await?;
+
+                                        let chat_message =
+                                            internal_function_call::handle_internal_function_call(
+                                                &chat_message,
+                                                context.clone(),
+                                                &function_args,
+                                                &function_name,
+                                            )
+                                            .await?;
+
+                                        return Ok(chat_message);
+                                    }
+
                                     let ai_function = context
                                         .octopus_database
                                         .try_get_ai_function_by_name(&function_name)

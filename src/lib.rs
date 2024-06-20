@@ -14,6 +14,7 @@ mod database;
 mod email_service;
 mod entity;
 mod error;
+mod internal_functions;
 mod multipart;
 mod ollama;
 mod parser;
