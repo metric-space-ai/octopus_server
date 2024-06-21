@@ -3,7 +3,7 @@ import os
 dependencies = [
     "pip install -q Flask==3.0.3",
     "pip install -q requests==2.32.3",
-    "pip install -q marker-pdf==0.2.13"
+    "pip install -q marker-pdf==0.2.14"
 ]
 
 for command in dependencies:
