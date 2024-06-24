@@ -11,7 +11,7 @@ pub mod proxy;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Details1 {
-    families: Vec<String>,
+    families: Option<Vec<String>>,
     family: String,
     format: String,
     parameter_size: String,

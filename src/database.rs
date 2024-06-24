@@ -4102,7 +4102,7 @@ impl OctopusDatabase {
         id: Uuid,
         o_name: &str,
         o_details_family: &str,
-        o_details_families: Vec<String>,
+        o_details_families: Option<Vec<String>>,
         o_details_format: &str,
         o_details_parameter_size: &str,
         o_details_parent_model: Option<String>,
