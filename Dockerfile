@@ -225,7 +225,7 @@ RUN npm run build
 WORKDIR /
 RUN git clone https://github.com/ollama/ollama.git
 WORKDIR /ollama/
-RUN git checkout v0.1.43
+RUN git checkout v0.1.45
 WORKDIR /ollama/llm/generate
 ARG CGO_CFLAGS
 RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
@@ -556,6 +556,7 @@ COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.
 COPY /octopus_client/public public/
 COPY /octopus_client/src src/
 WORKDIR /octopus_server
+RUN mkdir -p /root/.ollama
 RUN mkdir -p data/generate/services
 COPY --from=octopus_server_builder /usr/local/cargo/bin/cargo-sqlx ./
 COPY --from=octopus_server_builder /usr/local/cargo/bin/sqlx ./
@@ -575,6 +576,7 @@ RUN chmod +x docker-entrypoint.sh && \
     mkdir ./services/ && \
     mkdir ./wasp_apps/ && \
     mkdir ./wasp_generator/
+VOLUME /root/.ollama
 VOLUME /octopus_server/public
 VOLUME /octopus_server/services
 VOLUME /octopus_server/wasp_apps

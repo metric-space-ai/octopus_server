@@ -68,6 +68,8 @@ pub fn get_models() -> Vec<&'static str> {
         "deepseek-coder:1.3b",
         "deepseek-coder:6.7b",
         "deepseek-coder:33b",
+        "deepseek-coder-v2:16b",
+        "deepseek-coder-v2:236b",
         "deepseek-llm:7b",
         "deepseek-llm:67b",
         "deepseek-v2:16b",
