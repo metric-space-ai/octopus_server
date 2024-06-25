@@ -418,67 +418,50 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
             && (ai_service.status == AiServiceStatus::Running
                 || ai_service.status == AiServiceStatus::Setup)
         {
-            let cloned_context = context.clone();
-            let cloned_ai_service = ai_service.clone();
-            tokio::spawn(async move {
-                let result =
-                    start_or_manage_running_parallel(cloned_ai_service, cloned_context).await;
+            let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
 
-                if let Err(e) = result {
-                    tracing::error!("Error: {:?}", e);
+            match pid {
+                None => {
+                    let ai_service =
+                        parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
+
+                    let environment_created =
+                        create_environment(&ai_service, context.clone()).await?;
+
+                    if environment_created {
+                        let process = Process {
+                            id: ai_service.id.to_string(),
+                            client_port: None,
+                            failed_connection_attempts: 0,
+                            last_used_at: None,
+                            pid: None,
+                            server_port: Some(ai_service.port),
+                            state: ProcessState::EnvironmentPrepared,
+                            r#type: ProcessType::AiService,
+                        };
+
+                        let process = context.process_manager.insert_process(&process)?;
+
+                        if let Some(_process) = process {
+                            run(ai_service, context.clone()).await?;
+                        }
+                    }
                 }
-            });
-        }
-    }
+                Some(pid) => {
+                    let process = Process {
+                        id: ai_service.id.to_string(),
+                        client_port: None,
+                        failed_connection_attempts: 0,
+                        last_used_at: None,
+                        pid: Some(pid),
+                        server_port: Some(ai_service.port),
+                        state: ProcessState::Running,
+                        r#type: ProcessType::AiService,
+                    };
 
-    Ok(())
-}
-
-pub async fn start_or_manage_running_parallel(
-    ai_service: AiService,
-    context: Arc<Context>,
-) -> Result<()> {
-    let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
-
-    match pid {
-        None => {
-            let ai_service =
-                parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
-
-            let environment_created = create_environment(&ai_service, context.clone()).await?;
-
-            if environment_created {
-                let process = Process {
-                    id: ai_service.id.to_string(),
-                    client_port: None,
-                    failed_connection_attempts: 0,
-                    last_used_at: None,
-                    pid: None,
-                    server_port: Some(ai_service.port),
-                    state: ProcessState::EnvironmentPrepared,
-                    r#type: ProcessType::AiService,
-                };
-
-                let process = context.process_manager.insert_process(&process)?;
-
-                if let Some(_process) = process {
-                    run(ai_service, context.clone()).await?;
+                    context.process_manager.insert_process(&process)?;
                 }
             }
-        }
-        Some(pid) => {
-            let process = Process {
-                id: ai_service.id.to_string(),
-                client_port: None,
-                failed_connection_attempts: 0,
-                last_used_at: None,
-                pid: Some(pid),
-                server_port: Some(ai_service.port),
-                state: ProcessState::Running,
-                r#type: ProcessType::AiService,
-            };
-
-            context.process_manager.insert_process(&process)?;
         }
     }
 
