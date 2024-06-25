@@ -18,7 +18,6 @@ use chrono::{DateTime, Duration, Utc};
 use rev_buf_reader::RevBufReader;
 use serde::{Deserialize, Serialize};
 use std::{fs::File, io::BufRead, path, sync::Arc};
-use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -229,7 +228,7 @@ pub async fn configuration(
         let ai_service = parser::ai_service_parsing(cloned_ai_service, cloned_context).await;
 
         if let Err(e) = ai_service {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 
@@ -541,7 +540,7 @@ pub async fn installation(
             process_manager::ai_service::install_and_run(cloned_ai_service, cloned_context).await;
 
         if let Err(e) = ai_service {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 
@@ -751,7 +750,7 @@ pub async fn operation(
         };
 
         if let Err(e) = ai_service {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 

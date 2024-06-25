@@ -14,7 +14,6 @@ use axum::{
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::time::Duration;
-use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -76,7 +75,7 @@ pub async fn create(
                 let ollama_model = ollama::pull(cloned_context, cloned_ollama_model).await;
 
                 if let Err(e) = ollama_model {
-                    debug!("Error: {:?}", e);
+                    tracing::error!("Error: {:?}", e);
                 }
             });
 
@@ -293,7 +292,7 @@ pub async fn update(
         let ollama_model = ollama::pull(cloned_context, cloned_ollama_model).await;
 
         if let Err(e) = ollama_model {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 

@@ -10,7 +10,6 @@ use crate::{
     server_resources, Result,
 };
 use std::{collections::HashMap, str::FromStr, sync::Arc};
-use tracing::debug;
 
 mod addons;
 pub mod configuration;
@@ -326,7 +325,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                                     ollama::pull(cloned_context, cloned_ollama_model).await;
 
                                 if let Err(e) = ollama_model {
-                                    debug!("Error: {:?}", e);
+                                    tracing::error!("Error: {:?}", e);
                                 }
                             });
                         }
@@ -371,7 +370,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
                                 ollama::pull(cloned_context, cloned_ollama_model).await;
 
                             if let Err(e) = ollama_model {
-                                debug!("Error: {:?}", e);
+                                tracing::error!("Error: {:?}", e);
                             }
                         });
                     }

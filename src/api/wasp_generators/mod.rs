@@ -17,7 +17,6 @@ use axum::{
 use rev_buf_reader::RevBufReader;
 use serde::Deserialize;
 use std::{fs::File, io::BufRead, path, sync::Arc};
-use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
@@ -364,7 +363,7 @@ pub async fn generate(
         let wasp_generator = generator::generate(cloned_context, cloned_wasp_generator).await;
 
         if let Err(e) = wasp_generator {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 

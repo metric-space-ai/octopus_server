@@ -15,7 +15,6 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
-use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -404,7 +403,7 @@ pub async fn generate(
         .await;
 
         if let Err(e) = ai_service_generator {
-            debug!("Error: {:?}", e);
+            tracing::error!("Error: {:?}", e);
         }
     });
 
