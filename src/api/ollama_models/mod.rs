@@ -13,6 +13,7 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
+use tokio::time::Duration;
 use tracing::debug;
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -108,6 +109,12 @@ pub async fn delete(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let ollama_model = context
+        .octopus_database
+        .try_get_ollama_model_by_id(id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     context
@@ -120,6 +127,28 @@ pub async fn delete(
         .octopus_database
         .transaction_commit(transaction)
         .await?;
+
+    let ollama_host = context.get_config().await?.ollama_host;
+
+    if let Some(ollama_host) = ollama_host {
+        let url = format!("{ollama_host}/api/delete");
+
+        let client = reqwest::Client::new();
+
+        client
+            .delete(url)
+            .body(
+                serde_json::json!({
+                    "name": &ollama_model.name,
+                })
+                .to_string(),
+            )
+            .timeout(Duration::from_secs(1800))
+            .send()
+            .await?
+            .text()
+            .await?;
+    }
 
     Ok((StatusCode::NO_CONTENT, ()).into_response())
 }
