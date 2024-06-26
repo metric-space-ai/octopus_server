@@ -264,6 +264,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             chat_messages::create,
             chat_messages::delete,
             chat_messages::flag,
+            chat_messages::history,
             chat_messages::latest,
             chat_messages::list,
             chat_messages::not_sensitive,
@@ -571,6 +572,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/chat-messages/:chat_id/:chat_message_id/not-sensitive",
             put(chat_messages::not_sensitive),
+        )
+        .route(
+            "/api/v1/chat-messages/:chat_message_id/history",
+            get(chat_messages::history),
         )
         .route(
             "/api/v1/chat-message-files/:chat_message_id",

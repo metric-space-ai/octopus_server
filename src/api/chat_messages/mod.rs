@@ -525,6 +525,66 @@ pub async fn flag(
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
+    path = "/api/v1/chat-messages/:chat_message_id/history",
+    responses(
+        (status = 200, description = "List of chat messages.", body = [ChatMessageExtended]),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "Chat message not found.", body = ResponseError),
+    ),
+    params(
+        ("chat_message_id" = String, Path, description = "Chat message id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn history(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(chat_message_id): Path<Uuid>,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    let chat_message = context
+        .octopus_database
+        .try_get_chat_message_extended_by_id(chat_message_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let chat = context
+        .octopus_database
+        .try_get_chat_by_id(chat_message.chat_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(chat.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.company_id != user.company_id {
+        return Err(AppError::Forbidden);
+    }
+
+    let chat_messages = context
+        .octopus_database
+        .get_chat_messages_extended_by_chat_id(chat.id)
+        .await?;
+
+    Ok((StatusCode::OK, Json(chat_messages)).into_response())
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
     path = "/api/v1/chat-messages/:chat_id/latest",
     responses(
         (status = 200, description = "Chat message latest.", body = ChatMessageExtended),
@@ -1982,6 +2042,282 @@ pub mod tests {
             workspace_id,
         )
         .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn history_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &message,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-messages/{chat_message_id}/history"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: Vec<ChatMessage> = serde_json::from_slice(&body).unwrap();
+
+        assert!(!body.is_empty());
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn history_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &message,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-messages/{chat_message_id}/history"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn history_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) = chat_message_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &message,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-messages/{chat_message_id}/history"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id, second_company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn history_404() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let chat_message_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-messages/{chat_message_id}/history"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
