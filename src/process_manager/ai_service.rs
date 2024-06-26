@@ -309,7 +309,9 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
 }
 
 pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    if ai_service.status == AiServiceStatus::Setup || ai_service.status == AiServiceStatus::Stopped
+    if ai_service.status == AiServiceStatus::Restarting
+        || ai_service.status == AiServiceStatus::Setup
+        || ai_service.status == AiServiceStatus::Stopped
     {
         let environment_created = create_environment(&ai_service, context.clone()).await?;
 
@@ -329,6 +331,7 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
         }
     }
     if ai_service.status == AiServiceStatus::InstallationFinished
+        || ai_service.status == AiServiceStatus::Restarting
         || ai_service.status == AiServiceStatus::Running
         || ai_service.status == AiServiceStatus::Setup
         || ai_service.status == AiServiceStatus::Stopped
@@ -412,56 +415,111 @@ pub async fn run(ai_service: AiService, context: Arc<Context>) -> Result<AiServi
 
 pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
     let ai_services = context.octopus_database.get_ai_services().await?;
+    //let mut ai_services_parallel = vec![];
+    let mut ai_services_sequential = vec![];
+
+    let mut transaction = context.octopus_database.transaction_begin().await?;
 
     for ai_service in ai_services {
         if ai_service.is_enabled
-            && (ai_service.status == AiServiceStatus::Running
+            && (ai_service.status == AiServiceStatus::Restarting
+                || ai_service.status == AiServiceStatus::Running
                 || ai_service.status == AiServiceStatus::Setup)
         {
-            let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
+            let ai_service = context
+                .octopus_database
+                .update_ai_service_is_enabled_and_status(
+                    &mut transaction,
+                    ai_service.id,
+                    true,
+                    100,
+                    AiServiceStatus::Restarting,
+                )
+                .await?;
 
-            match pid {
-                None => {
-                    let ai_service =
-                        parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
-
-                    let environment_created =
-                        create_environment(&ai_service, context.clone()).await?;
-
-                    if environment_created {
-                        let process = Process {
-                            id: ai_service.id.to_string(),
-                            client_port: None,
-                            failed_connection_attempts: 0,
-                            last_used_at: None,
-                            pid: None,
-                            server_port: Some(ai_service.port),
-                            state: ProcessState::EnvironmentPrepared,
-                            r#type: ProcessType::AiService,
-                        };
-
-                        let process = context.process_manager.insert_process(&process)?;
-
-                        if let Some(_process) = process {
-                            run(ai_service, context.clone()).await?;
-                        }
-                    }
+            if let Some(ref _processed_function_body) = ai_service.processed_function_body {
+                ai_services_sequential.push(ai_service);
+                /*
+                if processed_function_body.contains("apt-get") {
+                    ai_services_sequential.push(ai_service);
+                } else {
+                    ai_services_parallel.push(ai_service);
                 }
-                Some(pid) => {
-                    let process = Process {
-                        id: ai_service.id.to_string(),
-                        client_port: None,
-                        failed_connection_attempts: 0,
-                        last_used_at: None,
-                        pid: Some(pid),
-                        server_port: Some(ai_service.port),
-                        state: ProcessState::Running,
-                        r#type: ProcessType::AiService,
-                    };
+                */
+            }
+        }
+    }
 
-                    context.process_manager.insert_process(&process)?;
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+    /*
+    for ai_service in ai_services_parallel {
+        let cloned_context = context.clone();
+        let cloned_ai_service = ai_service.clone();
+        tokio::spawn(async move {
+            let result =
+                start_or_manage_running_ai_service(cloned_ai_service, cloned_context).await;
+
+            if let Err(e) = result {
+                tracing::error!("Error: {:?}", e);
+            }
+        });
+    }
+    */
+    for ai_service in ai_services_sequential {
+        start_or_manage_running_ai_service(ai_service, context.clone()).await?;
+    }
+
+    Ok(())
+}
+
+pub async fn start_or_manage_running_ai_service(
+    ai_service: AiService,
+    context: Arc<Context>,
+) -> Result<()> {
+    let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
+
+    match pid {
+        None => {
+            let ai_service =
+                parser::ai_service_replace_device_map(ai_service, context.clone()).await?;
+
+            let environment_created = create_environment(&ai_service, context.clone()).await?;
+
+            if environment_created {
+                let process = Process {
+                    id: ai_service.id.to_string(),
+                    client_port: None,
+                    failed_connection_attempts: 0,
+                    last_used_at: None,
+                    pid: None,
+                    server_port: Some(ai_service.port),
+                    state: ProcessState::EnvironmentPrepared,
+                    r#type: ProcessType::AiService,
+                };
+
+                let process = context.process_manager.insert_process(&process)?;
+
+                if let Some(_process) = process {
+                    run(ai_service, context.clone()).await?;
                 }
             }
+        }
+        Some(pid) => {
+            let process = Process {
+                id: ai_service.id.to_string(),
+                client_port: None,
+                failed_connection_attempts: 0,
+                last_used_at: None,
+                pid: Some(pid),
+                server_port: Some(ai_service.port),
+                state: ProcessState::Running,
+                r#type: ProcessType::AiService,
+            };
+
+            context.process_manager.insert_process(&process)?;
         }
     }
 

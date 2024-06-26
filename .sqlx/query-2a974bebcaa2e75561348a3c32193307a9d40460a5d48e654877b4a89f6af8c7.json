@@ -140,6 +140,7 @@
                 "malicious_code_detected",
                 "parsing_finished",
                 "parsing_started",
+                "restarting",
                 "running",
                 "setup",
                 "stopped"

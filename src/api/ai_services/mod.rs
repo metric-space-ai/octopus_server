@@ -677,19 +677,31 @@ pub async fn operation(
 
     match input.operation {
         AiServiceOperation::Disable => {
-            if !(ai_service.status == AiServiceStatus::Running
-                || ai_service.status == AiServiceStatus::Setup)
+            if !(ai_service.status == AiServiceStatus::Restarting
+                || ai_service.status == AiServiceStatus::Running
+                || ai_service.status == AiServiceStatus::Setup
+                || ai_service.status == AiServiceStatus::Stopped)
             {
                 return Err(AppError::Conflict);
             }
         }
         AiServiceOperation::Enable => {
-            if ai_service.status != AiServiceStatus::Stopped {
+            if !(ai_service.status == AiServiceStatus::Restarting
+                || ai_service.status == AiServiceStatus::Running
+                || ai_service.status == AiServiceStatus::Stopped)
+            {
                 return Err(AppError::Conflict);
             }
         }
-        AiServiceOperation::HealthCheck | AiServiceOperation::Setup => {
+        AiServiceOperation::HealthCheck => {
             if ai_service.status != AiServiceStatus::Running {
+                return Err(AppError::Conflict);
+            }
+        }
+        AiServiceOperation::Setup => {
+            if !(ai_service.status == AiServiceStatus::Running
+                || ai_service.status == AiServiceStatus::Setup)
+            {
                 return Err(AppError::Conflict);
             }
         }

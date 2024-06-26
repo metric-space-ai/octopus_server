@@ -117,6 +117,7 @@ pub enum AiServiceStatus {
     MaliciousCodeDetected,
     ParsingFinished,
     ParsingStarted,
+    Restarting,
     Running,
     Setup,
     Stopped,
