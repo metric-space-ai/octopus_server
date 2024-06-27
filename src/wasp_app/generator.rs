@@ -128,7 +128,7 @@ fn create_archive(src_dir: &str, dst_file: &str, method: zip::CompressionMethod)
     let walkdir = WalkDir::new(src_dir);
     let it = walkdir.into_iter();
 
-    zip_dir(&mut it.filter_map(|e| e.ok()), src_dir, file, method)?;
+    zip_dir(&mut it.filter_map(std::result::Result::ok), src_dir, file, method)?;
 
     Ok(())
 }

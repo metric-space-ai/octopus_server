@@ -57,12 +57,11 @@ pub async fn create(
     if let (Some(content_type), Some(data), Some(original_file_name)) =
         (content_type, data, original_file_name)
     {
-        let extension = original_file_name
+        let extension = (*original_file_name
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?
-            .to_string();
+            .ok_or(AppError::File)?).to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");
@@ -355,12 +354,11 @@ pub async fn update(
     {
         let old_path = format!("{PUBLIC_DIR}/{}", file.file_name);
 
-        let extension = original_file_name
+        let extension = (*original_file_name
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?
-            .to_string();
+            .ok_or(AppError::File)?).to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");

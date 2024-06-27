@@ -98,11 +98,17 @@ pub async fn allowed_users(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let allowed_user_ids = if input.allowed_user_ids.is_empty() {
+        None
+    } else {
+        Some(input.allowed_user_ids)
+    };
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let wasp_app = context
         .octopus_database
-        .update_wasp_app_allowed_user_ids(&mut transaction, wasp_app.id, &input.allowed_user_ids)
+        .update_wasp_app_allowed_user_ids(&mut transaction, wasp_app.id, allowed_user_ids)
         .await?;
 
     context

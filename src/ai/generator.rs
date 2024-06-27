@@ -69,14 +69,14 @@ pub async fn generate(
                                         ai_function_response
                                     {
                                         if let Some(response) = ai_function_text_response.response {
-                                            internet_research_results = Some(response)
+                                            internet_research_results = Some(response);
                                         }
                                     }
                                 }
                             }
                             AiFunctionResponse::Text(ai_function_text_response) => {
                                 if let Some(response) = ai_function_text_response.response {
-                                    internet_research_results = Some(response)
+                                    internet_research_results = Some(response);
                                 }
                             }
                             _ => {}

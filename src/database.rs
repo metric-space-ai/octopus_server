@@ -3001,7 +3001,7 @@ impl OctopusDatabase {
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
-        allowed_user_ids: &[Uuid],
+        allowed_user_ids: Option<Vec<Uuid>>,
     ) -> Result<AiService> {
         let ai_service = sqlx::query_as!(
             AiService,
@@ -3010,7 +3010,7 @@ impl OctopusDatabase {
             WHERE id = $1
             RETURNING id, ai_service_generator_id, allowed_user_ids, color, device_map, health_check_execution_time, health_check_status AS "health_check_status: _", is_enabled, original_file_name, original_function_body, parser_feedback, port, priority, processed_function_body, progress, required_python_version AS "required_python_version: _", setup_execution_time, setup_status AS "setup_status: _", status AS "status: _", type AS "type: _", created_at, deleted_at, health_check_at, setup_at, updated_at"#,
             id,
-            allowed_user_ids,
+            allowed_user_ids.as_deref(),
         )
         .fetch_one(&mut **transaction)
         .await?;
@@ -4391,7 +4391,7 @@ impl OctopusDatabase {
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
-        allowed_user_ids: &[Uuid],
+        allowed_user_ids: Option<Vec<Uuid>>,
     ) -> Result<WaspApp> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
@@ -4400,7 +4400,7 @@ impl OctopusDatabase {
             WHERE id = $1
             RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type AS "instance_type: _", is_enabled, name, created_at, deleted_at, updated_at"#,
             id,
-            allowed_user_ids,
+            allowed_user_ids.as_deref(),
         )
         .fetch_one(&mut **transaction)
         .await?;

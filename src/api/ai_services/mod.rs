@@ -95,15 +95,17 @@ pub async fn allowed_users(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let allowed_user_ids = if input.allowed_user_ids.is_empty() {
+        None
+    } else {
+        Some(input.allowed_user_ids)
+    };
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let ai_service = context
         .octopus_database
-        .update_ai_service_allowed_user_ids(
-            &mut transaction,
-            ai_service.id,
-            &input.allowed_user_ids,
-        )
+        .update_ai_service_allowed_user_ids(&mut transaction, ai_service.id, allowed_user_ids)
         .await?;
 
     context
@@ -388,13 +390,13 @@ pub async fn diff(
 
     let mut result = String::new();
     let original_function_body = ai_service.original_function_body;
-    let processed_function_body = ai_service.processed_function_body.unwrap_or("".to_string());
+    let processed_function_body = ai_service.processed_function_body.unwrap_or(String::new());
 
     for diff in diff::lines(&original_function_body, &processed_function_body) {
         match diff {
-            diff::Result::Left(l) => result.push_str(&format!("-{}\n", l)),
-            diff::Result::Both(l, _) => result.push_str(&format!(" {}\n", l)),
-            diff::Result::Right(r) => result.push_str(&format!("+{}\n", r)),
+            diff::Result::Left(l) => result.push_str(&format!("-{l}\n")),
+            diff::Result::Both(l, _) => result.push_str(&format!(" {l}\n")),
+            diff::Result::Right(r) => result.push_str(&format!("+{r}\n")),
         }
     }
 
@@ -464,7 +466,7 @@ pub async fn download_processed_function_body(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    let processed_function_body = ai_service.processed_function_body.unwrap_or("".to_string());
+    let processed_function_body = ai_service.processed_function_body.unwrap_or(String::new());
 
     Ok((StatusCode::OK, PyFile(processed_function_body)).into_response())
 }

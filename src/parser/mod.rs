@@ -35,7 +35,7 @@ pub async fn ai_service_malicious_code_check(
             AiServiceStatus::Configuration
         } else {
             if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
-                let fixing_proposal = format!("Malicious code check: {}", fixing_proposal);
+                let fixing_proposal = format!("Malicious code check: {fixing_proposal}");
 
                 context
                     .octopus_database
@@ -99,7 +99,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
             if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
-                let fixing_proposal = format!("Pre parsing code check: {}", fixing_proposal);
+                let fixing_proposal = format!("Pre parsing code check: {fixing_proposal}");
 
                 let ai_service_tmp = context
                     .octopus_database
@@ -216,7 +216,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     if let Some(parsing_code_check_response) = parsing_code_check_response {
         if !parsing_code_check_response.is_passed {
             if let Some(fixing_proposal) = parsing_code_check_response.fixing_proposal {
-                let fixing_proposal = format!("Post parsing code check: {}", fixing_proposal);
+                let fixing_proposal = format!("Post parsing code check: {fixing_proposal}");
 
                 let ai_service_tmp = context
                     .octopus_database

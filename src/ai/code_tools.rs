@@ -153,7 +153,7 @@ device = select_device()"#,
     }
 
     if context.get_config().await?.test_mode {
-        return Ok(Some("".to_string()));
+        return Ok(Some(String::new()));
     }
 
     let request = CreateChatCompletionRequestArgs::default()
@@ -250,8 +250,7 @@ pub async fn open_ai_describe_functions(
 
     text.push_str(&format!(
         r#"]}}
-    Just give me the json, nothing else. Do not explain yourself. {}"#,
-        code
+    Just give me the json, nothing else. Do not explain yourself. {code}"#
     ));
 
     let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()

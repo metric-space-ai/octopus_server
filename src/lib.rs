@@ -52,7 +52,7 @@ pub struct Args {
     #[arg(long)]
     pub wasp_database_url: Option<String>,
 
-    /// WebSocket port
+    /// `WebSocket` port
     #[arg(long)]
     pub ws_port: Option<u16>,
 }

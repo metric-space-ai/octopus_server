@@ -89,7 +89,7 @@ pub async fn create_environment(
     for i in 0..archive.len() {
         let file = archive.by_index(i)?;
         let outpath = match file.enclosed_name() {
-            Some(path) => path.to_owned(),
+            Some(path) => path.clone(),
             None => continue,
         };
 
@@ -109,7 +109,7 @@ pub async fn create_environment(
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)?;
         let outpath = match file.enclosed_name() {
-            Some(path) => path.to_owned(),
+            Some(path) => path.clone(),
             None => continue,
         };
 

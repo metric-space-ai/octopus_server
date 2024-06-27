@@ -309,7 +309,7 @@ pub async fn download_original_function_body(
 
     let original_function_body = ai_service_generator
         .original_function_body
-        .unwrap_or("".to_string());
+        .unwrap_or(String::new());
 
     Ok((StatusCode::OK, PyFile(original_function_body)).into_response())
 }
