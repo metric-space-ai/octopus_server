@@ -249,7 +249,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
             if let Some(server_port) = process.server_port {
                 let ai_service_id = Uuid::parse_str(&process.id)?;
                 let ai_service =
-                    ai::service::service_health_check(ai_service_id, context.clone(), server_port)
+                    ai::service::service_health_check(ai_service_id, context.clone(), server_port, 40)
                         .await?;
 
                 if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
@@ -293,7 +293,7 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
             if let Some(server_port) = process.server_port {
                 let ai_service_id = Uuid::parse_str(&process.id)?;
                 let ai_service =
-                    ai::service::service_health_check(ai_service_id, context.clone(), server_port)
+                    ai::service::service_health_check(ai_service_id, context.clone(), server_port, 40)
                         .await?;
 
                 if ai_service.health_check_status != AiServiceHealthCheckStatus::Ok {

@@ -95,7 +95,7 @@ pub async fn handle_function_call(
         if failed_connection_attempts > 10 {
             tracing::error!("Function call error: No Response - health check");
 
-            service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
+            service_health_check(ai_service.id, context.clone(), ai_service.port, 40).await?;
 
             break;
         }

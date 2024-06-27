@@ -31,6 +31,7 @@ pub async fn service_health_check(
     ai_service_id: Uuid,
     context: Arc<Context>,
     port: i32,
+    failed_connection_attempts_limit: i32,
 ) -> Result<AiService> {
     let url = format!("{BASE_AI_FUNCTION_URL}:{port}/health-check");
 
@@ -90,7 +91,7 @@ pub async fn service_health_check(
 
             failed_connection_attempts += 1;
 
-            if failed_connection_attempts > 40 {
+            if failed_connection_attempts > failed_connection_attempts_limit {
                 break;
             }
 
@@ -122,7 +123,7 @@ pub async fn service_health_check(
 pub async fn service_prepare(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
     if ai_service.is_enabled {
         let ai_service =
-            service_health_check(ai_service.id, context.clone(), ai_service.port).await?;
+            service_health_check(ai_service.id, context.clone(), ai_service.port, 160).await?;
 
         if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
             let mut transaction = context.octopus_database.transaction_begin().await?;
