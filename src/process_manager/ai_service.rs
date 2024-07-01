@@ -248,9 +248,13 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
         ProcessState::HealthCheckProblem => {
             if let Some(server_port) = process.server_port {
                 let ai_service_id = Uuid::parse_str(&process.id)?;
-                let ai_service =
-                    ai::service::service_health_check(ai_service_id, context.clone(), server_port, 40)
-                        .await?;
+                let ai_service = ai::service::service_health_check(
+                    ai_service_id,
+                    context.clone(),
+                    server_port,
+                    40,
+                )
+                .await?;
 
                 if ai_service.health_check_status == AiServiceHealthCheckStatus::Ok {
                     let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
@@ -292,9 +296,13 @@ pub async fn manage_running(context: Arc<Context>, mut process: Process) -> Resu
         ProcessState::Running => {
             if let Some(server_port) = process.server_port {
                 let ai_service_id = Uuid::parse_str(&process.id)?;
-                let ai_service =
-                    ai::service::service_health_check(ai_service_id, context.clone(), server_port, 40)
-                        .await?;
+                let ai_service = ai::service::service_health_check(
+                    ai_service_id,
+                    context.clone(),
+                    server_port,
+                    40,
+                )
+                .await?;
 
                 if ai_service.health_check_status != AiServiceHealthCheckStatus::Ok {
                     process.state = ProcessState::HealthCheckProblem;

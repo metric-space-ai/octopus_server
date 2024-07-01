@@ -55,7 +55,8 @@ pub async fn create(
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?).to_string();
+            .ok_or(AppError::File)?)
+        .to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let nextcloud_subdir = context.get_config().await?.nextcloud_subdir;
@@ -253,7 +254,8 @@ pub async fn update(
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?).to_string();
+            .ok_or(AppError::File)?)
+        .to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{NEXTCLOUD_FILES_DIR}/{nextcloud_subdir}{file_name}");

@@ -5,6 +5,7 @@ pub fn fix_apt_get(code_lines: Vec<String>) -> Vec<String> {
         if code_line.contains("apt")
             && code_line.contains("install")
             && !code_line.contains("apt-get")
+            && !code_line.contains("wrapt")
         {
             let new_line = code_line.replace("apt", "apt-get");
             parsed_code_lines.push(new_line);
@@ -20,7 +21,11 @@ pub fn fix_apt_install(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
-        if code_line.contains("apt") && code_line.contains("install") && !code_line.contains("-y") {
+        if code_line.contains("apt")
+            && code_line.contains("install")
+            && !code_line.contains("-y")
+            && !code_line.contains("wrapt")
+        {
             let new_line = code_line.replace("install", "install -y");
             parsed_code_lines.push(new_line);
         } else {

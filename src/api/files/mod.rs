@@ -61,7 +61,8 @@ pub async fn create(
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?).to_string();
+            .ok_or(AppError::File)?)
+        .to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");
@@ -358,7 +359,8 @@ pub async fn update(
             .split('.')
             .collect::<Vec<&str>>()
             .last()
-            .ok_or(AppError::File)?).to_string();
+            .ok_or(AppError::File)?)
+        .to_string();
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");
