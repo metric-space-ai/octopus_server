@@ -1,5 +1,6 @@
 use crate::{
     api::auth,
+    canon,
     context::Context,
     error::AppError,
     session::{SessionResponse, SessionResponseData},
@@ -37,9 +38,11 @@ pub async fn login(
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let hash = context
         .octopus_database
-        .try_get_hash_for_email(&input.email)
+        .try_get_hash_for_email(&email)
         .await?;
     let Some(hash) = hash else {
         return Err(AppError::NotRegistered);
@@ -52,7 +55,7 @@ pub async fn login(
 
     let user = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?
         .ok_or(AppError::NotRegistered)?;
 

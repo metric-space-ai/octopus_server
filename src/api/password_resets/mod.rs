@@ -1,5 +1,6 @@
 use crate::{
-    api::auth, context::Context, email_service::send_password_reset_request_email, error::AppError,
+    api::auth, canon, context::Context, email_service::send_password_reset_request_email,
+    error::AppError,
 };
 use axum::{
     extract::{Path, State},
@@ -122,9 +123,11 @@ pub async fn request(
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let user = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -165,7 +168,7 @@ pub async fn request(
 
     let password_reset_token = context
         .octopus_database
-        .insert_password_reset_token(&mut transaction, user.id, &input.email, &token)
+        .insert_password_reset_token(&mut transaction, user.id, &email, &token)
         .await?;
 
     context
@@ -173,7 +176,7 @@ pub async fn request(
         .transaction_commit(transaction)
         .await?;
 
-    send_password_reset_request_email(context, &input.email, &token).await?;
+    send_password_reset_request_email(context, &email, &token).await?;
 
     Ok((StatusCode::CREATED, Json(password_reset_token)).into_response())
 }

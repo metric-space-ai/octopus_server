@@ -1,5 +1,6 @@
 use crate::{
     api::auth,
+    canon,
     context::Context,
     email_service::send_invitation_email,
     entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
@@ -74,6 +75,8 @@ pub async fn create(
     let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
@@ -89,7 +92,7 @@ pub async fn create(
 
     let user_exists = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?;
 
     match user_exists {
@@ -111,7 +114,7 @@ pub async fn create(
                 .insert_user(
                     &mut transaction,
                     session_user.company_id,
-                    &input.email,
+                    &email,
                     input.is_enabled,
                     false,
                     context.get_config().await?.pepper_id,
@@ -230,6 +233,8 @@ pub async fn invitation(
     let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
@@ -245,7 +250,7 @@ pub async fn invitation(
 
     let user_exists = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?;
 
     match user_exists {
@@ -269,7 +274,7 @@ pub async fn invitation(
                 .insert_user(
                     &mut transaction,
                     session_user.company_id,
-                    &input.email,
+                    &email,
                     true,
                     true,
                     context.get_config().await?.pepper_id,
@@ -293,7 +298,7 @@ pub async fn invitation(
                 .map_to_user_extended(&user, Some(profile))
                 .await?;
 
-            send_invitation_email(context, &input.email, &password).await?;
+            send_invitation_email(context, &email, &password).await?;
 
             Ok((StatusCode::CREATED, Json(user_extended)).into_response())
         }
@@ -445,6 +450,8 @@ pub async fn update(
     let session = require_authenticated(extracted_session).await?;
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let session_user = context
         .octopus_database
         .try_get_user_by_id(session.user_id)
@@ -471,7 +478,7 @@ pub async fn update(
     let user = if session_user.id == user_id {
         context
             .octopus_database
-            .update_user_email(&mut transaction, user.id, &input.email)
+            .update_user_email(&mut transaction, user.id, &email)
             .await?
     } else {
         let is_enabled = input.is_enabled.ok_or(AppError::BadRequest)?;
@@ -479,7 +486,7 @@ pub async fn update(
 
         context
             .octopus_database
-            .update_user(&mut transaction, user.id, &input.email, is_enabled, &roles)
+            .update_user(&mut transaction, user.id, &email, is_enabled, &roles)
             .await?
     };
 

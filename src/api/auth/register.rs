@@ -1,5 +1,6 @@
 use crate::{
     api::auth,
+    canon,
     context::Context,
     entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
     error::AppError,
@@ -45,6 +46,8 @@ pub async fn register(
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let registration_allowed = context
         .get_config()
         .await?
@@ -57,7 +60,7 @@ pub async fn register(
 
     let user_exists = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?;
 
     match user_exists {
@@ -85,7 +88,7 @@ pub async fn register(
                 .insert_user(
                     &mut transaction,
                     company.id,
-                    &input.email,
+                    &email,
                     true,
                     false,
                     context.get_config().await?.pepper_id,

@@ -1,5 +1,6 @@
 use crate::{
     api::auth,
+    canon,
     context::Context,
     entity::{
         WorkspacesType, PARAMETER_NAME_AI_MODEL, PARAMETER_NAME_AI_SYSTEM_PROMPT,
@@ -109,9 +110,11 @@ pub async fn setup(
 ) -> Result<impl IntoResponse, AppError> {
     input.validate()?;
 
+    let email = canon::canonicalize(&input.email);
+
     let user_exists = context
         .octopus_database
-        .try_get_user_by_email(&input.email)
+        .try_get_user_by_email(&email)
         .await?;
 
     match user_exists {
@@ -138,7 +141,7 @@ pub async fn setup(
                 .insert_user(
                     &mut transaction,
                     company.id,
-                    &input.email,
+                    &email,
                     true,
                     false,
                     context.get_config().await?.pepper_id,
