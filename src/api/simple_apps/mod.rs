@@ -70,13 +70,27 @@ pub async fn create(
 ) -> Result<impl IntoResponse, AppError> {
     ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
 
+    let mut bypass_code_check = false;
+    let mut data = None;
+
     while let Some(field) = multipart.next_field().await? {
-        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+        let field_name = (field.name().ok_or(AppError::Parsing)?).to_string();
 
-        if content_type == "text/html" {
-            let data = field.bytes().await?.clone().to_vec();
-            let code = String::from_utf8(data)?;
+        if field_name == "bypass_code_check" {
+            bypass_code_check = (field.text().await?).parse::<bool>().unwrap_or(false);
+        } else {
+            let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
+            if content_type == "text/html" {
+                data = Some(field.bytes().await?.clone().to_vec());
+            }
+        }
+    }
+
+    if let Some(data) = data {
+        let code = String::from_utf8(data)?;
+
+        if !bypass_code_check {
             let parsing_code_check_response =
                 ai::code_tools::open_ai_malicious_code_check(&code, context.clone()).await?;
 
@@ -85,45 +99,43 @@ pub async fn create(
                     return Err(AppError::BadRequest);
                 }
             }
-
-            let mut simple_app_meta =
-                ai::code_tools::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
-
-            if simple_app_meta.title.is_empty() || simple_app_meta.description.is_empty() {
-                simple_app_meta = ai::code_tools::open_ai_simple_app_advanced_meta_extraction(
-                    &code,
-                    context.clone(),
-                )
-                .await?;
-            }
-
-            let formatted_name = simple_app_meta
-                .title
-                .clone()
-                .replace(' ', "_")
-                .to_lowercase();
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let simple_app = context
-                .octopus_database
-                .insert_simple_app(
-                    &mut transaction,
-                    &code,
-                    &simple_app_meta.description,
-                    &formatted_name,
-                    true,
-                    &simple_app_meta.title,
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            return Ok((StatusCode::CREATED, Json(simple_app)).into_response());
         }
+
+        let mut simple_app_meta =
+            ai::code_tools::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
+
+        if simple_app_meta.title.is_empty() || simple_app_meta.description.is_empty() {
+            simple_app_meta =
+                ai::code_tools::open_ai_simple_app_advanced_meta_extraction(&code, context.clone())
+                    .await?;
+        }
+
+        let formatted_name = simple_app_meta
+            .title
+            .clone()
+            .replace(' ', "_")
+            .to_lowercase();
+
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let simple_app = context
+            .octopus_database
+            .insert_simple_app(
+                &mut transaction,
+                &code,
+                &simple_app_meta.description,
+                &formatted_name,
+                true,
+                &simple_app_meta.title,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        return Ok((StatusCode::CREATED, Json(simple_app)).into_response());
     }
 
     Err(AppError::BadRequest)
@@ -258,13 +270,27 @@ pub async fn update(
         .await?
         .ok_or(AppError::NotFound)?;
 
+    let mut bypass_code_check = false;
+    let mut data = None;
+
     while let Some(field) = multipart.next_field().await? {
-        let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
+        let field_name = (field.name().ok_or(AppError::Parsing)?).to_string();
 
-        if content_type == "text/html" {
-            let data = field.bytes().await?.clone().to_vec();
-            let code = String::from_utf8(data)?;
+        if field_name == "bypass_code_check" {
+            bypass_code_check = (field.text().await?).parse::<bool>().unwrap_or(false);
+        } else {
+            let content_type = (field.content_type().ok_or(AppError::File)?).to_string();
 
+            if content_type == "text/html" {
+                data = Some(field.bytes().await?.clone().to_vec());
+            }
+        }
+    }
+
+    if let Some(data) = data {
+        let code = String::from_utf8(data)?;
+
+        if !bypass_code_check {
             let parsing_code_check_response =
                 ai::code_tools::open_ai_malicious_code_check(&code, context.clone()).await?;
 
@@ -273,38 +299,44 @@ pub async fn update(
                     return Err(AppError::BadRequest);
                 }
             }
-
-            let simple_app_meta =
-                ai::code_tools::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
-
-            let formatted_name = simple_app_meta
-                .title
-                .clone()
-                .replace(' ', "_")
-                .to_lowercase();
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let simple_app = context
-                .octopus_database
-                .update_simple_app(
-                    &mut transaction,
-                    id,
-                    &code,
-                    &simple_app_meta.description,
-                    &formatted_name,
-                    true,
-                    &simple_app_meta.title,
-                )
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            return Ok((StatusCode::OK, Json(simple_app)).into_response());
         }
+
+        let mut simple_app_meta =
+            ai::code_tools::open_ai_simple_app_meta_extraction(&code, context.clone()).await?;
+
+        if simple_app_meta.title.is_empty() || simple_app_meta.description.is_empty() {
+            simple_app_meta =
+                ai::code_tools::open_ai_simple_app_advanced_meta_extraction(&code, context.clone())
+                    .await?;
+        }
+
+        let formatted_name = simple_app_meta
+            .title
+            .clone()
+            .replace(' ', "_")
+            .to_lowercase();
+
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let simple_app = context
+            .octopus_database
+            .update_simple_app(
+                &mut transaction,
+                id,
+                &code,
+                &simple_app_meta.description,
+                &formatted_name,
+                true,
+                &simple_app_meta.title,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        return Ok((StatusCode::OK, Json(simple_app)).into_response());
     }
 
     Err(AppError::BadRequest)
