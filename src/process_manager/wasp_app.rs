@@ -194,6 +194,8 @@ pub async fn create_environment(
 
     let mut parameters = String::new();
 
+    parameters.push_str(&format!("PG_BOSS_NEW_OPTIONS=\"{{\"connectionString\":\"{wasp_database_url}\"}}\" "));
+
     let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
     if let Some(octopus_api_url) = octopus_api_url {
