@@ -77,6 +77,10 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
         ));
     }
 
+    let nextcloud_subdir = context.get_config().await?.nextcloud_subdir;
+
+    parameters.push_str(&format!("NC_SUBDIR={nextcloud_subdir} "));
+
     let nextcloud_url = context.get_config().await?.get_parameter_nextcloud_url();
 
     if let Some(nextcloud_url) = nextcloud_url {
