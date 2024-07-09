@@ -52,42 +52,43 @@ RUN set -eux; \
     rustc --version;
 # https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
 ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.4
+ENV GOLANG_VERSION 1.22.5
 RUN set -eux; \
+    now="$(date '+%s')"; \
     arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
     url=; \
     case "$arch" in \
         'amd64') \
-            url='https://dl.google.com/go/go1.22.4.linux-amd64.tar.gz'; \
-            sha256='ba79d4526102575196273416239cca418a651e049c2b099f3159db85e7bade7d'; \
+            url='https://dl.google.com/go/go1.22.5.linux-amd64.tar.gz'; \
+            sha256='904b924d435eaea086515bc63235b192ea441bd8c9b198c507e85009e6e4c7f0'; \
             ;; \
         'armhf') \
-            url='https://dl.google.com/go/go1.22.4.linux-armv6l.tar.gz'; \
-            sha256='e2b143fbacbc9cbd448e9ef41ac3981f0488ce849af1cf37e2341d09670661de'; \
+            url='https://dl.google.com/go/go1.22.5.linux-armv6l.tar.gz'; \
+            sha256='8c4587cf3e63c9aefbcafa92818c4d9d51683af93ea687bf6c7508d6fa36f85e'; \
             ;; \
         'arm64') \
-            url='https://dl.google.com/go/go1.22.4.linux-arm64.tar.gz'; \
-            sha256='a8e177c354d2e4a1b61020aca3562e27ea3e8f8247eca3170e3fa1e0c2f9e771'; \
+            url='https://dl.google.com/go/go1.22.5.linux-arm64.tar.gz'; \
+            sha256='8d21325bfcf431be3660527c1a39d3d9ad71535fabdf5041c826e44e31642b5a'; \
             ;; \
         'i386') \
-            url='https://dl.google.com/go/go1.22.4.linux-386.tar.gz'; \
-            sha256='47a2a8d249a91eb8605c33bceec63aedda0441a43eac47b4721e3975ff916cec'; \
+            url='https://dl.google.com/go/go1.22.5.linux-386.tar.gz'; \
+            sha256='3ea4c78e6fa52978ae1ed2e5927ad17495da440c9fae7787b1ebc1d0572f7f43'; \
             ;; \
         'mips64el') \
-            url='https://dl.google.com/go/go1.22.4.linux-mips64le.tar.gz'; \
-            sha256='7486e2d7dd8c98eb44df815ace35a7fe7f30b7c02326e3741bd934077508139b'; \
+            url='https://dl.google.com/go/go1.22.5.linux-mips64le.tar.gz'; \
+            sha256='b7956d925c9ef5a4dc53017feaed2d78dba5d0a1036bad5ea513f1f15ba08fbc'; \
             ;; \
         'ppc64el') \
-            url='https://dl.google.com/go/go1.22.4.linux-ppc64le.tar.gz'; \
-            sha256='a3e5834657ef92523f570f798fed42f1f87bc18222a16815ec76b84169649ec4'; \
+            url='https://dl.google.com/go/go1.22.5.linux-ppc64le.tar.gz'; \
+            sha256='5312bb420ac0b59175a58927e70b4660b14ab7319aab54398b6071fabcbfbb09'; \
             ;; \
         'riscv64') \
-            url='https://dl.google.com/go/go1.22.4.linux-riscv64.tar.gz'; \
-            sha256='56a827ff7dc6245bcd7a1e9288dffaa1d8b0fd7468562264c1523daf3b4f1b4a'; \
+            url='https://dl.google.com/go/go1.22.5.linux-riscv64.tar.gz'; \
+            sha256='f8d0c7d96b336f4133409ff9da7241cfe91e65723c2e8e7c7f9b58a9f9603476'; \
             ;; \
         's390x') \
-            url='https://dl.google.com/go/go1.22.4.linux-s390x.tar.gz'; \
-            sha256='7590c3e278e2dc6040aae0a39da3ca1eb2e3921673a7304cc34d588c45889eec'; \
+            url='https://dl.google.com/go/go1.22.5.linux-s390x.tar.gz'; \
+            sha256='24c6c5c9d515adea5d58ae78388348c97614a0c21ac4d4f4c0dab75e893b0b5d'; \
             ;; \
         *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
     esac; \
@@ -108,7 +109,9 @@ RUN set -eux; \
     \
     SOURCE_DATE_EPOCH="$(stat -c '%Y' /usr/local/go)"; \
     export SOURCE_DATE_EPOCH; \
+    touchy="$(date -d "@$SOURCE_DATE_EPOCH" '+%Y%m%d%H%M.%S')"; \
     date --date "@$SOURCE_DATE_EPOCH" --rfc-2822; \
+    [ "$SOURCE_DATE_EPOCH" -lt "$now" ]; \
     \
     if [ "$arch" = 'armhf' ]; then \
         [ -s /usr/local/go/go.env ]; \
@@ -119,13 +122,18 @@ RUN set -eux; \
             echo 'GOARM=7'; \
         } >> /usr/local/go/go.env; \
         after="$(go env GOARM)"; [ "$after" = '7' ]; \
-        date="$(date -d "@$SOURCE_DATE_EPOCH" '+%Y%m%d%H%M.%S')"; \
-        touch -t "$date" /usr/local/go/go.env /usr/local/go; \
+        touch -t "$touchy" /usr/local/go/go.env /usr/local/go; \
     fi; \
     \
+    mkdir /target /target/usr /target/usr/local; \
+    mv -vT /usr/local/go /target/usr/local/go; \
+    ln -svfT /target/usr/local/go /usr/local/go; \
+    touch -t "$touchy" /target/usr/local /target/usr /target; \
+    \
     go version; \
-    epoch="$(stat -c '%Y' /usr/local/go)"; \
-    [ "$SOURCE_DATE_EPOCH" = "$epoch" ]
+    epoch="$(stat -c '%Y' /target/usr/local/go)"; \
+    [ "$SOURCE_DATE_EPOCH" = "$epoch" ]; \
+    find /target -newer /target/usr/local/go -exec sh -c 'ls -ld "$@" && exit "$#"' -- '{}' +
 ENV GOTOOLCHAIN=local
 ENV GOPATH /go
 ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
@@ -133,7 +141,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.20.3
+ENV NODE_VERSION 18.20.4
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -225,7 +233,7 @@ RUN npm run build
 WORKDIR /
 RUN git clone https://github.com/ollama/ollama.git
 WORKDIR /ollama/
-RUN git checkout v0.1.48
+RUN git checkout v0.2.1
 WORKDIR /ollama/llm/generate
 ARG CGO_CFLAGS
 RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
