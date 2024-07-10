@@ -380,6 +380,49 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     }
 
     for function in configuration.functions {
+        if function.name.len() > 64 {
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
+            let fixing_proposal =
+                format!("Function name is longer than 64 chars: {}", function.name);
+
+            let ai_service_tmp = context
+                .octopus_database
+                .try_get_ai_service_by_id(ai_service.id)
+                .await?;
+
+            let fixing_proposal = if let Some(ai_service_tmp) = ai_service_tmp {
+                if let Some(parser_feedback) = ai_service_tmp.parser_feedback {
+                    format!("{parser_feedback} \n\n {fixing_proposal}")
+                } else {
+                    fixing_proposal
+                }
+            } else {
+                fixing_proposal
+            };
+
+            let mut transaction = context.octopus_database.transaction_begin().await?;
+
+            context
+                .octopus_database
+                .update_ai_service_parser_feedback2(
+                    &mut transaction,
+                    ai_service.id,
+                    &fixing_proposal,
+                )
+                .await?;
+
+            context
+                .octopus_database
+                .transaction_commit(transaction)
+                .await?;
+
+            return Err(Box::new(AppError::Parsing));
+        }
+
         let ai_function_exists = context
             .octopus_database
             .try_get_ai_function_by_name(&function.name)
