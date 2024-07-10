@@ -66,6 +66,26 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
 
     let mut parameters = String::new();
 
+    let azure_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_azure_openai_api_key();
+
+    if let Some(azure_openai_api_key) = azure_openai_api_key {
+        parameters.push_str(&format!("AZURE_OPENAI_API_KEY={azure_openai_api_key} "));
+    }
+
+    let azure_openai_deployment_id = context
+        .get_config()
+        .await?
+        .get_parameter_azure_openai_deployment_id();
+
+    if let Some(azure_openai_deployment_id) = azure_openai_deployment_id {
+        parameters.push_str(&format!(
+            "AZURE_OPENAI_DEPLOYMENT_ID={azure_openai_deployment_id} "
+        ));
+    }
+
     let hugging_face_token_access = context
         .get_config()
         .await?

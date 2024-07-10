@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.9.21"
+version = "0.9.22"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -25,7 +25,7 @@ hex = "0.4.3"
 http = "1.1.0"
 http-body = "1.0.0"
 http-body-util = "0.1.2"
-hyper = { version = "1.4.0", features = ["full"] }
+hyper = { version = "1.4.1", features = ["full"] }
 infer = "0.16.0"
 mime = "0.3.17"
 num_cpus = "1.16.0"
