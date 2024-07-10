@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -15,37 +15,41 @@
       },
       {
         "ordinal": 2,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
         "name": "custom_style",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -54,5 +58,5 @@
       false
     ]
   },
-  "hash": "12d0141571cb4755aecba45bfbb2895bc58d4573cd55a14d72163af5456bbbc4"
+  "hash": "e9a2114a0871ec2978dc9080ddbb0a468692d9dd426cdab18f4f1e98c8df3a1c"
 }

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL",
+  "query": "INSERT INTO companies\n            (address, custom_style, name)\n            VALUES ($1, $2, $3)\n            RETURNING id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -15,35 +15,45 @@
       },
       {
         "ordinal": 2,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
         "name": "custom_style",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Varchar",
+        "Text",
+        "Varchar"
+      ]
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -52,5 +62,5 @@
       false
     ]
   },
-  "hash": "5c8ebc9b400630b808e13228c5e2ac264c4966fa0b61d12e1a74a23ebfc48657"
+  "hash": "87ac31bb4d2ac05d1ba8439d412a4fad1ff6d8fe0aef89246ba0979d6a952d17"
 }

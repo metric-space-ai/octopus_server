@@ -345,6 +345,7 @@ pub struct ChatPicture {
 pub struct Company {
     pub id: Uuid,
     pub address: Option<String>,
+    pub allowed_domains: Option<Vec<String>>,
     pub custom_style: Option<String>,
     pub name: String,
     pub created_at: DateTime<Utc>,

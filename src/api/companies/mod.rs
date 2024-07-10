@@ -20,6 +20,7 @@ use validator::Validate;
 pub struct CompanyPut {
     #[validate(length(max = 256, min = 1))]
     pub address: Option<String>,
+    pub allowed_domains: Option<Vec<String>>,
     pub custom_style: Option<String>,
     #[validate(length(max = 256, min = 1))]
     pub name: String,
@@ -115,6 +116,10 @@ pub async fn update(
         return Err(AppError::Forbidden);
     }
 
+    let allowed_domains = input
+        .allowed_domains
+        .filter(|allowed_domains| !allowed_domains.is_empty());
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     let company = context
@@ -123,6 +128,7 @@ pub async fn update(
             &mut transaction,
             company.id,
             input.address,
+            allowed_domains,
             input.custom_style,
             &input.name,
         )

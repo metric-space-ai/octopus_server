@@ -452,7 +452,7 @@ impl OctopusDatabase {
     pub async fn get_companies(&self) -> Result<Vec<Company>> {
         let companies = sqlx::query_as!(
             Company,
-            "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at
+            "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at
             FROM companies
             WHERE deleted_at IS NULL",
         )
@@ -1044,7 +1044,7 @@ impl OctopusDatabase {
             "INSERT INTO companies
             (address, custom_style, name)
             VALUES ($1, $2, $3)
-            RETURNING id, address, custom_style, name, created_at, deleted_at, updated_at",
+            RETURNING id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at",
             address,
             custom_style,
             name
@@ -2381,7 +2381,7 @@ impl OctopusDatabase {
     pub async fn try_get_company_by_id(&self, id: Uuid) -> Result<Option<Company>> {
         let company = sqlx::query_as!(
             Company,
-            "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at
+            "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at
             FROM companies
             WHERE id = $1
             AND deleted_at IS NULL",
@@ -2396,7 +2396,7 @@ impl OctopusDatabase {
     pub async fn try_get_company_primary(&self) -> Result<Option<Company>> {
         let company = sqlx::query_as!(
             Company,
-            "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at
+            "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at
             FROM companies
             WHERE deleted_at IS NULL
             ORDER BY created_at ASC
@@ -3924,17 +3924,19 @@ impl OctopusDatabase {
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
         address: Option<String>,
+        allowed_domains: Option<Vec<String>>,
         custom_style: Option<String>,
         name: &str,
     ) -> Result<Company> {
         let company = sqlx::query_as!(
             Company,
             "UPDATE companies
-            SET address = $2, custom_style = $3, name = $4, updated_at = current_timestamp(0)
+            SET address = $2, allowed_domains = $3, custom_style = $4, name = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, address, custom_style, name, created_at, deleted_at, updated_at",
+            RETURNING id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at",
             id,
             address,
+            allowed_domains.as_deref(),
             custom_style,
             name
         )

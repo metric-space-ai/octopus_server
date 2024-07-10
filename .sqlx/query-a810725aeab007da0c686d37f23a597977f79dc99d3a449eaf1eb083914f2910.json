@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE companies\n            SET address = $2, custom_style = $3, name = $4, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, address, custom_style, name, created_at, deleted_at, updated_at",
+  "query": "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL\n            ORDER BY created_at ASC\n            LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -15,40 +15,41 @@
       },
       {
         "ordinal": 2,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
         "name": "custom_style",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": [
-        "Uuid",
-        "Varchar",
-        "Text",
-        "Varchar"
-      ]
+      "Left": []
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -57,5 +58,5 @@
       false
     ]
   },
-  "hash": "43f8723c157dae8ccb06dfa481e1e96f7ba815a434c343e014c666e7633f756a"
+  "hash": "a810725aeab007da0c686d37f23a597977f79dc99d3a449eaf1eb083914f2910"
 }

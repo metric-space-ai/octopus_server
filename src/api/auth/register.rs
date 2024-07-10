@@ -81,6 +81,20 @@ pub async fn register(
                 .await?
                 .ok_or(AppError::CompanyNotFound)?;
 
+            if let Some(allowed_domains) = company.allowed_domains {
+                let mut registration_allowed = false;
+
+                for allowed_domain in allowed_domains {
+                    if email.contains(&allowed_domain) {
+                        registration_allowed = true;
+                    }
+                }
+
+                if !registration_allowed {
+                    return Err(AppError::NotAllowedDomain);
+                }
+            }
+
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
             let user = context

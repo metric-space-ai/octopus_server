@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, address, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE deleted_at IS NULL\n            ORDER BY created_at ASC\n            LIMIT 1",
+  "query": "SELECT id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at\n            FROM companies\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -15,35 +15,43 @@
       },
       {
         "ordinal": 2,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
         "name": "custom_style",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
-      "Left": []
+      "Left": [
+        "Uuid"
+      ]
     },
     "nullable": [
       false,
+      true,
       true,
       true,
       false,
@@ -52,5 +60,5 @@
       false
     ]
   },
-  "hash": "ef13b7db204c6f1f223018b071d3666b3852e0e95b6a69eaf71728aba994667b"
+  "hash": "22a3782f6d538862ad20e2592d06e1c689c4df81490455a5ac59f6f09edf19f6"
 }

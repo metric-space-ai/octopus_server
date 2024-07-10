@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO companies\n            (address, custom_style, name)\n            VALUES ($1, $2, $3)\n            RETURNING id, address, custom_style, name, created_at, deleted_at, updated_at",
+  "query": "UPDATE companies\n            SET address = $2, allowed_domains = $3, custom_style = $4, name = $5, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, address, allowed_domains, custom_style, name, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -15,33 +15,40 @@
       },
       {
         "ordinal": 2,
+        "name": "allowed_domains",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 3,
         "name": "custom_style",
         "type_info": "Text"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "name",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 4,
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Varchar",
+        "TextArray",
         "Text",
         "Varchar"
       ]
@@ -50,11 +57,12 @@
       false,
       true,
       true,
+      true,
       false,
       false,
       true,
       false
     ]
   },
-  "hash": "f4a427a9a27404b1a5c968c9bc8272e5e5f040d6e5706e74e71a00a5ef1a6585"
+  "hash": "d943019bfb35032d9595a340c2157c06e03504fca13878bbb6721346c325feee"
 }

@@ -32,6 +32,7 @@ pub enum AppError {
     Io(std::io::Error),
     Json(serde_json::Error),
     Multipart(MultipartError),
+    NotAllowedDomain,
     NotFound,
     NotRegistered,
     NotUtf8,
@@ -79,6 +80,9 @@ impl IntoResponse for AppError {
             AppError::Io(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Filesystem error."),
             AppError::Json(_error) => (StatusCode::BAD_REQUEST, "Invalid JSON."),
             AppError::Multipart(_error) => (StatusCode::BAD_REQUEST, "Multipart form error."),
+            AppError::NotAllowedDomain => {
+                (StatusCode::CONFLICT, "User email domain is not allowed.")
+            }
             AppError::NotFound => (StatusCode::NOT_FOUND, "Not found."),
             AppError::NotRegistered => (StatusCode::NOT_FOUND, "Email address not registered."),
             AppError::NotUtf8 => (StatusCode::INTERNAL_SERVER_ERROR, "Not Utf8 error."),
