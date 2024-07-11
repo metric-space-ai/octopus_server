@@ -8,7 +8,7 @@ use crate::{
         EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, InspectionDisabling,
         NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
         Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
-        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
+        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -534,6 +534,21 @@ impl OctopusDatabase {
         .await?;
 
         Ok(files)
+    }
+
+    pub async fn get_kvs_by_user_id(&self, user_id: Uuid) -> Result<Vec<KV>> {
+        let kvs = sqlx::query_as!(
+            KV,
+            "SELECT id, user_id, kv_key, kv_value, created_at, expires_at, updated_at
+            FROM kvs
+            WHERE user_id = $1
+            ORDER BY kv_key ASC",
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(kvs)
     }
 
     pub async fn get_nextcloud_files(&self) -> Result<Vec<NextcloudFile>> {
@@ -1152,6 +1167,31 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn insert_kv(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        user_id: Uuid,
+        kv_key: &str,
+        kv_value: &str,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<KV> {
+        let kv = sqlx::query_as!(
+            KV,
+            "INSERT INTO kvs
+            (user_id, kv_key, kv_value, expires_at)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, user_id, kv_key, kv_value, created_at, expires_at, updated_at",
+            user_id,
+            kv_key,
+            kv_value,
+            expires_at,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(kv)
     }
 
     pub async fn insert_nextcloud_file(
@@ -1835,6 +1875,23 @@ impl OctopusDatabase {
         Ok(inspection_disabling)
     }
 
+    pub async fn try_delete_kv_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let kv = sqlx::query_scalar::<_, Uuid>(
+            "DELETE FROM kvs
+                WHERE id = $1
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(kv)
+    }
+
     pub async fn try_delete_nextcloud_file_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2498,6 +2555,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn try_get_kv_by_kv_key(&self, kv_key: &str) -> Result<Option<KV>> {
+        let kv = sqlx::query_as!(
+            KV,
+            "SELECT id, user_id, kv_key, kv_value, created_at, expires_at, updated_at
+            FROM kvs
+            WHERE kv_key = $1",
+            kv_key
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(kv)
     }
 
     pub async fn try_get_nextcloud_file_by_id(&self, id: Uuid) -> Result<Option<NextcloudFile>> {
@@ -4049,6 +4120,31 @@ impl OctopusDatabase {
         .await?;
 
         Ok(inspection_disabling)
+    }
+
+    pub async fn update_kv(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        kv_key: &str,
+        kv_value: &str,
+        expires_at: Option<DateTime<Utc>>,
+    ) -> Result<KV> {
+        let kv = sqlx::query_as!(
+            KV,
+            "UPDATE kvs
+            SET kv_key = $2, kv_value = $3, expires_at = $4, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, user_id, kv_key, kv_value, created_at, expires_at, updated_at",
+            id,
+            kv_key,
+            kv_value,
+            expires_at,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(kv)
     }
 
     pub async fn update_nextcloud_file(

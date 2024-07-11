@@ -26,6 +26,7 @@ use crate::{
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         inspection_disablings::InspectionDisablingPost,
+        kvs::{KVPost, KVPut},
         ollama_models::{OllamaModelPost, OllamaModelPut},
         parameters::{ParameterPost, ParameterPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
@@ -47,7 +48,7 @@ use crate::{
         ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling, NextcloudFile,
         OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User,
         UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
-        WorkspacesType,
+        WorkspacesType, KV,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -93,6 +94,7 @@ mod example_prompt_categories;
 mod example_prompts;
 mod files;
 mod inspection_disablings;
+mod kvs;
 mod llm_proxy;
 mod nextcloud_files;
 mod nextcloud_raw_files;
@@ -173,6 +175,9 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 Gpu,
                 InspectionDisabling,
                 InspectionDisablingPost,
+                KV,
+                KVPost,
+                KVPut,
                 LoginPost,
                 NextcloudFile,
                 OllamaModel,
@@ -310,6 +315,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             inspection_disablings::create,
             inspection_disablings::delete,
             inspection_disablings::read,
+            kvs::create,
+            kvs::delete,
+            kvs::list,
+            kvs::read,
+            kvs::update,
             llm_proxy::proxy,
             login::login,
             logout::logout,
@@ -408,6 +418,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "example_prompts", description = "Example prompts API."),
             (name = "files", description = "Files API."),
             (name = "inspection_disablings", description = "Inspection disablings API."),
+            (name = "kvs", description = "KVs API."),
             (name = "llm_proxy", description = "LLM proxy API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -656,6 +667,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
+        )
+        .route("/api/v1/kvs", get(kvs::list).post(kvs::create))
+        .route(
+            "/api/v1/kvs/:id",
+            delete(kvs::delete).get(kvs::read).put(kvs::update),
         )
         .route(
             "/api/v1/llm-proxy/*pass",

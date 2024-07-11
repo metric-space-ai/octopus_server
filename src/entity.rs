@@ -433,6 +433,17 @@ pub struct InspectionDisabling {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct KV {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub kv_key: String,
+    pub kv_value: String,
+    pub created_at: DateTime<Utc>,
+    pub expires_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct NextcloudFile {
     pub id: Uuid,
     pub file_name: String,
