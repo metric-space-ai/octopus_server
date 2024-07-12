@@ -18,7 +18,7 @@ clap = { version = "4.5.9", features = ["derive", "env"] }
 chrono = { version = "0.4.38", features = ["serde"] }
 diff = "0.1.13"
 fake = "2.9.2"
-fantoccini = "0.20.0-rc.7"
+fantoccini = "0.21.0"
 futures = "0.3.30"
 futures-util = { version = "0.3.30", default-features = false, features = ["sink", "std"] }
 hex = "0.4.3"

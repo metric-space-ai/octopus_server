@@ -143,23 +143,65 @@ impl Config {
     }
 
     pub fn get_parameter_nextcloud_password(&self) -> Option<String> {
-        self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_PASSWORD)
+        let nextcloud_password = self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_PASSWORD);
+
+        if let Some(nextcloud_password) = nextcloud_password {
+            if nextcloud_password != *"default" {
+                return Some(nextcloud_password);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_nextcloud_url(&self) -> Option<String> {
-        self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_URL)
+        let nextcloud_url = self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_URL);
+
+        if let Some(nextcloud_url) = nextcloud_url {
+            if nextcloud_url != *"default" {
+                return Some(nextcloud_url);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_nextcloud_username(&self) -> Option<String> {
-        self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_USERNAME)
+        let nextcloud_username = self.get_parameter_value(PARAMETER_NAME_NEXTCLOUD_USERNAME);
+
+        if let Some(nextcloud_username) = nextcloud_username {
+            if nextcloud_username != *"default" {
+                return Some(nextcloud_username);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_octopus_api_url(&self) -> Option<String> {
-        self.get_parameter_value(PARAMETER_NAME_OCTOPUS_API_URL)
+        let octopus_api_url = self.get_parameter_value(PARAMETER_NAME_OCTOPUS_API_URL);
+
+        if let Some(octopus_api_url) = octopus_api_url {
+            if octopus_api_url == *"default" {
+                return Some("http://localhost:8080".to_string());
+            } else {
+                return Some(octopus_api_url);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_octopus_ws_url(&self) -> Option<String> {
-        self.get_parameter_value(PARAMETER_NAME_OCTOPUS_WS_URL)
+        let octopus_ws_url = self.get_parameter_value(PARAMETER_NAME_OCTOPUS_WS_URL);
+
+        if let Some(octopus_ws_url) = octopus_ws_url {
+            if octopus_ws_url != *"default" {
+                return Some(octopus_ws_url);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_openai_api_key(&self) -> Option<String> {
