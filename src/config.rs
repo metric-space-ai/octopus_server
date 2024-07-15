@@ -3,6 +3,7 @@ use crate::{
         Parameter, PARAMETER_NAME_AI_MODEL, PARAMETER_NAME_AI_SYSTEM_PROMPT,
         PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
+        PARAMETER_NAME_MAIN_LLM, PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL,
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
         PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
@@ -136,6 +137,32 @@ impl Config {
         if let Some(hugging_face_token_access) = hugging_face_token_access {
             if hugging_face_token_access != *"default" {
                 return Some(hugging_face_token_access);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm(&self) -> Option<String> {
+        let main_llm = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM);
+
+        if let Some(main_llm) = main_llm {
+            if main_llm == *"default" {
+                return Some("gpt".to_string());
+            } else {
+                return Some(main_llm);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_ollama_model(&self) -> Option<String> {
+        let main_llm_ollama_model = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL);
+
+        if let Some(main_llm_ollama_model) = main_llm_ollama_model {
+            if main_llm_ollama_model != *"default" {
+                return Some(main_llm_ollama_model);
             }
         }
 

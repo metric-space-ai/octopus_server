@@ -1,11 +1,11 @@
 use crate::{
-    ai::{service::service_health_check, BASE_AI_FUNCTION_URL, PUBLIC_DIR},
+    ai::{service::service_health_check, BASE_AI_FUNCTION_URL},
     context::Context,
     entity::{
         AiFunction, AiFunctionResponseContentType, AiService, ChatMessage, ChatMessageStatus,
     },
     error::AppError,
-    Result,
+    Result, PUBLIC_DIR,
 };
 use async_recursion::async_recursion;
 use base64::{alphabet, engine, Engine};

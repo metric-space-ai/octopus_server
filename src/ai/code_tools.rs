@@ -1,5 +1,5 @@
 use crate::{
-    ai::{open_ai_get_client, AiClient, MODEL128K},
+    ai::open_ai::{open_ai_get_client, AiClient, MODEL128K},
     context::Context,
     error::AppError,
     parser::configuration::Configuration,
