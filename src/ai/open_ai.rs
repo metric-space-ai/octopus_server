@@ -2,8 +2,7 @@ use crate::{
     ai::{self, function_call, internal_function_call, AiFunctionCall, ChatAuditTrail},
     context::Context,
     entity::{
-        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
-        ChatMessageStatus, User,
+        ChatMessage, ChatMessageStatus, User,
     },
     error::AppError,
     get_pwd, Result,
@@ -22,7 +21,6 @@ use async_openai::{
     Client,
 };
 use base64::{alphabet, engine, Engine};
-use serde::Serialize;
 use serde_json::json;
 use sqlx::{Postgres, Transaction};
 use std::{
@@ -37,77 +35,11 @@ pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/"
 pub const MODEL: &str = "gpt-4o-2024-05-13";
 pub const MODEL128K: &str = "gpt-4o-2024-05-13";
 
-#[derive(Debug, Serialize)]
-pub struct InformationRetrievalPost {
-    pub prompt: String,
-}
-
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
 pub enum AiClient {
     Azure(Client<AzureConfig>),
     OpenAI(Client<OpenAIConfig>),
-}
-
-pub async fn check_information_retrieval_service(
-    context: Arc<Context>,
-    transaction: &mut Transaction<'_, Postgres>,
-    chat_message: &ChatMessage,
-) -> Result<ChatMessage> {
-    let ai_function = context
-        .octopus_database
-        .try_get_ai_function_for_direct_call("querycontent")
-        .await?;
-
-    if let Some(ai_function) = ai_function {
-        let ai_service = context
-            .octopus_database
-            .try_get_ai_service_by_id(ai_function.ai_service_id)
-            .await?;
-
-        if let Some(ai_service) = ai_service {
-            if ai_function.is_enabled
-                && ai_service.is_enabled
-                && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
-                && ai_service.setup_status == AiServiceSetupStatus::Performed
-                && ai_service.status == AiServiceStatus::Running
-            {
-                let information_retrieval_post = InformationRetrievalPost {
-                    prompt: chat_message.message.clone(),
-                };
-                let function_args = serde_json::to_value(information_retrieval_post)?;
-
-                let information_retrieval_response = function_call::querycontent_function_call(
-                    &ai_function,
-                    &ai_service,
-                    &function_args,
-                )
-                .await;
-
-                if let Ok(Some(information_retrieval_response)) = information_retrieval_response {
-                    if let Some(result) = information_retrieval_response.result {
-                        let chat_message = context
-                            .octopus_database
-                            .update_chat_message_from_function(
-                                transaction,
-                                chat_message.id,
-                                ai_function.id,
-                                ChatMessageStatus::Answered,
-                                100,
-                                Some(result),
-                                ai_service.color.clone(),
-                                ai_service.id,
-                            )
-                            .await?;
-
-                        return Ok(chat_message);
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(chat_message.clone())
 }
 
 #[allow(deprecated)]
@@ -699,19 +631,6 @@ pub async fn open_ai_request(
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
-
-    let chat_message =
-        check_information_retrieval_service(context.clone(), &mut transaction, &chat_message)
-            .await?;
-
-    if chat_message.status == ChatMessageStatus::Answered {
-        context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await?;
-
-        return Ok(chat_message);
-    }
 
     let chat_message = ai::check_sensitive_information_service(
         context.clone(),

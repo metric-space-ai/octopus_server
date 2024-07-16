@@ -291,50 +291,6 @@ pub async fn function_call(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct InformationRetrievalResponse {
-    pub result: Option<String>,
-}
-
-pub async fn querycontent_function_call(
-    ai_function: &AiFunction,
-    ai_service: &AiService,
-    function_args: &Value,
-) -> Result<Option<InformationRetrievalResponse>> {
-    let url = format!(
-        "{BASE_AI_FUNCTION_URL}:{}/{}",
-        ai_service.port, ai_function.name
-    );
-
-    let response = reqwest::ClientBuilder::new()
-        .connect_timeout(Duration::from_secs(60))
-        .build()?
-        .post(url)
-        .json(&function_args)
-        .send()
-        .await;
-
-    match response {
-        Err(error) => {
-            tracing::error!("Function call error: {error:?}");
-        }
-        Ok(response) => {
-            if response.status() == StatusCode::CREATED {
-                let information_retrieval_response: std::result::Result<
-                    InformationRetrievalResponse,
-                    reqwest::Error,
-                > = response.json().await;
-
-                if let Ok(information_retrieval_response) = information_retrieval_response {
-                    return Ok(Some(information_retrieval_response));
-                }
-            }
-        }
-    }
-
-    Ok(None)
-}
-
-#[derive(Debug, Deserialize)]
 pub struct FunctionSensitiveInformationResponse {
     pub is_sensitive: bool,
     #[allow(dead_code)]
