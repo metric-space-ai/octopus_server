@@ -1,9 +1,7 @@
 use crate::{
     ai::{self, function_call, internal_function_call, AiFunctionCall, ChatAuditTrail},
     context::Context,
-    entity::{
-        ChatMessage, ChatMessageStatus, User,
-    },
+    entity::{ChatMessage, ChatMessageStatus, User},
     error::AppError,
     get_pwd, Result,
 };

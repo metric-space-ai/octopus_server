@@ -201,6 +201,7 @@ pub async fn create_environment(
     let octopus_api_url = context.get_config().await?.get_parameter_octopus_api_url();
 
     if let Some(octopus_api_url) = octopus_api_url {
+        parameters.push_str(&format!("OCTOPUS_API_URL={octopus_api_url} "));
         parameters.push_str(&format!("REACT_APP_OCTOPUS_API_URL={octopus_api_url} "));
     }
 
@@ -217,6 +218,7 @@ pub async fn create_environment(
         .transaction_commit(transaction)
         .await?;
 
+    parameters.push_str(&format!("OCTOPUS_TOKEN={} ", session.id));
     parameters.push_str(&format!("REACT_APP_OCTOPUS_TOKEN={} ", session.id));
 
     let ollama_host = context.get_config().await?.ollama_host;
