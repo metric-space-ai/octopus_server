@@ -20,12 +20,6 @@ pub struct ChatRequest {
     pub stream: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Message {
-    pub content: String,
-    pub role: String,
-}
-
 #[derive(Serialize, Deserialize)]
 struct ChatResponse {
     created_at: String,
@@ -38,6 +32,12 @@ struct ChatResponse {
     prompt_eval_count: i64,
     prompt_eval_duration: i64,
     total_duration: i64,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Message {
+    pub content: String,
+    pub role: String,
 }
 
 pub async fn get_messages(
@@ -188,7 +188,7 @@ pub async fn get_messages(
                             let chat_audit_trail = ChatAuditTrail {
                                 id: chat_message_tmp.id,
                                 content,
-                                role: "function".to_string(),
+                                role: "user".to_string(),
                                 created_at: chat_message_tmp.created_at,
                             };
                             chat_audit_trails.push(chat_audit_trail);
@@ -218,9 +218,14 @@ pub async fn get_messages(
 pub async fn ollama_request(
     context: Arc<Context>,
     chat_message: ChatMessage,
-    model: &str,
     user: User,
 ) -> Result<ChatMessage> {
+    let main_llm_ollama_model = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_ollama_model()
+        .unwrap_or(MAIN_LLM_OLLAMA_MODEL.to_string());
+
     let ollama_host = context
         .get_config()
         .await?
@@ -253,7 +258,7 @@ pub async fn ollama_request(
     if !context.get_config().await?.test_mode {
         let chat_request = ChatRequest {
             messages,
-            model: model.to_string(),
+            model: main_llm_ollama_model.to_string(),
             stream: false,
         };
 

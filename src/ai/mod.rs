@@ -12,6 +12,7 @@ use sqlx::{Postgres, Transaction};
 use std::sync::Arc;
 use uuid::Uuid;
 
+pub mod anthropic;
 pub mod code_tools;
 pub mod function_call;
 pub mod generator;
@@ -50,14 +51,10 @@ pub async fn ai_request(
     let main_llm = context.get_config().await?.get_parameter_main_llm();
 
     let chat_message = if let Some(main_llm) = main_llm {
-        if main_llm == *"ollama" {
-            let main_llm_ollama_model = context
-                .get_config()
-                .await?
-                .get_parameter_main_llm_ollama_model()
-                .unwrap_or(ollama::MAIN_LLM_OLLAMA_MODEL.to_string());
-
-            ollama::ollama_request(context, chat_message, &main_llm_ollama_model, user).await?
+        if main_llm == *"anthropic" {
+            anthropic::anthropic_request(context, chat_message, user).await?
+        } else if main_llm == *"ollama" {
+            ollama::ollama_request(context, chat_message, user).await?
         } else {
             open_ai::open_ai_request(context, chat_message, user).await?
         }
