@@ -71,7 +71,10 @@ pub async fn get_messages(
     let mut chat_audit_trails = vec![];
     let mut messages = vec![];
 
-    let ai_system_prompt = context.get_config().await?.get_parameter_ai_system_prompt();
+    let ai_system_prompt = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_system_prompt();
 
     if let Some(ai_system_prompt) = ai_system_prompt {
         let message = Message {

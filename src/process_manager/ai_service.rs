@@ -66,23 +66,25 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
 
     let mut parameters = String::new();
 
-    let azure_openai_api_key = context
+    let main_llm_azure_openai_api_key = context
         .get_config()
         .await?
-        .get_parameter_azure_openai_api_key();
+        .get_parameter_main_llm_azure_openai_api_key();
 
-    if let Some(azure_openai_api_key) = azure_openai_api_key {
-        parameters.push_str(&format!("AZURE_OPENAI_API_KEY={azure_openai_api_key} "));
+    if let Some(main_llm_azure_openai_api_key) = main_llm_azure_openai_api_key {
+        parameters.push_str(&format!(
+            "AZURE_OPENAI_API_KEY={main_llm_azure_openai_api_key} "
+        ));
     }
 
-    let azure_openai_deployment_id = context
+    let main_llm_azure_openai_deployment_id = context
         .get_config()
         .await?
-        .get_parameter_azure_openai_deployment_id();
+        .get_parameter_main_llm_azure_openai_deployment_id();
 
-    if let Some(azure_openai_deployment_id) = azure_openai_deployment_id {
+    if let Some(main_llm_azure_openai_deployment_id) = main_llm_azure_openai_deployment_id {
         parameters.push_str(&format!(
-            "AZURE_OPENAI_DEPLOYMENT_ID={azure_openai_deployment_id} "
+            "AZURE_OPENAI_DEPLOYMENT_ID={main_llm_azure_openai_deployment_id} "
         ));
     }
 
@@ -131,10 +133,13 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
         parameters.push_str(&format!("OLLAMA_HOST={ollama_host} "));
     }
 
-    let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
+    let main_llm_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_api_key();
 
-    if let Some(openai_api_key) = openai_api_key {
-        parameters.push_str(&format!("OPENAI_API_KEY={openai_api_key} "));
+    if let Some(main_llm_openai_api_key) = main_llm_openai_api_key {
+        parameters.push_str(&format!("OPENAI_API_KEY={main_llm_openai_api_key} "));
     }
 
     let scrapingbee_api_key = context

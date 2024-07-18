@@ -28,10 +28,8 @@ use std::{
 };
 use uuid::Uuid;
 
-pub const AZURE_OPENAI_API_VERSION: &str = "2023-12-01-preview";
-pub const AZURE_OPENAI_BASE_URL: &str = "https://metricspace2.openai.azure.com/";
+pub const AZURE_OPENAI_API_VERSION: &str = "2024-05-01-preview";
 pub const MODEL: &str = "gpt-4o-2024-05-13";
-pub const MODEL128K: &str = "gpt-4o-2024-05-13";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -194,10 +192,13 @@ pub async fn get_messages(
     let model = context
         .get_config()
         .await?
-        .get_parameter_ai_model()
+        .get_parameter_main_llm_openai_model()
         .unwrap_or(MODEL.to_string());
 
-    let ai_system_prompt = context.get_config().await?.get_parameter_ai_system_prompt();
+    let ai_system_prompt = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_system_prompt();
 
     if let Some(ai_system_prompt) = ai_system_prompt {
         let chat_completion_request_system_message =
@@ -585,21 +586,26 @@ pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
     let azure_openai_enabled = context
         .get_config()
         .await?
-        .get_parameter_azure_openai_enabled();
+        .get_parameter_main_llm_azure_openai_enabled();
 
     let ai_client = if azure_openai_enabled {
         let api_key = context
             .get_config()
             .await?
-            .get_parameter_azure_openai_api_key()
+            .get_parameter_main_llm_azure_openai_api_key()
             .ok_or(AppError::Config)?;
         let deployment_id = context
             .get_config()
             .await?
-            .get_parameter_azure_openai_deployment_id()
+            .get_parameter_main_llm_azure_openai_deployment_id()
+            .ok_or(AppError::Config)?;
+        let url = context
+            .get_config()
+            .await?
+            .get_parameter_main_llm_azure_openai_url()
             .ok_or(AppError::Config)?;
         let config = AzureConfig::new()
-            .with_api_base(AZURE_OPENAI_BASE_URL)
+            .with_api_base(url)
             .with_api_key(api_key)
             .with_deployment_id(deployment_id)
             .with_api_version(AZURE_OPENAI_API_VERSION);
@@ -609,7 +615,7 @@ pub async fn open_ai_get_client(context: Arc<Context>) -> Result<AiClient> {
         let api_key = context
             .get_config()
             .await?
-            .get_parameter_openai_api_key()
+            .get_parameter_main_llm_openai_api_key()
             .ok_or(AppError::Config)?;
         let config = OpenAIConfig::new().with_api_key(api_key);
 
@@ -651,7 +657,7 @@ pub async fn open_ai_request(
     let model = context
         .get_config()
         .await?
-        .get_parameter_ai_model()
+        .get_parameter_main_llm_openai_model()
         .unwrap_or(MODEL.to_string());
 
     if !context.get_config().await?.test_mode {

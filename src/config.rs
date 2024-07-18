@@ -1,15 +1,16 @@
 use crate::{
     entity::{
-        Parameter, PARAMETER_NAME_AI_MODEL, PARAMETER_NAME_AI_SYSTEM_PROMPT,
-        PARAMETER_NAME_AZURE_OPENAI_API_KEY, PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID,
-        PARAMETER_NAME_AZURE_OPENAI_ENABLED, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
-        PARAMETER_NAME_MAIN_LLM, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY,
-        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL, PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL,
+        Parameter, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
+        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
+        PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
+        PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
+        PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_OPENAI_MODEL, PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT,
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
         PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
-        PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_OPENAI_API_KEY,
-        PARAMETER_NAME_REGISTRATION_ALLOWED, PARAMETER_NAME_SCRAPINGBEE_API_KEY,
-        PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_REGISTRATION_ALLOWED,
+        PARAMETER_NAME_SCRAPINGBEE_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -56,78 +57,6 @@ impl Config {
             wasp_database_url,
             web_driver_url,
             ws_port,
-        }
-    }
-
-    pub fn get_parameter_ai_model(&self) -> Option<String> {
-        let ai_model = self.get_parameter_value(PARAMETER_NAME_AI_MODEL);
-
-        if let Some(ai_model) = ai_model {
-            if ai_model != *"default" {
-                return Some(ai_model);
-            }
-        }
-
-        None
-    }
-
-    pub fn get_parameter_ai_system_prompt(&self) -> Option<String> {
-        let ai_system_prompt = self.get_parameter_value(PARAMETER_NAME_AI_SYSTEM_PROMPT);
-
-        if let Some(ai_system_prompt) = ai_system_prompt {
-            if ai_system_prompt != *"default" {
-                return Some(ai_system_prompt);
-            }
-        }
-
-        None
-    }
-
-    pub fn get_parameter_azure_openai_api_key(&self) -> Option<String> {
-        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_API_KEY) {
-            None => {
-                if let Ok(val) = std::env::var("AZURE_OPENAI_API_KEY") {
-                    Some(val)
-                } else {
-                    None
-                }
-            }
-            Some(azure_openai_api_key) => Some(azure_openai_api_key),
-        }
-    }
-
-    pub fn get_parameter_azure_openai_deployment_id(&self) -> Option<String> {
-        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_DEPLOYMENT_ID) {
-            None => {
-                if let Ok(val) = std::env::var("AZURE_OPENAI_DEPLOYMENT_ID") {
-                    Some(val)
-                } else {
-                    None
-                }
-            }
-            Some(azure_openai_deployment_id) => Some(azure_openai_deployment_id),
-        }
-    }
-
-    pub fn get_parameter_azure_openai_enabled(&self) -> bool {
-        match self.get_parameter_value(PARAMETER_NAME_AZURE_OPENAI_ENABLED) {
-            None => {
-                let val = std::env::var("AZURE_OPENAI_ENABLED");
-                if let Ok(val) = val {
-                    if let Ok(val) = val.parse::<bool>() {
-                        val
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            }
-            Some(azure_openai_enabled) => {
-                let parse_result = azure_openai_enabled.parse::<bool>();
-
-                parse_result.unwrap_or(false)
-            }
         }
     }
 
@@ -184,12 +113,108 @@ impl Config {
         None
     }
 
+    pub fn get_parameter_main_llm_azure_openai_api_key(&self) -> Option<String> {
+        let main_llm_azure_openai_api_key =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY);
+
+        if let Some(main_llm_azure_openai_api_key) = main_llm_azure_openai_api_key {
+            if main_llm_azure_openai_api_key != *"default" {
+                return Some(main_llm_azure_openai_api_key);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_azure_openai_deployment_id(&self) -> Option<String> {
+        let main_llm_azure_openai_deployment_id =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID);
+
+        if let Some(main_llm_azure_openai_deployment_id) = main_llm_azure_openai_deployment_id {
+            if main_llm_azure_openai_deployment_id != *"default" {
+                return Some(main_llm_azure_openai_deployment_id);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_azure_openai_enabled(&self) -> bool {
+        let main_llm_azure_openai_enabled =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED);
+
+        if let Some(main_llm_azure_openai_enabled) = main_llm_azure_openai_enabled {
+            if main_llm_azure_openai_enabled != *"default" {
+                if let Ok(val) = main_llm_azure_openai_enabled.parse::<bool>() {
+                    return val;
+                } else {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        false
+    }
+
+    pub fn get_parameter_main_llm_azure_openai_url(&self) -> Option<String> {
+        let main_llm_azure_openai_url =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL);
+
+        if let Some(main_llm_azure_openai_url) = main_llm_azure_openai_url {
+            if main_llm_azure_openai_url != *"default" {
+                return Some(main_llm_azure_openai_url);
+            }
+        }
+
+        None
+    }
+
     pub fn get_parameter_main_llm_ollama_model(&self) -> Option<String> {
         let main_llm_ollama_model = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL);
 
         if let Some(main_llm_ollama_model) = main_llm_ollama_model {
             if main_llm_ollama_model != *"default" {
                 return Some(main_llm_ollama_model);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_openai_api_key(&self) -> Option<String> {
+        let main_llm_openai_api_key =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY);
+
+        if let Some(main_llm_openai_api_key) = main_llm_openai_api_key {
+            if main_llm_openai_api_key != *"default" {
+                return Some(main_llm_openai_api_key);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_openai_model(&self) -> Option<String> {
+        let main_llm_openai_model = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_MODEL);
+
+        if let Some(main_llm_openai_model) = main_llm_openai_model {
+            if main_llm_openai_model != *"default" {
+                return Some(main_llm_openai_model);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_system_prompt(&self) -> Option<String> {
+        let main_llm_system_prompt =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT);
+
+        if let Some(main_llm_system_prompt) = main_llm_system_prompt {
+            if main_llm_system_prompt != *"default" {
+                return Some(main_llm_system_prompt);
             }
         }
 
@@ -256,19 +281,6 @@ impl Config {
         }
 
         None
-    }
-
-    pub fn get_parameter_openai_api_key(&self) -> Option<String> {
-        match self.get_parameter_value(PARAMETER_NAME_OPENAI_API_KEY) {
-            None => {
-                if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-                    Some(val)
-                } else {
-                    None
-                }
-            }
-            Some(openai_api_key) => Some(openai_api_key),
-        }
     }
 
     pub fn get_parameter_registration_allowed(&self) -> Option<bool> {

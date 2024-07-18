@@ -220,10 +220,15 @@ pub async fn create_environment(
         parameters.push_str(&format!("OLLAMA_HOST={ollama_host} "));
     }
 
-    let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
+    let main_llm_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_api_key();
 
-    if let Some(openai_api_key) = openai_api_key {
-        parameters.push_str(&format!("REACT_APP_OPENAI_API_KEY={openai_api_key} "));
+    if let Some(main_llm_openai_api_key) = main_llm_openai_api_key {
+        parameters.push_str(&format!(
+            "REACT_APP_OPENAI_API_KEY={main_llm_openai_api_key} "
+        ));
     }
 
     if let Some(wasp_generator_server_port) = wasp_generator_server_port {

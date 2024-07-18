@@ -32,10 +32,13 @@ pub async fn generate(
 
     let mut parameters = String::new();
 
-    let openai_api_key = context.get_config().await?.get_parameter_openai_api_key();
+    let main_llm_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_api_key();
 
-    if let Some(openai_api_key) = openai_api_key {
-        parameters.push_str(&format!("OPENAI_API_KEY={openai_api_key} "));
+    if let Some(main_llm_openai_api_key) = main_llm_openai_api_key {
+        parameters.push_str(&format!("OPENAI_API_KEY={main_llm_openai_api_key} "));
     }
 
     let path = format!("{wasp_generator_dir_path}/{wasp_generator_id}.sh");
