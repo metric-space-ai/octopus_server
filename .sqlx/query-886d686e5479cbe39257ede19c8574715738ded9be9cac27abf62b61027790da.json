@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "UPDATE chat_messages\n            SET is_not_checked_by_system = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", created_at, deleted_at, updated_at",
+  "query": "UPDATE chat_messages\n            SET is_not_checked_by_system = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", used_llm, used_model, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -145,16 +145,26 @@
       },
       {
         "ordinal": 26,
+        "name": "used_llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 27,
+        "name": "used_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 28,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 27,
+        "ordinal": 29,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 28,
+        "ordinal": 30,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -192,10 +202,12 @@
       true,
       true,
       false,
+      true,
+      true,
       false,
       true,
       false
     ]
   },
-  "hash": "98b7955fe201058f7b7162197e49f93dea8780c6a88837fb41ed18dbde39c435"
+  "hash": "886d686e5479cbe39257ede19c8574715738ded9be9cac27abf62b61027790da"
 }

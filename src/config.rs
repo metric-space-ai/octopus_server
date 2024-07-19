@@ -193,6 +193,10 @@ impl Config {
             }
         }
 
+        if let Ok(val) = std::env::var("OPENAI_API_KEY") {
+            return Some(val);
+        }
+
         None
     }
 

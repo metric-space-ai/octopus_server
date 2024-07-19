@@ -237,6 +237,16 @@ pub async fn ollama_request(
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
+    let chat_message = context
+        .octopus_database
+        .update_chat_message_llm_model(
+            &mut transaction,
+            chat_message.id,
+            Some("ollama".to_string()),
+            Some(main_llm_ollama_model.clone()),
+        )
+        .await?;
+
     ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
 
     let chat_message = ai::check_sensitive_information_service(

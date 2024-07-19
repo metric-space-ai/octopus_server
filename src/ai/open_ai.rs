@@ -632,7 +632,28 @@ pub async fn open_ai_request(
 ) -> Result<ChatMessage> {
     let ai_client = open_ai_get_client(context.clone()).await?;
 
+    let model = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_model()
+        .unwrap_or(MODEL.to_string());
+
+    let used_llm = match ai_client {
+        AiClient::Azure(_) => "azure_openai".to_string(),
+        AiClient::OpenAI(_) => "openai".to_string(),
+    };
+
     let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let chat_message = context
+        .octopus_database
+        .update_chat_message_llm_model(
+            &mut transaction,
+            chat_message.id,
+            Some(used_llm),
+            Some(model.clone()),
+        )
+        .await?;
 
     ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
 
@@ -654,11 +675,6 @@ pub async fn open_ai_request(
     }
 
     let messages = get_messages(context.clone(), &mut transaction, &chat_message).await?;
-    let model = context
-        .get_config()
-        .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
 
     if !context.get_config().await?.test_mode {
         let request = match &ai_client {
