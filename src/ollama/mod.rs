@@ -129,6 +129,7 @@ pub fn get_models() -> Vec<&'static str> {
         "llava-phi3:3.8b",
         "magicoder:7b",
         "magicoder:7b-s-cl",
+        "mathstral:7b",
         "meditron:7b",
         "meditron:70b",
         "medllama2:7b",
