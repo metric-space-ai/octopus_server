@@ -44,11 +44,11 @@ use crate::{
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
-        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling, NextcloudFile,
-        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile, SimpleApp, User,
-        UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
-        WorkspacesType, KV,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
+        Company, ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling,
+        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile,
+        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
+        WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -88,6 +88,7 @@ mod chat_message_files;
 mod chat_message_pictures;
 mod chat_messages;
 mod chat_pictures;
+mod chat_token_audits;
 mod chats;
 mod companies;
 mod example_prompt_categories;
@@ -163,6 +164,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 ChatMessageStatus,
                 ChatPicture,
                 ChatPut,
+                ChatTokenAudit,
                 Company,
                 CompanyPut,
                 ExamplePrompt,
@@ -288,6 +290,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             chat_pictures::delete,
             chat_pictures::read,
             chat_pictures::update,
+            chat_token_audits::list,
+            chat_token_audits::read,
             chats::create,
             chats::delete,
             chats::latest,
@@ -413,6 +417,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "chat_message_files", description = "Chat message files API."),
             (name = "chat_message_pictures", description = "Chat message pictures API."),
             (name = "chat_pictures", description = "Chat pictures API."),
+            (name = "chat_token_audits", description = "Chat token audits API."),
             (name = "companies", description = "Companies API."),
             (name = "example_prompt_categories", description = "Example prompt categories API."),
             (name = "example_prompts", description = "Example prompts API."),
@@ -619,6 +624,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(chat_pictures::delete)
                 .get(chat_pictures::read)
                 .put(chat_pictures::update),
+        )
+        .route("/api/v1/chat-token-audits", get(chat_token_audits::list))
+        .route(
+            "/api/v1/chat-token-audits/:chat_token_audit_id",
+            get(chat_token_audits::read),
         )
         .route(
             "/api/v1/chats/:workspace_id",

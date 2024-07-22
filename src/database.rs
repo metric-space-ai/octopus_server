@@ -4,8 +4,8 @@ use crate::{
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
-        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, Company,
-        EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, InspectionDisabling,
+        ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
+        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, InspectionDisabling,
         NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
         Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
         WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
@@ -447,6 +447,24 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_message_pictures)
+    }
+
+    pub async fn get_chat_token_audits_by_company_id(
+        &self,
+        company_id: Uuid,
+    ) -> Result<Vec<ChatTokenAudit>> {
+        let chat_token_audits = sqlx::query_as!(
+            ChatTokenAudit,
+            "SELECT id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at
+            FROM chat_token_audits
+            WHERE company_id = $1
+            ORDER BY created_at DESC",
+            company_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_token_audits)
     }
 
     pub async fn get_companies(&self) -> Result<Vec<Company>> {
@@ -1045,6 +1063,40 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_picture)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_chat_token_audit(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_id: Uuid,
+        chat_message_id: Uuid,
+        company_id: Uuid,
+        user_id: Uuid,
+        input_tokens: i64,
+        llm: &str,
+        model: &str,
+        output_tokens: i64,
+    ) -> Result<ChatTokenAudit> {
+        let chat_token_audit = sqlx::query_as!(
+            ChatTokenAudit,
+            "INSERT INTO chat_token_audits
+            (chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at",
+            chat_id,
+            chat_message_id,
+            company_id,
+            user_id,
+            input_tokens,
+            llm,
+            model,
+            output_tokens
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_token_audit)
     }
 
     pub async fn insert_company(
@@ -2435,6 +2487,20 @@ impl OctopusDatabase {
         .await?;
 
         Ok(chat_picture)
+    }
+
+    pub async fn try_get_chat_token_audit_by_id(&self, id: Uuid) -> Result<Option<ChatTokenAudit>> {
+        let chat_token_audit = sqlx::query_as!(
+            ChatTokenAudit,
+            "SELECT id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at
+            FROM chat_token_audits
+            WHERE id = $1",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(chat_token_audit)
     }
 
     pub async fn try_get_company_by_id(&self, id: Uuid) -> Result<Option<Company>> {

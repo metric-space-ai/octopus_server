@@ -516,6 +516,21 @@ pub async fn anthropic_request(
 
                                     context
                                         .octopus_database
+                                        .insert_chat_token_audit(
+                                            &mut transaction,
+                                            chat_message.chat_id,
+                                            chat_message.id,
+                                            user.company_id,
+                                            user.id,
+                                            chat_response.usage.input_tokens,
+                                            "anthropic",
+                                            &main_llm_anthropic_model,
+                                            chat_response.usage.output_tokens,
+                                        )
+                                        .await?;
+
+                                    context
+                                        .octopus_database
                                         .transaction_commit(transaction)
                                         .await?;
 
@@ -552,6 +567,29 @@ pub async fn anthropic_request(
                                                 &function_args,
                                                 &function_name,
                                             )
+                                            .await?;
+
+                                        let mut transaction =
+                                            context.octopus_database.transaction_begin().await?;
+
+                                        context
+                                            .octopus_database
+                                            .insert_chat_token_audit(
+                                                &mut transaction,
+                                                chat_message.chat_id,
+                                                chat_message.id,
+                                                user.company_id,
+                                                user.id,
+                                                chat_response.usage.input_tokens,
+                                                "anthropic",
+                                                &main_llm_anthropic_model,
+                                                chat_response.usage.output_tokens,
+                                            )
+                                            .await?;
+
+                                        context
+                                            .octopus_database
+                                            .transaction_commit(transaction)
                                             .await?;
 
                                         return Ok(chat_message);
@@ -604,6 +642,31 @@ pub async fn anthropic_request(
                                             )
                                             .await?;
 
+                                            let mut transaction = context
+                                                .octopus_database
+                                                .transaction_begin()
+                                                .await?;
+
+                                            context
+                                                .octopus_database
+                                                .insert_chat_token_audit(
+                                                    &mut transaction,
+                                                    chat_message.chat_id,
+                                                    chat_message.id,
+                                                    user.company_id,
+                                                    user.id,
+                                                    chat_response.usage.input_tokens,
+                                                    "anthropic",
+                                                    &main_llm_anthropic_model,
+                                                    chat_response.usage.output_tokens,
+                                                )
+                                                .await?;
+
+                                            context
+                                                .octopus_database
+                                                .transaction_commit(transaction)
+                                                .await?;
+
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
@@ -636,6 +699,21 @@ pub async fn anthropic_request(
 
                                         context
                                             .octopus_database
+                                            .insert_chat_token_audit(
+                                                &mut transaction,
+                                                chat_message.chat_id,
+                                                chat_message.id,
+                                                user.company_id,
+                                                user.id,
+                                                chat_response.usage.input_tokens,
+                                                "anthropic",
+                                                &main_llm_anthropic_model,
+                                                chat_response.usage.output_tokens,
+                                            )
+                                            .await?;
+
+                                        context
+                                            .octopus_database
                                             .transaction_commit(transaction)
                                             .await?;
 
@@ -656,6 +734,21 @@ pub async fn anthropic_request(
                                                 100,
                                                 wasp_app.id,
                                                 ChatMessageStatus::Answered,
+                                            )
+                                            .await?;
+
+                                        context
+                                            .octopus_database
+                                            .insert_chat_token_audit(
+                                                &mut transaction,
+                                                chat_message.chat_id,
+                                                chat_message.id,
+                                                user.company_id,
+                                                user.id,
+                                                chat_response.usage.input_tokens,
+                                                "anthropic",
+                                                &main_llm_anthropic_model,
+                                                chat_response.usage.output_tokens,
                                             )
                                             .await?;
 

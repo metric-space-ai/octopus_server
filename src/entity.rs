@@ -346,6 +346,20 @@ pub struct ChatPicture {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ChatTokenAudit {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub chat_message_id: Uuid,
+    pub company_id: Uuid,
+    pub user_id: Uuid,
+    pub input_tokens: i64,
+    pub llm: String,
+    pub model: String,
+    pub output_tokens: i64,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Company {
     pub id: Uuid,
     pub address: Option<String>,

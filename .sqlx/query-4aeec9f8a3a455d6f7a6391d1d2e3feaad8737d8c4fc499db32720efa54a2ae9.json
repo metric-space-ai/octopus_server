@@ -1,0 +1,83 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO chat_token_audits\n            (chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens)\n            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n            RETURNING id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "chat_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "chat_message_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "company_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "input_tokens",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "output_tokens",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Int8",
+        "Varchar",
+        "Varchar",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4aeec9f8a3a455d6f7a6391d1d2e3feaad8737d8c4fc499db32720efa54a2ae9"
+}

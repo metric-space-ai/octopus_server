@@ -1,0 +1,76 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at\n            FROM chat_token_audits\n            WHERE company_id = $1\n            ORDER BY created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "chat_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "chat_message_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "company_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "input_tokens",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 6,
+        "name": "llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "output_tokens",
+        "type_info": "Int8"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "220ceb7d5e3d530dfa25d7917152011302d16fe251bba0228bb18b8e4bdce2e8"
+}

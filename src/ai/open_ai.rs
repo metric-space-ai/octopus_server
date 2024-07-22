@@ -650,7 +650,7 @@ pub async fn open_ai_request(
         .update_chat_message_llm_model(
             &mut transaction,
             chat_message.id,
-            Some(used_llm),
+            Some(used_llm.clone()),
             Some(model.clone()),
         )
         .await?;
@@ -683,12 +683,12 @@ pub async fn open_ai_request(
 
                 if functions.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model)
+                        .model(model.clone())
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model)
+                        .model(model.clone())
                         .messages(messages)
                         .functions(functions)
                         .build()
@@ -699,12 +699,12 @@ pub async fn open_ai_request(
 
                 if tools.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model)
+                        .model(model.clone())
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model)
+                        .model(model.clone())
                         .messages(messages)
                         .tools(tools)
                         .build()
@@ -760,8 +760,8 @@ pub async fn open_ai_request(
 
                         return Ok(chat_message);
                     }
-                    Ok(response_message) => {
-                        let response_message = response_message.choices.first();
+                    Ok(create_chat_completion_response) => {
+                        let response_message = create_chat_completion_response.choices.first();
 
                         match response_message {
                             None => {
@@ -851,6 +851,35 @@ pub async fn open_ai_request(
                                             )
                                             .await?;
 
+                                        if let Some(completion_usage) =
+                                            create_chat_completion_response.usage
+                                        {
+                                            let mut transaction = context
+                                                .octopus_database
+                                                .transaction_begin()
+                                                .await?;
+
+                                            context
+                                                .octopus_database
+                                                .insert_chat_token_audit(
+                                                    &mut transaction,
+                                                    chat_message.chat_id,
+                                                    chat_message.id,
+                                                    user.company_id,
+                                                    user.id,
+                                                    i64::from(completion_usage.prompt_tokens),
+                                                    &used_llm,
+                                                    &model,
+                                                    i64::from(completion_usage.completion_tokens),
+                                                )
+                                                .await?;
+
+                                            context
+                                                .octopus_database
+                                                .transaction_commit(transaction)
+                                                .await?;
+                                        }
+
                                         return Ok(chat_message);
                                     }
 
@@ -901,6 +930,37 @@ pub async fn open_ai_request(
                                             )
                                             .await?;
 
+                                            if let Some(completion_usage) =
+                                                create_chat_completion_response.usage
+                                            {
+                                                let mut transaction = context
+                                                    .octopus_database
+                                                    .transaction_begin()
+                                                    .await?;
+
+                                                context
+                                                    .octopus_database
+                                                    .insert_chat_token_audit(
+                                                        &mut transaction,
+                                                        chat_message.chat_id,
+                                                        chat_message.id,
+                                                        user.company_id,
+                                                        user.id,
+                                                        i64::from(completion_usage.prompt_tokens),
+                                                        &used_llm,
+                                                        &model,
+                                                        i64::from(
+                                                            completion_usage.completion_tokens,
+                                                        ),
+                                                    )
+                                                    .await?;
+
+                                                context
+                                                    .octopus_database
+                                                    .transaction_commit(transaction)
+                                                    .await?;
+                                            }
+
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
@@ -931,6 +991,25 @@ pub async fn open_ai_request(
                                             )
                                             .await?;
 
+                                        if let Some(completion_usage) =
+                                            create_chat_completion_response.usage
+                                        {
+                                            context
+                                                .octopus_database
+                                                .insert_chat_token_audit(
+                                                    &mut transaction,
+                                                    chat_message.chat_id,
+                                                    chat_message.id,
+                                                    user.company_id,
+                                                    user.id,
+                                                    i64::from(completion_usage.prompt_tokens),
+                                                    &used_llm,
+                                                    &model,
+                                                    i64::from(completion_usage.completion_tokens),
+                                                )
+                                                .await?;
+                                        }
+
                                         context
                                             .octopus_database
                                             .transaction_commit(transaction)
@@ -956,6 +1035,25 @@ pub async fn open_ai_request(
                                             )
                                             .await?;
 
+                                        if let Some(completion_usage) =
+                                            create_chat_completion_response.usage
+                                        {
+                                            context
+                                                .octopus_database
+                                                .insert_chat_token_audit(
+                                                    &mut transaction,
+                                                    chat_message.chat_id,
+                                                    chat_message.id,
+                                                    user.company_id,
+                                                    user.id,
+                                                    i64::from(completion_usage.prompt_tokens),
+                                                    &used_llm,
+                                                    &model,
+                                                    i64::from(completion_usage.completion_tokens),
+                                                )
+                                                .await?;
+                                        }
+
                                         context
                                             .octopus_database
                                             .transaction_commit(transaction)
@@ -976,6 +1074,25 @@ pub async fn open_ai_request(
                                             ChatMessageStatus::Answered,
                                         )
                                         .await?;
+
+                                    if let Some(completion_usage) =
+                                        create_chat_completion_response.usage
+                                    {
+                                        context
+                                            .octopus_database
+                                            .insert_chat_token_audit(
+                                                &mut transaction,
+                                                chat_message.chat_id,
+                                                chat_message.id,
+                                                user.company_id,
+                                                user.id,
+                                                i64::from(completion_usage.prompt_tokens),
+                                                &used_llm,
+                                                &model,
+                                                i64::from(completion_usage.completion_tokens),
+                                            )
+                                            .await?;
+                                    }
 
                                     context
                                         .octopus_database
