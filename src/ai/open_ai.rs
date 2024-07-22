@@ -29,7 +29,7 @@ use std::{
 use uuid::Uuid;
 
 pub const AZURE_OPENAI_API_VERSION: &str = "2024-05-01-preview";
-pub const MODEL: &str = "gpt-4o-2024-05-13";
+pub const MODEL: &str = "gpt-4o-mini-2024-07-18";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]

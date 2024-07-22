@@ -58,7 +58,7 @@ pub async fn open_ai_create_ai_service(
 
     text.push_str("Make sure that you have a proper imports for all used functions.\n\n");
 
-    text.push_str(r#"When generating code related to OpenAI make sure that you use OPENAI_API_KEY ENV value. You can just define client this way client = OpenAI(). Also make sure that you have a proper "models": {"model": "gpt-4o-2024-05-13"} section in service configuration.\n\n"#);
+    text.push_str(r#"When generating code related to OpenAI make sure that you use OPENAI_API_KEY ENV value. You can just define client this way client = OpenAI(). Also make sure that you have a proper "models": {"model": "gpt-4o-mini-2024-07-18"} section in service configuration.\n\n"#);
 
     text.push_str(r#"When generating configuration related to AI models make sure that you have a proper "models" definition like "models": {"model": "microsoft/Phi-3-vision-128k-instruct"} section in service configuration. Don't use outdated "model_setup". Convert "model_setup" to "models".\n\n"#);
 

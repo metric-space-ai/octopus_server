@@ -20,7 +20,7 @@ config_str = '''{
     },
     "required_python_version": "cp312",
     "models": {
-        "model": "gpt-4o-2024-05-13"
+        "model": "gpt-4o-mini-2024-07-18"
     },
     "functions": [
         {
