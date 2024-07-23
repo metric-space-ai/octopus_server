@@ -39,7 +39,7 @@ rev_buf_reader = "0.3.0"
 serde = { version = "1.0.200", features = ["derive"] }
 serde_json = "1.0.110"
 sha3 = "0.10.8"
-sqlx = { version = "0.7.0", features = [
+sqlx = { version = "0.8.0", features = [
     "chrono",
     "json",
     "postgres",
