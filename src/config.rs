@@ -6,7 +6,8 @@ use crate::{
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
         PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
-        PARAMETER_NAME_MAIN_LLM_OPENAI_MODEL, PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT,
+        PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
+        PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT,
         PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
         PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
         PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_REGISTRATION_ALLOWED,
@@ -200,12 +201,26 @@ impl Config {
         None
     }
 
-    pub fn get_parameter_main_llm_openai_model(&self) -> Option<String> {
-        let main_llm_openai_model = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_MODEL);
+    pub fn get_parameter_main_llm_openai_primary_model(&self) -> Option<String> {
+        let main_llm_openai_primary_model =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL);
 
-        if let Some(main_llm_openai_model) = main_llm_openai_model {
-            if main_llm_openai_model != *"default" {
-                return Some(main_llm_openai_model);
+        if let Some(main_llm_openai_primary_model) = main_llm_openai_primary_model {
+            if main_llm_openai_primary_model != *"default" {
+                return Some(main_llm_openai_primary_model);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_openai_secondary_model(&self) -> Option<String> {
+        let main_llm_openai_secondary_model =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL);
+
+        if let Some(main_llm_openai_secondary_model) = main_llm_openai_secondary_model {
+            if main_llm_openai_secondary_model != *"default" {
+                return Some(main_llm_openai_secondary_model);
             }
         }
 

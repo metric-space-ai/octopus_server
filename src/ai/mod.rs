@@ -1,4 +1,5 @@
 use crate::{
+    ai::{anthropic::ANTHROPIC, ollama::OLLAMA, open_ai::OPENAI},
     context::Context,
     entity::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
@@ -48,16 +49,17 @@ pub async fn ai_request(
     chat_message: ChatMessage,
     user: User,
 ) -> Result<ChatMessage> {
-    let main_llm = context.get_config().await?.get_parameter_main_llm();
+    let main_llm = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm()
+        .unwrap_or(OPENAI.to_string());
+    let suggested_llm = chat_message.suggested_llm.clone().unwrap_or(main_llm);
 
-    let chat_message = if let Some(main_llm) = main_llm {
-        if main_llm == *"anthropic" {
-            anthropic::anthropic_request(context, chat_message, user).await?
-        } else if main_llm == *"ollama" {
-            ollama::ollama_request(context, chat_message, user).await?
-        } else {
-            open_ai::open_ai_request(context, chat_message, user).await?
-        }
+    let chat_message = if suggested_llm == *ANTHROPIC {
+        anthropic::anthropic_request(context, chat_message, user).await?
+    } else if suggested_llm == *OLLAMA {
+        ollama::ollama_request(context, chat_message, user).await?
     } else {
         open_ai::open_ai_request(context, chat_message, user).await?
     };

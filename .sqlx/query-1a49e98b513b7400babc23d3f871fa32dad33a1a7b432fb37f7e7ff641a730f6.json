@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", used_llm, used_model, created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
+  "query": "UPDATE chat_messages\n            SET used_llm = $2, used_model = $3, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -145,33 +145,50 @@
       },
       {
         "ordinal": 26,
-        "name": "used_llm",
+        "name": "suggested_llm",
         "type_info": "Varchar"
       },
       {
         "ordinal": 27,
-        "name": "used_model",
+        "name": "suggested_model",
         "type_info": "Varchar"
       },
       {
         "ordinal": 28,
+        "name": "suggested_secondary_model",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 29,
+        "name": "used_llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 30,
+        "name": "used_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 31,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 29,
+        "ordinal": 32,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 30,
+        "ordinal": 33,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Varchar",
+        "Varchar"
       ]
     },
     "nullable": [
@@ -205,8 +222,11 @@
       true,
       false,
       true,
+      true,
+      false,
+      true,
       false
     ]
   },
-  "hash": "bf71ff3f26cb5790476eb6a2ccf28338e2b07e41f9568efc864ee14faaebf632"
+  "hash": "1a49e98b513b7400babc23d3f871fa32dad33a1a7b432fb37f7e7ff641a730f6"
 }

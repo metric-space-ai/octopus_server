@@ -28,8 +28,11 @@ use std::{
 };
 use uuid::Uuid;
 
+pub const AZURE_OPENAI: &str = "azure_openai";
 pub const AZURE_OPENAI_API_VERSION: &str = "2024-05-01-preview";
-pub const MODEL: &str = "gpt-4o-mini-2024-07-18";
+pub const OPENAI: &str = "openai";
+pub const PRIMARY_MODEL: &str = "gpt-4o-mini-2024-07-18";
+pub const SECONDARY_MODEL: &str = "gpt-4o-2024-05-13";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
@@ -189,11 +192,23 @@ pub async fn get_messages(
 ) -> Result<Vec<ChatCompletionRequestMessage>> {
     let mut chat_audit_trails = vec![];
     let mut messages = vec![];
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
+    let mut suggested_model = chat_message
+        .suggested_model
+        .clone()
+        .unwrap_or(main_llm_openai_primary_model);
+
+    if chat_message.suggested_secondary_model {
+        suggested_model = context
+            .get_config()
+            .await?
+            .get_parameter_main_llm_openai_secondary_model()
+            .unwrap_or(SECONDARY_MODEL.to_string());
+    }
 
     let ai_system_prompt = context
         .get_config()
@@ -204,6 +219,18 @@ pub async fn get_messages(
         let chat_completion_request_system_message =
             ChatCompletionRequestSystemMessageArgs::default()
                 .content(ai_system_prompt)
+                .build()?;
+
+        messages.push(ChatCompletionRequestMessage::System(
+            chat_completion_request_system_message,
+        ));
+    }
+
+    if chat_message.suggested_secondary_model {
+        let system_prompt = "Here is the chat history so far from an other model. User is not satisfied with last answer. Analyse the problem. What needs do be done to give a better answer in the meaning of strategy. Now try to provide a better answer to the user last prompt.".to_string();
+        let chat_completion_request_system_message =
+            ChatCompletionRequestSystemMessageArgs::default()
+                .content(system_prompt)
                 .build()?;
 
         messages.push(ChatCompletionRequestMessage::System(
@@ -338,7 +365,9 @@ pub async fn get_messages(
                     let pwd = get_pwd()?;
                     let file_path = format!("{pwd}/{}", chat_message_file.file_name);
 
-                    if chat_message_file.media_type == "image/png" && model.contains("turbo") {
+                    if chat_message_file.media_type == "image/png"
+                        && (suggested_model.contains("4o") || suggested_model.contains("turbo"))
+                    {
                         let file_exists = Path::new(&file_path).is_file();
                         if file_exists {
                             let content = read(file_path)?;
@@ -632,15 +661,27 @@ pub async fn open_ai_request(
 ) -> Result<ChatMessage> {
     let ai_client = open_ai_get_client(context.clone()).await?;
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
+    let mut suggested_model = chat_message
+        .suggested_model
+        .clone()
+        .unwrap_or(main_llm_openai_primary_model);
+
+    if chat_message.suggested_secondary_model {
+        suggested_model = context
+            .get_config()
+            .await?
+            .get_parameter_main_llm_openai_secondary_model()
+            .unwrap_or(SECONDARY_MODEL.to_string());
+    }
 
     let used_llm = match ai_client {
-        AiClient::Azure(_) => "azure_openai".to_string(),
-        AiClient::OpenAI(_) => "openai".to_string(),
+        AiClient::Azure(_) => AZURE_OPENAI.to_string(),
+        AiClient::OpenAI(_) => OPENAI.to_string(),
     };
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -651,7 +692,7 @@ pub async fn open_ai_request(
             &mut transaction,
             chat_message.id,
             Some(used_llm.clone()),
-            Some(model.clone()),
+            Some(suggested_model.clone()),
         )
         .await?;
 
@@ -683,12 +724,12 @@ pub async fn open_ai_request(
 
                 if functions.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model.clone())
+                        .model(suggested_model.clone())
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model.clone())
+                        .model(suggested_model.clone())
                         .messages(messages)
                         .functions(functions)
                         .build()
@@ -699,12 +740,12 @@ pub async fn open_ai_request(
 
                 if tools.is_empty() {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model.clone())
+                        .model(suggested_model.clone())
                         .messages(messages)
                         .build()
                 } else {
                     CreateChatCompletionRequestArgs::default()
-                        .model(model.clone())
+                        .model(suggested_model.clone())
                         .messages(messages)
                         .tools(tools)
                         .build()
@@ -869,7 +910,7 @@ pub async fn open_ai_request(
                                                     user.id,
                                                     i64::from(completion_usage.prompt_tokens),
                                                     &used_llm,
-                                                    &model,
+                                                    &suggested_model,
                                                     i64::from(completion_usage.completion_tokens),
                                                 )
                                                 .await?;
@@ -948,7 +989,7 @@ pub async fn open_ai_request(
                                                         user.id,
                                                         i64::from(completion_usage.prompt_tokens),
                                                         &used_llm,
-                                                        &model,
+                                                        &suggested_model,
                                                         i64::from(
                                                             completion_usage.completion_tokens,
                                                         ),
@@ -1004,7 +1045,7 @@ pub async fn open_ai_request(
                                                     user.id,
                                                     i64::from(completion_usage.prompt_tokens),
                                                     &used_llm,
-                                                    &model,
+                                                    &suggested_model,
                                                     i64::from(completion_usage.completion_tokens),
                                                 )
                                                 .await?;
@@ -1048,7 +1089,7 @@ pub async fn open_ai_request(
                                                     user.id,
                                                     i64::from(completion_usage.prompt_tokens),
                                                     &used_llm,
-                                                    &model,
+                                                    &suggested_model,
                                                     i64::from(completion_usage.completion_tokens),
                                                 )
                                                 .await?;
@@ -1088,7 +1129,7 @@ pub async fn open_ai_request(
                                                 user.id,
                                                 i64::from(completion_usage.prompt_tokens),
                                                 &used_llm,
-                                                &model,
+                                                &suggested_model,
                                                 i64::from(completion_usage.completion_tokens),
                                             )
                                             .await?;

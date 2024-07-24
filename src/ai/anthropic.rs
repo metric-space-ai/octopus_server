@@ -12,6 +12,7 @@ use std::{fs::read_to_string, path::Path, sync::Arc};
 use tokio::time::Duration;
 use uuid::Uuid;
 
+pub const ANTHROPIC: &str = "anthropic";
 pub const MAIN_LLM_ANTHROPIC_MODEL: &str = "claude-3-opus-20240229";
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -387,6 +388,10 @@ pub async fn anthropic_request(
         .await?
         .get_parameter_main_llm_anthropic_model()
         .unwrap_or(MAIN_LLM_ANTHROPIC_MODEL.to_string());
+    let suggested_model = chat_message
+        .suggested_model
+        .clone()
+        .unwrap_or(main_llm_anthropic_model);
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -395,8 +400,8 @@ pub async fn anthropic_request(
         .update_chat_message_llm_model(
             &mut transaction,
             chat_message.id,
-            Some("anthropic".to_string()),
-            Some(main_llm_anthropic_model.clone()),
+            Some(ANTHROPIC.to_string()),
+            Some(suggested_model.clone()),
         )
         .await?;
 
@@ -427,7 +432,7 @@ pub async fn anthropic_request(
         let mut chat_request = ChatRequest {
             max_tokens: 4096,
             messages,
-            model: main_llm_anthropic_model.to_string(),
+            model: suggested_model.to_string(),
             stream: false,
             tools: None,
         };
@@ -523,8 +528,8 @@ pub async fn anthropic_request(
                                             user.company_id,
                                             user.id,
                                             chat_response.usage.input_tokens,
-                                            "anthropic",
-                                            &main_llm_anthropic_model,
+                                            ANTHROPIC,
+                                            &suggested_model,
                                             chat_response.usage.output_tokens,
                                         )
                                         .await?;
@@ -581,8 +586,8 @@ pub async fn anthropic_request(
                                                 user.company_id,
                                                 user.id,
                                                 chat_response.usage.input_tokens,
-                                                "anthropic",
-                                                &main_llm_anthropic_model,
+                                                ANTHROPIC,
+                                                &suggested_model,
                                                 chat_response.usage.output_tokens,
                                             )
                                             .await?;
@@ -656,8 +661,8 @@ pub async fn anthropic_request(
                                                     user.company_id,
                                                     user.id,
                                                     chat_response.usage.input_tokens,
-                                                    "anthropic",
-                                                    &main_llm_anthropic_model,
+                                                    ANTHROPIC,
+                                                    &suggested_model,
                                                     chat_response.usage.output_tokens,
                                                 )
                                                 .await?;
@@ -706,8 +711,8 @@ pub async fn anthropic_request(
                                                 user.company_id,
                                                 user.id,
                                                 chat_response.usage.input_tokens,
-                                                "anthropic",
-                                                &main_llm_anthropic_model,
+                                                ANTHROPIC,
+                                                &suggested_model,
                                                 chat_response.usage.output_tokens,
                                             )
                                             .await?;
@@ -746,8 +751,8 @@ pub async fn anthropic_request(
                                                 user.company_id,
                                                 user.id,
                                                 chat_response.usage.input_tokens,
-                                                "anthropic",
-                                                &main_llm_anthropic_model,
+                                                ANTHROPIC,
+                                                &suggested_model,
                                                 chat_response.usage.output_tokens,
                                             )
                                             .await?;

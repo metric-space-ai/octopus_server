@@ -268,6 +268,9 @@ pub struct ChatMessage {
     pub response: Option<String>,
     pub simple_app_data: Option<serde_json::Value>,
     pub status: ChatMessageStatus,
+    pub suggested_llm: Option<String>,
+    pub suggested_model: Option<String>,
+    pub suggested_secondary_model: bool,
     pub used_llm: Option<String>,
     pub used_model: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -307,6 +310,9 @@ pub struct ChatMessageExtended {
     pub response: Option<String>,
     pub simple_app_data: Option<serde_json::Value>,
     pub status: ChatMessageStatus,
+    pub suggested_llm: Option<String>,
+    pub suggested_model: Option<String>,
+    pub suggested_secondary_model: bool,
     pub used_llm: Option<String>,
     pub used_model: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -510,7 +516,8 @@ pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED: &str = "MAIN_LLM_AZURE_O
 pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL: &str = "MAIN_LLM_AZURE_OPENAI_URL";
 pub const PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL: &str = "MAIN_LLM_OLLAMA_MODEL";
 pub const PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY: &str = "MAIN_LLM_OPENAI_API_KEY";
-pub const PARAMETER_NAME_MAIN_LLM_OPENAI_MODEL: &str = "MAIN_LLM_OPENAI_MODEL";
+pub const PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL: &str = "MAIN_LLM_OPENAI_PRIMARY_MODEL";
+pub const PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL: &str = "MAIN_LLM_OPENAI_SECONDARY_MODEL";
 pub const PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT: &str = "MAIN_LLM_SYSTEM_PROMPT";
 pub const PARAMETER_NAME_NEXTCLOUD_PASSWORD: &str = "NEXTCLOUD_PASSWORD";
 pub const PARAMETER_NAME_NEXTCLOUD_URL: &str = "NEXTCLOUD_URL";

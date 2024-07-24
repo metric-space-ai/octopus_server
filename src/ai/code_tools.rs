@@ -1,5 +1,5 @@
 use crate::{
-    ai::open_ai::{open_ai_get_client, AiClient, MODEL},
+    ai::open_ai::{open_ai_get_client, AiClient, PRIMARY_MODEL},
     context::Context,
     error::AppError,
     parser::configuration::Configuration,
@@ -159,14 +159,14 @@ device = select_device()"#,
         return Ok(Some(String::new()));
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -292,14 +292,14 @@ pub async fn open_ai_describe_functions(
         return Ok(Some(response));
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -402,14 +402,14 @@ pub async fn open_ai_malicious_code_check(
         return Ok(Some(response));
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -514,14 +514,14 @@ pub async fn open_ai_post_parsing_code_check(
         return Ok(Some(response));
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -626,14 +626,14 @@ pub async fn open_ai_pre_parsing_code_check(
         return Ok(Some(response));
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -741,14 +741,14 @@ pub async fn open_ai_simple_app_meta_extraction(
         return Ok(simple_app_meta);
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -843,14 +843,14 @@ pub async fn open_ai_simple_app_advanced_meta_extraction(
         return Ok(simple_app_meta);
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 
@@ -951,14 +951,14 @@ pub async fn open_ai_wasp_app_advanced_meta_extraction(
         return Ok(wasp_app_meta);
     }
 
-    let model = context
+    let main_llm_openai_primary_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_openai_model()
-        .unwrap_or(MODEL.to_string());
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let request = CreateChatCompletionRequestArgs::default()
-        .model(model)
+        .model(main_llm_openai_primary_model)
         .messages(messages)
         .build();
 

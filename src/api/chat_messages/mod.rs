@@ -1,5 +1,8 @@
 use crate::{
-    ai::{self, function_call},
+    ai::{
+        self, function_call,
+        open_ai::{AZURE_OPENAI, OPENAI},
+    },
     context::Context,
     entity::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessageStatus,
@@ -7,6 +10,7 @@ use crate::{
     },
     error::AppError,
     session::{require_authenticated, ExtractedSession},
+    util,
 };
 use axum::{
     extract::{Path, State},
@@ -14,7 +18,6 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use chrono::{Duration, Utc};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::error;
@@ -27,6 +30,8 @@ pub struct ChatMessagePost {
     pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
     pub suggested_ai_function_id: Option<Uuid>,
+    pub suggested_llm: Option<String>,
+    pub suggested_model: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -34,6 +39,8 @@ pub struct ChatMessagePut {
     pub bypass_sensitive_information_filter: Option<bool>,
     pub message: String,
     pub suggested_ai_function_id: Option<Uuid>,
+    pub suggested_llm: Option<String>,
+    pub suggested_model: Option<String>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -316,17 +323,7 @@ pub async fn create(
         return Err(AppError::Conflict);
     }
 
-    let estimated_seconds = context
-        .octopus_database
-        .get_chat_messages_estimated_response_at()
-        .await?;
-
-    let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
-        Some(estimated_seconds) => {
-            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
-        }
-    };
+    let estimated_response_at = util::get_estimated_response_at(context.clone()).await?;
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -340,6 +337,9 @@ pub async fn create(
             estimated_response_at,
             &input.message,
             input.suggested_ai_function_id,
+            input.suggested_llm,
+            input.suggested_model,
+            false,
         )
         .await?;
 
@@ -516,6 +516,47 @@ pub async fn flag(
         .octopus_database
         .transaction_commit(transaction)
         .await?;
+
+    if (input.bad_reply_is_not_helpful || input.bad_reply_is_not_true)
+        && (chat_message.used_llm == Some(AZURE_OPENAI.to_string())
+            || chat_message.used_llm == Some(OPENAI.to_string()))
+    {
+        let estimated_response_at = util::get_estimated_response_at(context.clone()).await?;
+
+        let mut transaction = context.octopus_database.transaction_begin().await?;
+
+        let new_chat_message = context
+            .octopus_database
+            .insert_chat_message(
+                &mut transaction,
+                chat_message.chat_id,
+                chat_message.user_id,
+                chat_message.bypass_sensitive_information_filter,
+                estimated_response_at,
+                &chat_message.message,
+                chat_message.suggested_ai_function_id,
+                chat_message.suggested_llm.clone(),
+                chat_message.suggested_model.clone(),
+                true,
+            )
+            .await?;
+
+        context
+            .octopus_database
+            .transaction_commit(transaction)
+            .await?;
+
+        let cloned_context = context.clone();
+        let cloned_chat_message = new_chat_message.clone();
+        tokio::spawn(async move {
+            let chat_message =
+                ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+
+            if let Err(e) = chat_message {
+                error!("Error: {:?}", e);
+            }
+        });
+    }
 
     Ok((StatusCode::OK, Json(chat_message)).into_response())
 }
@@ -917,17 +958,7 @@ pub async fn regenerate(
         return Err(AppError::Forbidden);
     }
 
-    let estimated_seconds = context
-        .octopus_database
-        .get_chat_messages_estimated_response_at()
-        .await?;
-
-    let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
-        Some(estimated_seconds) => {
-            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
-        }
-    };
+    let estimated_response_at = util::get_estimated_response_at(context.clone()).await?;
 
     let chat_messages = context
         .octopus_database
@@ -1045,17 +1076,7 @@ pub async fn update(
         return Err(AppError::Forbidden);
     }
 
-    let estimated_seconds = context
-        .octopus_database
-        .get_chat_messages_estimated_response_at()
-        .await?;
-
-    let estimated_response_at = match estimated_seconds.ceiling {
-        None => Utc::now() + Duration::try_seconds(5).ok_or(AppError::FromTime)?,
-        Some(estimated_seconds) => {
-            Utc::now() + Duration::try_seconds(estimated_seconds + 1).ok_or(AppError::FromTime)?
-        }
-    };
+    let estimated_response_at = util::get_estimated_response_at(context.clone()).await?;
 
     let chat_messages = context
         .octopus_database
@@ -1089,6 +1110,9 @@ pub async fn update(
             estimated_response_at,
             &input.message,
             input.suggested_ai_function_id,
+            input.suggested_llm,
+            input.suggested_model,
+            false,
         )
         .await?;
 

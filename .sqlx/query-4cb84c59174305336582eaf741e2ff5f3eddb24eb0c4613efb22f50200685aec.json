@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", used_llm, used_model, created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE chat_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at ASC",
   "describe": {
     "columns": [
       {
@@ -145,26 +145,41 @@
       },
       {
         "ordinal": 26,
-        "name": "used_llm",
+        "name": "suggested_llm",
         "type_info": "Varchar"
       },
       {
         "ordinal": 27,
-        "name": "used_model",
+        "name": "suggested_model",
         "type_info": "Varchar"
       },
       {
         "ordinal": 28,
+        "name": "suggested_secondary_model",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 29,
+        "name": "used_llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 30,
+        "name": "used_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 31,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 29,
+        "ordinal": 32,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 30,
+        "ordinal": 33,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -205,8 +220,11 @@
       true,
       false,
       true,
+      true,
+      false,
+      true,
       false
     ]
   },
-  "hash": "080591d8eb61e71c10e428c3ee8cd9851422eee4fda31dde44e57699d2d1a1fa"
+  "hash": "4cb84c59174305336582eaf741e2ff5f3eddb24eb0c4613efb22f50200685aec"
 }

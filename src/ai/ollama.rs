@@ -12,6 +12,7 @@ use std::{fs::read_to_string, path::Path, sync::Arc};
 use tokio::time::Duration;
 
 pub const MAIN_LLM_OLLAMA_MODEL: &str = "llama3:70b";
+pub const OLLAMA: &str = "ollama";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChatRequest {
@@ -242,7 +243,7 @@ pub async fn ollama_request(
         .update_chat_message_llm_model(
             &mut transaction,
             chat_message.id,
-            Some("ollama".to_string()),
+            Some(OLLAMA.to_string()),
             Some(main_llm_ollama_model.clone()),
         )
         .await?;

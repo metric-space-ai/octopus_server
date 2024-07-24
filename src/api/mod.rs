@@ -97,6 +97,7 @@ mod files;
 mod inspection_disablings;
 mod kvs;
 mod llm_proxy;
+mod llms;
 mod nextcloud_files;
 mod nextcloud_raw_files;
 mod ollama_models;
@@ -325,6 +326,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             kvs::read,
             kvs::update,
             llm_proxy::proxy,
+            llms::list,
             login::login,
             logout::logout,
             nextcloud_files::create,
@@ -425,6 +427,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "kvs", description = "KVs API."),
             (name = "llm_proxy", description = "LLM proxy API."),
+            (name = "llms", description = "LLMs API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
             (name = "nextcloud_files", description = "Nextcloud files API."),
@@ -690,6 +693,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .post(llm_proxy::proxy)
                 .put(llm_proxy::proxy),
         )
+        .route("/api/v1/llms", get(llms::list))
         .route(
             "/api/v1/nextcloud-files",
             get(nextcloud_files::list).post(nextcloud_files::create),

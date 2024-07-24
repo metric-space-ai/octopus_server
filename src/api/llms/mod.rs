@@ -1,0 +1,79 @@
+use crate::{
+    ai::{
+        anthropic::{ANTHROPIC, MAIN_LLM_ANTHROPIC_MODEL},
+        ollama::OLLAMA,
+        open_ai::{OPENAI, PRIMARY_MODEL, SECONDARY_MODEL},
+    },
+    context::Context,
+    error::AppError,
+    ollama,
+    session::{require_authenticated, ExtractedSession},
+};
+use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use std::{collections::HashMap, sync::Arc};
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/llms",
+    responses(
+        (status = 200, description = "LLMs list.", body = String),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn list(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    let mut llms = HashMap::new();
+
+    let main_llm_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_api_key();
+
+    let main_llm_azure_openai_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_azure_openai_api_key();
+
+    if main_llm_openai_api_key.is_some() || main_llm_azure_openai_api_key.is_some() {
+        llms.insert(
+            OPENAI.to_string(),
+            vec![PRIMARY_MODEL.to_string(), SECONDARY_MODEL.to_string()],
+        );
+    }
+
+    let main_llm_anthropic_api_key = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_anthropic_api_key();
+
+    if main_llm_anthropic_api_key.is_some() {
+        llms.insert(
+            ANTHROPIC.to_string(),
+            vec![MAIN_LLM_ANTHROPIC_MODEL.to_string()],
+        );
+    }
+
+    let ollama_models = ollama::get_models()
+        .into_iter()
+        .map(|x| x.to_string())
+        .collect::<Vec<String>>();
+
+    llms.insert(OLLAMA.to_string(), ollama_models);
+
+    Ok((StatusCode::OK, Json(llms)).into_response())
+}
