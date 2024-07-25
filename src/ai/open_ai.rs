@@ -5,11 +5,9 @@ use crate::{
     error::AppError,
     get_pwd, Result,
 };
-#[allow(deprecated)]
 use async_openai::{
     config::{AzureConfig, OpenAIConfig},
     types::{
-        ChatCompletionFunctions, ChatCompletionFunctionsArgs,
         ChatCompletionRequestAssistantMessageArgs, ChatCompletionRequestFunctionMessageArgs,
         ChatCompletionRequestMessage, ChatCompletionRequestMessageContentPartImageArgs,
         ChatCompletionRequestSystemMessageArgs, ChatCompletionRequestUserMessageArgs,
@@ -39,150 +37,6 @@ pub const SECONDARY_MODEL: &str = "gpt-4o-2024-05-13";
 pub enum AiClient {
     Azure(Client<AzureConfig>),
     OpenAI(Client<OpenAIConfig>),
-}
-
-#[allow(deprecated)]
-pub async fn get_functions_ai_functions(
-    context: Arc<Context>,
-    user_id: Uuid,
-) -> Result<Vec<ChatCompletionFunctions>> {
-    let mut functions = vec![];
-
-    let ai_functions = context
-        .octopus_database
-        .get_ai_functions_for_request(user_id)
-        .await?;
-
-    for ai_function in ai_functions {
-        if ai_function.formatted_name != "anonymization"
-            && ai_function.formatted_name != "google_search"
-            && ai_function.formatted_name != "querycontent"
-            && ai_function.formatted_name != "scrape_url"
-            && ai_function.formatted_name != "sensitive_information"
-        {
-            let description = ai_function
-                .generated_description
-                .unwrap_or(ai_function.description);
-
-            let function = ChatCompletionFunctionsArgs::default()
-                .name(ai_function.name)
-                .description(description)
-                .parameters(json!(ai_function.parameters))
-                .build()?;
-
-            functions.push(function);
-        }
-    }
-
-    Ok(functions)
-}
-
-#[allow(deprecated)]
-pub async fn get_functions_all(
-    context: Arc<Context>,
-    user_id: Uuid,
-) -> Result<Vec<ChatCompletionFunctions>> {
-    let mut functions = vec![];
-
-    let mut internal_functions = get_functions_internal_functions().await?;
-    functions.append(&mut internal_functions);
-
-    let mut ai_functions = get_functions_ai_functions(context.clone(), user_id).await?;
-    functions.append(&mut ai_functions);
-
-    let mut simple_apps_functions = get_functions_simple_apps(context.clone()).await?;
-    functions.append(&mut simple_apps_functions);
-
-    let mut wasp_apps_functions = get_functions_wasp_apps(context.clone(), user_id).await?;
-    functions.append(&mut wasp_apps_functions);
-
-    Ok(functions)
-}
-
-#[allow(deprecated)]
-pub async fn get_functions_internal_functions() -> Result<Vec<ChatCompletionFunctions>> {
-    let mut functions = vec![];
-
-    let function = ChatCompletionFunctionsArgs::default()
-        .name("os_internal_list_user_files".to_string())
-        .description("List user files function returns a comma-separated list of the files that belong to the user.".to_string())
-        .parameters(json!({
-            "type": "object",
-            "properties": {},
-            "required": [],
-        }))
-        .build()?;
-
-    functions.push(function);
-
-    Ok(functions)
-}
-
-#[allow(deprecated)]
-pub async fn get_functions_simple_apps(
-    context: Arc<Context>,
-) -> Result<Vec<ChatCompletionFunctions>> {
-    let mut functions = vec![];
-
-    let simple_apps = context
-        .octopus_database
-        .get_simple_apps_for_request()
-        .await?;
-
-    for simple_app in simple_apps {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name(simple_app.formatted_name)
-            .description(simple_app.description)
-            .parameters(json!({
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Simple app title",
-                    },
-                },
-                "required": ["title"],
-            }))
-            .build()?;
-
-        functions.push(function);
-    }
-
-    Ok(functions)
-}
-
-#[allow(deprecated)]
-pub async fn get_functions_wasp_apps(
-    context: Arc<Context>,
-    user_id: Uuid,
-) -> Result<Vec<ChatCompletionFunctions>> {
-    let mut functions = vec![];
-
-    let wasp_apps = context
-        .octopus_database
-        .get_wasp_apps_for_request(user_id)
-        .await?;
-
-    for wasp_app in wasp_apps {
-        let function = ChatCompletionFunctionsArgs::default()
-            .name(wasp_app.formatted_name)
-            .description(wasp_app.description)
-            .parameters(json!({
-                "type": "object",
-                "properties": {
-                    "title": {
-                        "type": "string",
-                        "description": "Wasp app title",
-                    },
-                },
-                "required": ["title"],
-            }))
-            .build()?;
-
-        functions.push(function);
-    }
-
-    Ok(functions)
 }
 
 pub async fn get_messages(
@@ -718,39 +572,18 @@ pub async fn open_ai_request(
     let messages = get_messages(context.clone(), &mut transaction, &chat_message).await?;
 
     if !context.get_config().await?.test_mode {
-        let request = match &ai_client {
-            AiClient::Azure(_ai_client) => {
-                let functions = get_functions_all(context.clone(), user.id).await?;
-
-                if functions.is_empty() {
-                    CreateChatCompletionRequestArgs::default()
-                        .model(suggested_model.clone())
-                        .messages(messages)
-                        .build()
-                } else {
-                    CreateChatCompletionRequestArgs::default()
-                        .model(suggested_model.clone())
-                        .messages(messages)
-                        .functions(functions)
-                        .build()
-                }
-            }
-            AiClient::OpenAI(_ai_client) => {
-                let tools = get_tools_all(context.clone(), user.id).await?;
-
-                if tools.is_empty() {
-                    CreateChatCompletionRequestArgs::default()
-                        .model(suggested_model.clone())
-                        .messages(messages)
-                        .build()
-                } else {
-                    CreateChatCompletionRequestArgs::default()
-                        .model(suggested_model.clone())
-                        .messages(messages)
-                        .tools(tools)
-                        .build()
-                }
-            }
+        let tools = get_tools_all(context.clone(), user.id).await?;
+        let request = if tools.is_empty() {
+            CreateChatCompletionRequestArgs::default()
+                .model(suggested_model.clone())
+                .messages(messages)
+                .build()
+        } else {
+            CreateChatCompletionRequestArgs::default()
+                .model(suggested_model.clone())
+                .messages(messages)
+                .tools(tools)
+                .build()
         };
 
         match request {
@@ -828,37 +661,20 @@ pub async fn open_ai_request(
                             Some(response_message) => {
                                 let response_message = response_message.message.clone();
 
-                                let (function_args, function_name) = match ai_client {
-                                    AiClient::Azure(_ai_client) => {
-                                        #[allow(deprecated)]
-                                        if let Some(function_call) = response_message.function_call
-                                        {
-                                            let function_name = function_call.name;
+                                let (function_args, function_name) =
+                                    if let Some(function_calls) = response_message.tool_calls {
+                                        if let Some(function_call) = function_calls.first() {
+                                            let function_name = function_call.function.name.clone();
                                             let function_args: serde_json::Value =
-                                                function_call.arguments.parse()?;
+                                                function_call.function.arguments.parse()?;
 
                                             (Some(function_args), Some(function_name))
                                         } else {
                                             (None, None)
                                         }
-                                    }
-                                    AiClient::OpenAI(_ai_client) => {
-                                        if let Some(function_calls) = response_message.tool_calls {
-                                            if let Some(function_call) = function_calls.first() {
-                                                let function_name =
-                                                    function_call.function.name.clone();
-                                                let function_args: serde_json::Value =
-                                                    function_call.function.arguments.parse()?;
-
-                                                (Some(function_args), Some(function_name))
-                                            } else {
-                                                (None, None)
-                                            }
-                                        } else {
-                                            (None, None)
-                                        }
-                                    }
-                                };
+                                    } else {
+                                        (None, None)
+                                    };
 
                                 if let (Some(function_args), Some(function_name)) =
                                     (function_args, function_name)
