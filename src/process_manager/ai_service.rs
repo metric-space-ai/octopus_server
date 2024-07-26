@@ -88,6 +88,24 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
         ));
     }
 
+    let main_llm_azure_openai_enabled = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_azure_openai_enabled();
+
+    parameters.push_str(&format!(
+        "AZURE_OPENAI_ENABLED={main_llm_azure_openai_enabled} "
+    ));
+
+    let main_llm_azure_openai_url = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_azure_openai_url();
+
+    if let Some(main_llm_azure_openai_url) = main_llm_azure_openai_url {
+        parameters.push_str(&format!("AZURE_OPENAI_URL={main_llm_azure_openai_url} "));
+    }
+
     let hugging_face_token_access = context
         .get_config()
         .await?
