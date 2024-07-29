@@ -467,6 +467,30 @@ impl OctopusDatabase {
         Ok(chat_token_audits)
     }
 
+    pub async fn get_chat_token_audits_by_company_id_and_time(
+        &self,
+        company_id: Uuid,
+        ends_at: DateTime<Utc>,
+        starts_at: DateTime<Utc>,
+    ) -> Result<Vec<ChatTokenAudit>> {
+        let chat_token_audits = sqlx::query_as!(
+            ChatTokenAudit,
+            "SELECT id, chat_id, chat_message_id, company_id, user_id, input_tokens, llm, model, output_tokens, created_at
+            FROM chat_token_audits
+            WHERE company_id = $1
+            AND created_at <= $2
+            AND created_at >= $3
+            ORDER BY created_at DESC",
+            company_id,
+            ends_at,
+            starts_at
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(chat_token_audits)
+    }
+
     pub async fn get_companies(&self) -> Result<Vec<Company>> {
         let companies = sqlx::query_as!(
             Company,
@@ -694,6 +718,21 @@ impl OctopusDatabase {
         }
 
         Ok(users_extended)
+    }
+
+    pub async fn get_users_by_ids(&self, user_ids: &[Uuid]) -> Result<Vec<User>> {
+        let users = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
+            FROM users
+            WHERE id = ANY($1)
+            AND deleted_at IS NULL",
+            user_ids
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(users)
     }
 
     pub async fn get_wasp_apps(&self) -> Result<Vec<WaspApp>> {

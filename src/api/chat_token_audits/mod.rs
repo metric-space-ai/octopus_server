@@ -5,13 +5,17 @@ use crate::{
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
+use chrono::{DateTime, Datelike, NaiveDate, Utc};
+use serde::Deserialize;
 use std::sync::Arc;
 use uuid::Uuid;
+
+pub mod report;
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
@@ -98,6 +102,73 @@ pub async fn read(
     }
 
     Ok((StatusCode::OK, Json(chat_token_audit)).into_response())
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct QueryParams {
+    pub ends_at: Option<DateTime<Utc>>,
+    pub starts_at: Option<DateTime<Utc>>,
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    get,
+    path = "/api/v1/chat-token-audits/:company_id/report",
+    responses(
+        (status = 200, description = "Chat token audit report.", body = String),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "Company not found.", body = ResponseError)
+    ),
+    params(
+        ("company_id" = String, Path, description = "Company id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn report(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(company_id): Path<Uuid>,
+    query_params: Query<QueryParams>,
+) -> Result<impl IntoResponse, AppError> {
+    let ends_at = query_params.ends_at.unwrap_or_else(Utc::now);
+    let now = Utc::now();
+    let naive_date =
+        NaiveDate::from_ymd_opt(now.year(), now.month(), 1).ok_or(AppError::Parsing)?;
+    let starts_at = DateTime::from_naive_utc_and_offset(naive_date.into(), *now.offset());
+    let starts_at = query_params.starts_at.unwrap_or(starts_at);
+
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
+
+    context
+        .octopus_database
+        .try_get_company_by_id(company_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let chat_token_audits = context
+        .octopus_database
+        .get_chat_token_audits_by_company_id_and_time(company_id, ends_at, starts_at)
+        .await?;
+
+    let report = report::generate(chat_token_audits, context, ends_at, starts_at).await?;
+
+    Ok((StatusCode::OK, Json(report)).into_response())
 }
 
 #[cfg(test)]

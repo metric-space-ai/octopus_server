@@ -293,6 +293,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             chat_pictures::update,
             chat_token_audits::list,
             chat_token_audits::read,
+            chat_token_audits::report,
             chats::create,
             chats::delete,
             chats::latest,
@@ -632,6 +633,10 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/chat-token-audits/:chat_token_audit_id",
             get(chat_token_audits::read),
+        )
+        .route(
+            "/api/v1/chat-token-audits/:company_id/report",
+            get(chat_token_audits::report),
         )
         .route(
             "/api/v1/chats/:workspace_id",
