@@ -10,15 +10,14 @@ use axum::{
     Json,
 };
 use chrono::{DateTime, Utc};
-use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use utoipa::ToSchema;
 use validator::Validate;
 
-static VALID_KEY: Lazy<Regex> =
-    Lazy::new(|| Regex::new(r"^[a-zA-Z0-9._~!$&'()*+,;=:@/?-]+$").unwrap());
+static VALID_KEY: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[a-zA-Z0-9._~!$&'()*+,;=:@/?-]+$").unwrap());
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
 pub struct KVPost {
