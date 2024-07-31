@@ -1,0 +1,98 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, company_id, user_id, access_type AS \"access_type: _\", file_name, media_type, original_file_name, type AS \"type: _\", created_at, updated_at\n            FROM files\n            WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "company_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "access_type: _",
+        "type_info": {
+          "Custom": {
+            "name": "files_access_types",
+            "kind": {
+              "Enum": [
+                "company",
+                "owner"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "media_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "original_file_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
+        "name": "type: _",
+        "type_info": {
+          "Custom": {
+            "name": "files_types",
+            "kind": {
+              "Enum": [
+                "document",
+                "knowledge_book",
+                "normal",
+                "task_book"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "e527aa7bfa8af4e7e2764c9c24765ce4288ed6f7a65c008e406fc3cc6c3f17cf"
+}

@@ -1,6 +1,7 @@
 use crate::{
     ai::function_call::{AiFunctionResponse, AiFunctionTextResponse},
     context::Context,
+    entity::FileType,
     error::AppError,
     Result, PUBLIC_DIR,
 };
@@ -11,9 +12,15 @@ pub async fn os_internal_list_user_files(
     context: Arc<Context>,
     user_id: Uuid,
 ) -> Result<AiFunctionResponse> {
+    let types = vec![
+        FileType::Document,
+        FileType::KnowledgeBook,
+        FileType::Normal,
+        FileType::TaskBook,
+    ];
     let files = context
         .octopus_database
-        .get_files_by_user_id(user_id)
+        .get_files_by_user_id_and_types(user_id, &types)
         .await?;
 
     let octopus_api_url = context

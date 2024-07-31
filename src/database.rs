@@ -5,10 +5,10 @@ use crate::{
         AiServiceRequiredPythonVersion, AiServiceSetupStatus, AiServiceStatus, AiServiceType,
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
-        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, InspectionDisabling,
-        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
-        Profile, Session, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
-        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
+        Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, FileAccessType,
+        FileType, InspectionDisabling, NextcloudFile, OllamaModel, OllamaModelStatus, Parameter,
+        PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended, WaspApp,
+        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -563,15 +563,43 @@ impl OctopusDatabase {
         Ok(example_prompt_categories)
     }
 
-    pub async fn get_files_by_user_id(&self, user_id: Uuid) -> Result<Vec<File>> {
-        let files = sqlx::query_as!(
-            File,
-            "SELECT id, user_id, file_name, media_type, original_file_name, created_at, updated_at
+    pub async fn get_files_by_company_id_and_access_type_and_types(
+        &self,
+        company_id: Uuid,
+        access_type: FileAccessType,
+        types: &[FileType],
+    ) -> Result<Vec<File>> {
+        let files = sqlx::query_as::<_, File>(
+            "SELECT id, company_id, user_id, access_type, file_name, media_type, original_file_name, type, created_at, updated_at
+            FROM files
+            WHERE company_id = $1
+            AND access_type = $2
+            AND type = ANY($3)
+            ORDER BY original_file_name ASC",
+        )
+        .bind(company_id)
+        .bind(access_type)
+        .bind(types)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(files)
+    }
+
+    pub async fn get_files_by_user_id_and_types(
+        &self,
+        user_id: Uuid,
+        types: &[FileType],
+    ) -> Result<Vec<File>> {
+        let files = sqlx::query_as::<_, File>(
+            "SELECT id, company_id, user_id, access_type, file_name, media_type, original_file_name, type, created_at, updated_at
             FROM files
             WHERE user_id = $1
+            AND type = ANY($2)
             ORDER BY original_file_name ASC",
-            user_id
         )
+        .bind(user_id)
+        .bind(types)
         .fetch_all(&*self.pool)
         .await?;
 
@@ -1220,25 +1248,31 @@ impl OctopusDatabase {
         Ok(example_prompt_category)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_file(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
+        company_id: Uuid,
         user_id: Uuid,
+        access_type: FileAccessType,
         file_name: &str,
         media_type: &str,
         original_file_name: &str,
+        r#type: FileType,
     ) -> Result<File> {
-        let file = sqlx::query_as!(
-            File,
+        let file = sqlx::query_as::<_, File>(
             "INSERT INTO files
-            (user_id, file_name, media_type, original_file_name)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, user_id, file_name, media_type, original_file_name, created_at, updated_at",
-            user_id,
-            file_name,
-            media_type,
-            original_file_name,
+            (company_id, user_id, access_type, file_name, media_type, original_file_name, type)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING id, company_id, user_id, access_type, file_name, media_type, original_file_name, type, created_at, updated_at",
         )
+        .bind(company_id)
+        .bind(user_id)
+        .bind(access_type)
+        .bind(file_name)
+        .bind(media_type)
+        .bind(original_file_name)
+        .bind(r#type)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -2645,9 +2679,9 @@ impl OctopusDatabase {
     pub async fn try_get_file_by_id(&self, id: Uuid) -> Result<Option<File>> {
         let file = sqlx::query_as!(
             File,
-            "SELECT id, user_id, file_name, media_type, original_file_name, created_at, updated_at
+            r#"SELECT id, company_id, user_id, access_type AS "access_type: _", file_name, media_type, original_file_name, type AS "type: _", created_at, updated_at
             FROM files
-            WHERE id = $1",
+            WHERE id = $1"#,
             id
         )
         .fetch_optional(&*self.pool)
@@ -4213,25 +4247,29 @@ impl OctopusDatabase {
         Ok(example_prompt_category)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn update_file(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
+        access_type: FileAccessType,
         file_name: &str,
         media_type: &str,
         original_file_name: &str,
+        r#type: FileType,
     ) -> Result<File> {
-        let file = sqlx::query_as!(
-            File,
+        let file = sqlx::query_as::<_, File>(
             "UPDATE files
-            SET file_name = $2, media_type = $3, original_file_name = $4, updated_at = current_timestamp(0)
+            SET access_type = $2, file_name = $3, media_type = $4, original_file_name = $5, type = $6, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, file_name, media_type, original_file_name, created_at, updated_at",
-            id,
-            file_name,
-            media_type,
-            original_file_name,
+            RETURNING id, company_id, user_id, access_type, file_name, media_type, original_file_name, type, created_at, updated_at",
         )
+        .bind(id)
+        .bind(access_type)
+        .bind(file_name)
+        .bind(media_type)
+        .bind(original_file_name)
+        .bind(r#type)
         .fetch_one(&mut **transaction)
         .await?;
 

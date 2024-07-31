@@ -407,13 +407,58 @@ pub struct ExamplePromptCategory {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "files_access_types", rename_all = "snake_case")]
+pub enum FileAccessType {
+    Company,
+    Owner,
+}
+
+impl FromStr for FileAccessType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Company" => Ok(FileAccessType::Company),
+            "Owner" => Ok(FileAccessType::Owner),
+            _ => Ok(FileAccessType::Owner),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "files_types", rename_all = "snake_case")]
+pub enum FileType {
+    Document,
+    KnowledgeBook,
+    Normal,
+    TaskBook,
+}
+
+impl FromStr for FileType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Document" => Ok(FileType::Document),
+            "KnowledgeBook" => Ok(FileType::KnowledgeBook),
+            "Normal" => Ok(FileType::Normal),
+            "TaskBook" => Ok(FileType::TaskBook),
+            _ => Ok(FileType::Normal),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct File {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub user_id: Uuid,
+    pub access_type: FileAccessType,
     pub file_name: String,
     pub media_type: String,
     pub original_file_name: String,
+    pub r#type: FileType,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -421,10 +466,13 @@ pub struct File {
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct FileWithUrl {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub user_id: Uuid,
+    pub access_type: FileAccessType,
     pub file_name: String,
     pub media_type: String,
     pub original_file_name: String,
+    pub r#type: FileType,
     pub url: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -436,10 +484,13 @@ impl FileWithUrl {
 
         Self {
             id: file.id,
+            company_id: file.company_id,
             user_id: file.user_id,
+            access_type: file.access_type,
             file_name: file.file_name,
             media_type: file.media_type,
             original_file_name: file.original_file_name,
+            r#type: file.r#type,
             url,
             created_at: file.created_at,
             updated_at: file.updated_at,
@@ -627,6 +678,19 @@ pub enum WaspAppInstanceType {
     Private,
     Shared,
     User,
+}
+
+impl FromStr for WaspAppInstanceType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Private" => Ok(WaspAppInstanceType::Private),
+            "Shared" => Ok(WaspAppInstanceType::Shared),
+            "User" => Ok(WaspAppInstanceType::User),
+            _ => Ok(WaspAppInstanceType::Shared),
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]

@@ -21,6 +21,7 @@ use std::{
     fs::{read_to_string, File},
     io::{BufRead, Write},
     path,
+    str::FromStr,
     sync::Arc,
 };
 use utoipa::{IntoParams, ToSchema};
@@ -193,11 +194,7 @@ pub async fn create(
             name = Some((field.text().await?).to_string());
         } else if field_name == "instance_type" {
             let value = (field.text().await?).to_string();
-            if value == "Private" {
-                instance_type = WaspAppInstanceType::Private;
-            } else if value == "User" {
-                instance_type = WaspAppInstanceType::User;
-            }
+            instance_type = WaspAppInstanceType::from_str(&value)?;
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
@@ -863,11 +860,7 @@ pub async fn update(
             name = Some((field.text().await?).to_string());
         } else if field_name == "instance_type" {
             let value = (field.text().await?).to_string();
-            if value == "Private" {
-                instance_type = WaspAppInstanceType::Private;
-            } else if value == "User" {
-                instance_type = WaspAppInstanceType::User;
-            }
+            instance_type = WaspAppInstanceType::from_str(&value)?;
         } else if field_name == "is_enabled" {
             is_enabled = (field.text().await?).parse::<bool>().unwrap_or(true);
         } else {
