@@ -93,6 +93,7 @@ pub fn get_models() -> Vec<&'static str> {
         "gemma:7b",
         "gemma:instruct",
         "gemma:text",
+        "gemma2:2b",
         "gemma2:9b",
         "gemma2:27b",
         "glm4:9b",
