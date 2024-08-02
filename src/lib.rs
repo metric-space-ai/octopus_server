@@ -20,6 +20,7 @@ mod multipart;
 mod ollama;
 mod parser;
 mod process_manager;
+mod scheduler;
 mod scraper;
 mod server_resources;
 mod session;
@@ -98,6 +99,9 @@ pub async fn run() -> Result<()> {
             error!("Error: {:?}", e);
         }
     });
+
+    app.context.job_scheduler.start().await?;
+    scheduler::prompts::start(app.context.clone()).await?;
 
     let listener =
         tokio::net::TcpListener::bind(format!("0.0.0.0:{}", app.context.get_config().await?.port))

@@ -7,8 +7,9 @@ use crate::{
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, FileAccessType,
         FileType, InspectionDisabling, NextcloudFile, OllamaModel, OllamaModelStatus, Parameter,
-        PasswordResetToken, Port, Profile, Session, SimpleApp, User, UserExtended, WaspApp,
-        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
+        PasswordResetToken, Port, Profile, ScheduledPrompt, Session, SimpleApp, User, UserExtended,
+        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        WorkspacesType, KV,
     },
     error::AppError,
     Result, PUBLIC_DIR,
@@ -272,7 +273,7 @@ impl OctopusDatabase {
     pub async fn get_chat_messages_by_chat_id(&self, chat_id: Uuid) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
@@ -291,7 +292,7 @@ impl OctopusDatabase {
     ) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND deleted_at IS NULL
@@ -377,7 +378,7 @@ impl OctopusDatabase {
         status: ChatMessageStatus,
     ) -> Result<Vec<ChatMessage>> {
         let chat_messages = sqlx::query_as::<_, ChatMessage>(
-            "SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
+            "SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE chat_id = $1
             AND status = $2
@@ -675,6 +676,39 @@ impl OctopusDatabase {
         .await?;
 
         Ok(profiles)
+    }
+
+    pub async fn get_scheduled_prompts(&self) -> Result<Vec<ScheduledPrompt>> {
+        let scheduled_prompts = sqlx::query_as!(
+            ScheduledPrompt,
+            "SELECT id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at
+            FROM scheduled_prompts
+            WHERE deleted_at IS NULL
+            ORDER BY prompt ASC",
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(scheduled_prompts)
+    }
+
+    pub async fn get_scheduled_prompts_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<ScheduledPrompt>> {
+        let scheduled_prompts = sqlx::query_as!(
+            ScheduledPrompt,
+            "SELECT id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at
+            FROM scheduled_prompts
+            WHERE user_id = $1
+            AND deleted_at IS NULL
+            ORDER BY prompt ASC",
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(scheduled_prompts)
     }
 
     pub async fn get_simple_apps(&self) -> Result<Vec<SimpleApp>> {
@@ -1027,7 +1061,7 @@ impl OctopusDatabase {
             r#"INSERT INTO chat_messages
             (chat_id, user_id, bypass_sensitive_information_filter, estimated_response_at, message, suggested_ai_function_id, suggested_llm, suggested_model, suggested_secondary_model)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
             chat_id,
             user_id,
             bypass_sensitive_information_filter,
@@ -1434,6 +1468,31 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn insert_scheduled_prompt(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_id: Uuid,
+        user_id: Uuid,
+        desired_schedule: &str,
+        prompt: &str,
+    ) -> Result<ScheduledPrompt> {
+        let scheduled_prompt = sqlx::query_as!(
+            ScheduledPrompt,
+            "INSERT INTO scheduled_prompts
+            (chat_id, user_id, desired_schedule, prompt)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at",
+            chat_id,
+            user_id,
+            desired_schedule,
+            prompt
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(scheduled_prompt)
+    }
+
     pub async fn insert_session(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -1669,6 +1728,7 @@ impl OctopusDatabase {
             ai_function_id: chat_message.ai_function_id,
             ai_service_id: chat_message.ai_service_id,
             chat_id: chat_message.chat_id,
+            scheduled_prompt_id: chat_message.scheduled_prompt_id,
             simple_app_id: chat_message.simple_app_id,
             suggested_ai_function_id: chat_message.suggested_ai_function_id,
             user_id: chat_message.user_id,
@@ -2102,6 +2162,25 @@ impl OctopusDatabase {
         Ok(password_reset_token)
     }
 
+    pub async fn try_delete_scheduled_prompt_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let scheduled_prompt = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE scheduled_prompts
+            SET deleted_at = current_timestamp(0)
+            WHERE id = $1
+            AND deleted_at IS NULL
+            RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(scheduled_prompt)
+    }
+
     pub async fn try_delete_session_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2460,7 +2539,7 @@ impl OctopusDatabase {
     pub async fn try_get_chat_message_by_id(&self, id: Uuid) -> Result<Option<ChatMessage>> {
         let chat_message = sqlx::query_as!(
             ChatMessage,
-            r#"SELECT id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
+            r#"SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at
             FROM chat_messages
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -2896,6 +2975,24 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn try_get_scheduled_prompt_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<ScheduledPrompt>> {
+        let scheduled_prompt = sqlx::query_as!(
+            ScheduledPrompt,
+            "SELECT id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at
+            FROM scheduled_prompts
+            WHERE id = $1
+            AND deleted_at IS NULL",
+            id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(scheduled_prompt)
+    }
+
     pub async fn try_get_session_by_id(&self, id: Uuid) -> Result<Option<Session>> {
         let session = sqlx::query_as!(
             Session,
@@ -3091,6 +3188,27 @@ impl OctopusDatabase {
             AND deleted_at IS NULL"#,
             id
         )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(workspace)
+    }
+
+    pub async fn try_get_workspace_by_user_id_and_type(
+        &self,
+        user_id: Uuid,
+        r#type: WorkspacesType,
+    ) -> Result<Option<Workspace>> {
+        let workspace = sqlx::query_as::<_, Workspace>(
+            "SELECT id, company_id, user_id, name, type, created_at, deleted_at, updated_at
+            FROM workspaces
+            WHERE user_id = $1
+            AND type = $2
+            AND deleted_at IS NULL
+            LIMIT 1",
+        )
+        .bind(user_id)
+        .bind(r#type)
         .fetch_optional(&*self.pool)
         .await?;
 
@@ -3700,7 +3818,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET progress = $2, response = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(progress)
@@ -3722,7 +3840,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_call = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_call)
@@ -3746,7 +3864,7 @@ impl OctopusDatabase {
             r#"UPDATE chat_messages
             SET bad_reply_comment = $2, bad_reply_is_harmful = $3, bad_reply_is_not_helpful = $4, bad_reply_is_not_true = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
             id,
             bad_reply_comment,
             bad_reply_is_harmful,
@@ -3775,7 +3893,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_id = $2, status = $3, progress = $4, response = $5, color = $6, ai_service_id = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_id)
@@ -3806,7 +3924,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_id = $2, ai_function_error = $3, status = $4, progress = $5, color = $6, ai_service_id = $7, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_id)
@@ -3836,7 +3954,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_id = $2, status = $3, progress = $4, color = $5, ai_service_id = $6, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_id)
@@ -3863,7 +3981,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET status = $2, progress = $3, response = $4, color = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(status)
@@ -3889,7 +4007,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET ai_function_error = $2, status = $3, progress = $4, color = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(ai_function_error)
@@ -3914,7 +4032,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET status = $2, progress = $3, color = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(status)
@@ -3941,7 +4059,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET estimated_response_at = $2, message = $3, status = $4, progress = $5, response = $6, created_at = current_timestamp(0), updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(estimated_response_at)
@@ -3968,7 +4086,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET is_anonymized = $2, message = $3, status = $4, progress = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(is_anonymized)
@@ -3993,7 +4111,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET is_marked_as_not_sensitive = $2, status = $3, progress = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(is_marked_as_not_sensitive)
@@ -4016,7 +4134,7 @@ impl OctopusDatabase {
             r#"UPDATE chat_messages
             SET is_not_checked_by_system = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
             id,
             is_not_checked_by_system,
         )
@@ -4038,7 +4156,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET is_sensitive = $2, status = $3, progress = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(is_sensitive)
@@ -4062,7 +4180,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET progress = $2, simple_app_id = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(progress)
@@ -4086,7 +4204,7 @@ impl OctopusDatabase {
             r#"UPDATE chat_messages
             SET used_llm = $2, used_model = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
             id,
             used_llm,
             used_model,
@@ -4109,7 +4227,7 @@ impl OctopusDatabase {
             "UPDATE chat_messages
             SET progress = $2, wasp_app_id = $3, status = $4, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, ai_function_id, ai_service_id, chat_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(progress)
@@ -4482,6 +4600,71 @@ impl OctopusDatabase {
         .await?;
 
         Ok(profile)
+    }
+
+    pub async fn update_scheduled_job_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        job_id: Uuid,
+    ) -> Result<ScheduledPrompt> {
+        let scheduled_prompt = sqlx::query_as!(
+            ScheduledPrompt,
+            "UPDATE scheduled_prompts
+            SET job_id = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at",
+            id,
+            job_id,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(scheduled_prompt)
+    }
+
+    pub async fn update_scheduled_prompt(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        desired_schedule: &str,
+        prompt: &str,
+    ) -> Result<ScheduledPrompt> {
+        let scheduled_prompt = sqlx::query_as!(
+            ScheduledPrompt,
+            "UPDATE scheduled_prompts
+            SET desired_schedule = $2, prompt = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at",
+            id,
+            desired_schedule,
+            prompt,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(scheduled_prompt)
+    }
+
+    pub async fn update_scheduled_prompt_schedule(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        schedule: &str,
+    ) -> Result<ScheduledPrompt> {
+        let scheduled_prompt = sqlx::query_as!(
+            ScheduledPrompt,
+            "UPDATE scheduled_prompts
+            SET schedule = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at",
+            id,
+            schedule
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(scheduled_prompt)
     }
 
     #[allow(clippy::too_many_arguments)]

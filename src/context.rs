@@ -1,8 +1,10 @@
 use crate::{config::Config, database::OctopusDatabase, process_manager::ProcessManager, Result};
 use tokio::sync::RwLock;
+use tokio_cron_scheduler::JobScheduler;
 
 pub struct Context {
     pub config: RwLock<Config>,
+    pub job_scheduler: JobScheduler,
     pub octopus_database: OctopusDatabase,
     pub process_manager: ProcessManager,
 }
@@ -10,11 +12,13 @@ pub struct Context {
 impl Context {
     pub fn new(
         config: Config,
+        job_scheduler: JobScheduler,
         octopus_database: OctopusDatabase,
         process_manager: ProcessManager,
     ) -> Self {
         Self {
             config: RwLock::new(config),
+            job_scheduler,
             octopus_database,
             process_manager,
         }

@@ -246,6 +246,7 @@ pub struct ChatMessage {
     pub ai_function_id: Option<Uuid>,
     pub ai_service_id: Option<Uuid>,
     pub chat_id: Uuid,
+    pub scheduled_prompt_id: Option<Uuid>,
     pub simple_app_id: Option<Uuid>,
     pub suggested_ai_function_id: Option<Uuid>,
     pub user_id: Uuid,
@@ -285,6 +286,7 @@ pub struct ChatMessageExtended {
     pub ai_function_id: Option<Uuid>,
     pub ai_service_id: Option<Uuid>,
     pub chat_id: Uuid,
+    pub scheduled_prompt_id: Option<Uuid>,
     pub simple_app_id: Option<Uuid>,
     pub suggested_ai_function_id: Option<Uuid>,
     pub user_id: Uuid,
@@ -620,6 +622,20 @@ pub struct Profile {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct ScheduledPrompt {
+    pub id: Uuid,
+    pub chat_id: Uuid,
+    pub user_id: Uuid,
+    pub desired_schedule: String,
+    pub job_id: Option<Uuid>,
+    pub prompt: String,
+    pub schedule: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Session {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -742,6 +758,7 @@ pub struct WaspGenerator {
 #[sqlx(type_name = "workspaces_types", rename_all = "snake_case")]
 pub enum WorkspacesType {
     Private,
+    PrivateScheduled,
     Public,
 }
 

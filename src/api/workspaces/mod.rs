@@ -133,7 +133,7 @@ pub async fn delete(
         .ok_or(AppError::NotFound)?;
 
     match workspace.r#type {
-        WorkspacesType::Private => {
+        WorkspacesType::Private | WorkspacesType::PrivateScheduled => {
             if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
                 || workspace.user_id != session_user.id
             {
@@ -249,7 +249,7 @@ pub async fn read(
         .ok_or(AppError::NotFound)?;
 
     match workspace.r#type {
-        WorkspacesType::Private => {
+        WorkspacesType::Private | WorkspacesType::PrivateScheduled => {
             if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
                 || workspace.user_id != session_user.id
             {
@@ -306,7 +306,7 @@ pub async fn update(
         .ok_or(AppError::NotFound)?;
 
     match workspace.r#type {
-        WorkspacesType::Private => {
+        WorkspacesType::Private | WorkspacesType::PrivateScheduled => {
             if !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
                 || workspace.user_id != session_user.id
             {

@@ -70,7 +70,7 @@ pub async fn list(
 
     let ollama_models = ollama::get_models()
         .into_iter()
-        .map(|x| x.to_string())
+        .map(std::string::ToString::to_string)
         .collect::<Vec<String>>();
 
     llms.insert(OLLAMA.to_string(), ollama_models);

@@ -82,7 +82,7 @@ pub async fn create(
         .ok_or(AppError::NotFound)?;
 
     match workspace.r#type {
-        WorkspacesType::Private => {
+        WorkspacesType::Private | WorkspacesType::PrivateScheduled => {
             if session_user.id != chat_message.user_id
                 && !session_user.roles.contains(&ROLE_PRIVATE_USER.to_string())
             {

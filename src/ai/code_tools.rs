@@ -1,6 +1,7 @@
 use crate::{
     ai::open_ai::{open_ai_get_client, AiClient, PRIMARY_MODEL},
     context::Context,
+    entity::ScheduledPrompt,
     error::AppError,
     parser::configuration::Configuration,
     Result,
@@ -696,6 +697,125 @@ pub async fn open_ai_pre_parsing_code_check(
     }
 
     Ok(None)
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ScheduledPromptsSchedule {
+    pub schedule_time: String,
+}
+
+pub async fn open_ai_scheduled_prompts_schedule(
+    context: Arc<Context>,
+    scheduled_prompt: ScheduledPrompt,
+) -> Result<ScheduledPrompt> {
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
+    let mut messages = vec![];
+
+    let text = r#"User provides schedule time for a prompt. Convert this schedule time to the following format "seconds; minutes; hours; day of month; month; day of week; year" that is similar to cron. Convert semicolons to spaces. Make sure you use specified format, not default cron. Make sure you understand provided format - it starts with seconds and you need to use all 7 fields. You response a json with {{\"schedule_time\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json."#.to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
+
+    let text = scheduled_prompt.desired_schedule.clone();
+
+    let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::User(
+        chat_completion_request_message,
+    ));
+
+    if context.get_config().await?.test_mode {
+        return Ok(scheduled_prompt);
+    }
+
+    let main_llm_openai_primary_model = context
+        .get_config()
+        .await?
+        .get_parameter_main_llm_openai_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
+
+    let request = CreateChatCompletionRequestArgs::default()
+        .model(main_llm_openai_primary_model)
+        .messages(messages)
+        .build();
+
+    match request {
+        Err(e) => {
+            tracing::error!("OpenAIError: {e}");
+        }
+        Ok(request) => {
+            let response_message = match ai_client {
+                AiClient::Azure(ai_client) => ai_client.chat().create(request).await,
+                AiClient::OpenAI(ai_client) => ai_client.chat().create(request).await,
+            };
+
+            match response_message {
+                Err(e) => {
+                    tracing::error!("OpenAIError: {e}");
+                }
+                Ok(response_message) => {
+                    let response_message = response_message.choices.first();
+
+                    match response_message {
+                        None => {
+                            tracing::error!("BadResponse");
+                        }
+                        Some(response_message) => {
+                            let response_message = response_message.message.clone();
+
+                            if let Some(response_content) = response_message.content {
+                                let response_content = if response_content.starts_with("```json")
+                                    && response_content.ends_with("```")
+                                {
+                                    response_content
+                                        .strip_prefix("```json")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                        .strip_suffix("```")
+                                        .ok_or(AppError::Parsing)?
+                                        .to_string()
+                                } else {
+                                    response_content
+                                };
+
+                                let scheduled_prompts_schedule: ScheduledPromptsSchedule =
+                                    serde_json::from_str(&response_content)?;
+
+                                let mut transaction =
+                                    context.octopus_database.transaction_begin().await?;
+
+                                let scheduled_prompt = context
+                                    .octopus_database
+                                    .update_scheduled_prompt_schedule(
+                                        &mut transaction,
+                                        scheduled_prompt.id,
+                                        &scheduled_prompts_schedule.schedule_time,
+                                    )
+                                    .await?;
+
+                                context
+                                    .octopus_database
+                                    .transaction_commit(transaction)
+                                    .await?;
+
+                                return Ok(scheduled_prompt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Err(Box::new(AppError::Parsing))
 }
 
 #[derive(Debug, Deserialize, Serialize)]

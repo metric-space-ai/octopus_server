@@ -6,6 +6,7 @@ use axum::Router;
 use sqlx::postgres::PgPoolOptions;
 use std::sync::Arc;
 use tokio::time::Duration;
+use tokio_cron_scheduler::JobScheduler;
 
 pub struct App {
     pub context: Arc<Context>,
@@ -28,6 +29,7 @@ pub async fn get_app(args: Args) -> Result<App> {
 
 pub async fn get_context(args: Args) -> Result<Arc<Context>> {
     let mut config = config::load(args)?;
+    let job_scheduler = JobScheduler::new().await?;
     let pool = PgPoolOptions::new()
         .acquire_timeout(Duration::from_secs(180))
         .connect(&config.database_url)
@@ -36,7 +38,12 @@ pub async fn get_context(args: Args) -> Result<Arc<Context>> {
     let parameters = octopus_database.get_parameters().await?;
     config.set_parameters(parameters);
     let process_manager = ProcessManager::new();
-    let context = Arc::new(Context::new(config, octopus_database, process_manager));
+    let context = Arc::new(Context::new(
+        config,
+        job_scheduler,
+        octopus_database,
+        process_manager,
+    ));
 
     Ok(context)
 }

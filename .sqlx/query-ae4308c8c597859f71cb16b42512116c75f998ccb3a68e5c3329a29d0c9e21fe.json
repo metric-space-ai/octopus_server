@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, company_id, user_id, name, type AS \"type: _\", created_at, deleted_at, updated_at\n            FROM workspaces\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, chat_id, user_id, desired_schedule, job_id, prompt, schedule, created_at, deleted_at, updated_at\n            FROM scheduled_prompts\n            WHERE user_id = $1\n            AND deleted_at IS NULL\n            ORDER BY prompt ASC",
   "describe": {
     "columns": [
       {
@@ -10,7 +10,7 @@
       },
       {
         "ordinal": 1,
-        "name": "company_id",
+        "name": "chat_id",
         "type_info": "Uuid"
       },
       {
@@ -20,37 +20,36 @@
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "desired_schedule",
         "type_info": "Varchar"
       },
       {
         "ordinal": 4,
-        "name": "type: _",
-        "type_info": {
-          "Custom": {
-            "name": "workspaces_types",
-            "kind": {
-              "Enum": [
-                "private",
-                "private_scheduled",
-                "public"
-              ]
-            }
-          }
-        }
+        "name": "job_id",
+        "type_info": "Uuid"
       },
       {
         "ordinal": 5,
+        "name": "prompt",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "schedule",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 8,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 9,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -65,11 +64,13 @@
       false,
       false,
       false,
+      true,
       false,
+      true,
       false,
       true,
       false
     ]
   },
-  "hash": "563127f96a20da835de2c8ebaf34b0ff1a7768842c603c0b7a0d47dba7795326"
+  "hash": "ae4308c8c597859f71cb16b42512116c75f998ccb3a68e5c3329a29d0c9e21fe"
 }

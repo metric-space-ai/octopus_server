@@ -31,6 +31,7 @@ use crate::{
         parameters::{ParameterPost, ParameterPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
         profiles::ProfilePut,
+        scheduled_prompts::{ScheduledPromptPost, ScheduledPromptPut},
         setup::{SetupInfoResponse, SetupPost},
         users::{UserInvitationPost, UserPost, UserPut},
         version::VersionInfoResponse,
@@ -47,8 +48,8 @@ use crate::{
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling,
         NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile,
-        SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType, KV,
+        ScheduledPrompt, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
+        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -106,6 +107,7 @@ mod password_resets;
 mod process_manager;
 mod profile_pictures;
 mod profiles;
+mod scheduled_prompts;
 mod scraper;
 mod server_resources;
 mod setup;
@@ -200,6 +202,9 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 ProfilePut,
                 RegisterPost,
                 ResponseError,
+                ScheduledPrompt,
+                ScheduledPromptPost,
+                ScheduledPromptPut,
                 ServerResources,
                 SessionResponse,
                 SessionResponseData,
@@ -358,6 +363,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             profile_pictures::delete,
             profile_pictures::update,
             register::register,
+            scheduled_prompts::create,
+            scheduled_prompts::delete,
+            scheduled_prompts::list,
+            scheduled_prompts::read,
+            scheduled_prompts::update,
             scraper::scraper,
             scraper::scraper_search_service,
             scraper::scraper_service,
@@ -440,6 +450,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "profiles", description = "Profiles API."),
             (name = "profile_pictures", description = "Profile pictures API."),
             (name = "register", description = "Register API."),
+            (name = "scheduled_prompts", description = "Scheduled prompts API."),
             (name = "scraper", description = "Scraper API."),
             (name = "server_resources", description = "Server resources API."),
             (name = "setup", description = "Setup API."),
@@ -748,6 +759,16 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route(
             "/api/v1/profiles/:user_id",
             get(profiles::read).put(profiles::update),
+        )
+        .route(
+            "/api/v1/scheduled-prompts",
+            get(scheduled_prompts::list).post(scheduled_prompts::create),
+        )
+        .route(
+            "/api/v1/scheduled-prompts/:id",
+            delete(scheduled_prompts::delete)
+                .get(scheduled_prompts::read)
+                .put(scheduled_prompts::update),
         )
         .route("/api/v1/scraper", get(scraper::scraper))
         .route(
