@@ -722,6 +722,49 @@ pub async fn open_ai_scheduled_prompts_schedule(
         chat_completion_request_message,
     ));
 
+    let text = "Here are a few examples:\n\n
+    At minute 1 - 0 1 * * * * *\n
+    At minute 10 - 0 10 * * * * *\n
+    At minute 45 - 0 45 * * * * *\n
+    At every 5th minute from 0 through 59 - 0 0/5 * * * * *\n
+    At every 10th minute from 0 through 59 - 0 0/10 * * * * *\n
+    At every 15th minute from 0 through 59 - 0 0/15 * * * * *\n
+    At 01:00 - 0 0 1 * * * *\n
+    At 05:00 - 0 0 5 * * * *\n
+    At 15:00 - 0 0 15 * * * *\n
+    At minute 0 past every 2nd hour from 0 through 23 - 0 0 0/2 * * * *\n
+    At minute 0 past every 4th hour from 0 through 23 - 0 0 0/4 * * * *\n
+    At minute 0 past every 6th hour from 0 through 23 - 0 0 0/6 * * * *\n
+    At 00:00 on day-of-month 1 - 0 0 0 1 * * *\n
+    At 00:00 on day-of-month 10 - 0 0 0 10 * * *\n
+    At 00:00 on day-of-month 22 - 0 0 0 22 * * *\n
+    At 00:00 on every 2nd day-of-month from 1 through 31 - 0 0 0 1/2 * * *\n
+    At 00:00 on every 4th day-of-month from 1 through 31 - 0 0 0 1/4 * * *\n
+    At 00:00 on every 7th day-of-month from 1 through 31 - 0 0 0 1/7 * * *\n
+    At 00:00 in January - 0 0 0 * 1 * *\n
+    At 00:00 in April - 0 0 0 * 4 * *\n
+    At 00:00 in August - 0 0 0 * 8 * *\n
+    At 00:00 in every 2nd month from January through December - 0 0 0 * 1/2 * *\n
+    At 00:00 in every 3rd month from January through December - 0 0 0 * 1/3 * *\n
+    At 00:00 in every 4th month from January through December - 0 0 0 * 1/4 * *\n
+    At 10:13 on day-of-month 23 in June - 0 13 10 23 6 * *\n
+    At 13:44 on day-of-month 19 in September - 0 44 13 19 9 * *\n
+    At 09:45 on day-of-month 12 in December - 0 45 09 12 12 * *\n
+    At 03:25 on day-of-month 16 in December - 0 25 03 16 12 * *\n
+    At 00:00 on Monday - 0 0 0 * * 1 *\n
+    At 00:00 on Tuesday - 0 0 0 * * 2 *\n
+    At 00:00 on Friday - 0 0 0 * * 5 *\n
+    \nHere is desired user schedule that you need to convert:"
+        .to_string();
+
+    let chat_completion_request_message = ChatCompletionRequestSystemMessageArgs::default()
+        .content(text)
+        .build()?;
+
+    messages.push(ChatCompletionRequestMessage::System(
+        chat_completion_request_message,
+    ));
+
     let text = scheduled_prompt.desired_schedule.clone();
 
     let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
