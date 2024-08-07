@@ -33,9 +33,9 @@ pub struct UserPost {
     email: String,
     is_enabled: bool,
     #[validate(length(max = 256, min = 1))]
-    job_title: String,
+    job_title: Option<String>,
     #[validate(length(max = 256, min = 1))]
-    name: String,
+    name: Option<String>,
     #[validate(length(min = 8))]
     password: String,
     #[validate(length(min = 8))]
@@ -125,12 +125,7 @@ pub async fn create(
 
             let profile = context
                 .octopus_database
-                .insert_profile(
-                    &mut transaction,
-                    user.id,
-                    Some(input.job_title),
-                    Some(input.name),
-                )
+                .insert_profile(&mut transaction, user.id, input.job_title, input.name)
                 .await?;
 
             context
