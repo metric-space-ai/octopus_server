@@ -30,7 +30,7 @@ pub const AZURE_OPENAI: &str = "azure_openai";
 pub const AZURE_OPENAI_API_VERSION: &str = "2024-05-01-preview";
 pub const OPENAI: &str = "openai";
 pub const PRIMARY_MODEL: &str = "gpt-4o-mini-2024-07-18";
-pub const SECONDARY_MODEL: &str = "gpt-4o-2024-05-13";
+pub const SECONDARY_MODEL: &str = "gpt-4o-2024-08-06";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Clone, Debug)]
