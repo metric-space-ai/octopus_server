@@ -397,6 +397,91 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn read_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[],
+            &[second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/companies/{company_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn read_404() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -623,6 +708,69 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let (address, custom_style, name) = get_company_update_params();
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/companies/{company_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "address": &address,
+                            "custom_style": &custom_style,
+                            "name": &name,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }

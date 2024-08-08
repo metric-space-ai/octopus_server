@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_ADMIN,
     error::AppError,
-    session::{ensure_secured, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Path, State},
@@ -19,6 +19,7 @@ use uuid::Uuid;
     path = "/api/v1/chat-audits",
     responses(
         (status = 200, description = "List of chat audits.", body = [ChatAudit]),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError)
     ),
     security(
@@ -29,7 +30,17 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user.roles.contains(&ROLE_ADMIN.to_string()) {
+        return Err(AppError::Forbidden);
+    }
 
     let chat_audits = context.octopus_database.get_chat_audits().await?;
 
@@ -43,6 +54,7 @@ pub async fn list(
     responses(
         (status = 200, description = "Chat audit read.", body = ChatAudit),
         (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 404, description = "Chat audit not found.", body = ResponseError),
     ),
     params(
@@ -57,7 +69,17 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(chat_audit_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_ADMIN).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user.roles.contains(&ROLE_ADMIN.to_string()) {
+        return Err(AppError::Forbidden);
+    }
 
     let chat_audit = context
         .octopus_database
@@ -180,6 +202,91 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        sleep(Duration::from_secs(2)).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/chat-audits")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn list_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -263,6 +370,99 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        sleep(Duration::from_secs(2)).await;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/chat-audits")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn read_200() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -339,6 +539,101 @@ mod tests {
         let body: ChatAudit = serde_json::from_slice(&body).unwrap();
 
         assert_eq!(body.chat_message_id, chat_message_id);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn read_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        sleep(Duration::from_secs(3)).await;
+
+        let chat_audit = app
+            .context
+            .octopus_database
+            .try_get_chat_audit_by_chat_message_id(chat_message_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let chat_audit_id = chat_audit.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-audits/{chat_audit_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         let mut transaction = app
             .context
@@ -456,6 +751,109 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn read_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        app.context
+            .octopus_database
+            .update_user_roles(
+                user_id,
+                &[
+                    ROLE_ADMIN.to_string(),
+                    ROLE_COMPANY_ADMIN_USER.to_string(),
+                    ROLE_PRIVATE_USER.to_string(),
+                    ROLE_PUBLIC_USER.to_string(),
+                ],
+            )
+            .await
+            .unwrap();
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        sleep(Duration::from_secs(3)).await;
+
+        let chat_audit = app
+            .context
+            .octopus_database
+            .try_get_chat_audit_by_chat_message_id(chat_message_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let chat_audit_id = chat_audit.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/chat-audits/{chat_audit_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }

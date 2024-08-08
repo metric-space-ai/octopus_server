@@ -3,7 +3,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{ensure_secured, require_authenticated, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
 };
 use axum::{
     extract::{Multipart, Path, State},
@@ -21,6 +21,7 @@ use uuid::Uuid;
     responses(
         (status = 200, description = "Simple app code.", body = String),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Simple app not found.", body = ResponseError),
     ),
     params(
@@ -35,7 +36,13 @@ pub async fn code(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
 
     let simple_app = context
         .octopus_database
@@ -57,6 +64,7 @@ pub async fn code(
     responses(
         (status = 201, description = "Simple app created.", body = SimpleApp),
         (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -68,7 +76,20 @@ pub async fn create(
     extracted_session: ExtractedSession,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let mut bypass_code_check = false;
     let mut data = None;
@@ -147,6 +168,7 @@ pub async fn create(
     path = "/api/v1/simple-apps/:id",
     responses(
         (status = 204, description = "Simple app deleted."),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Simple app not found.", body = ResponseError),
     ),
@@ -162,7 +184,20 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
@@ -187,6 +222,7 @@ pub async fn delete(
     responses(
         (status = 200, description = "List of Simple apps.", body = [SimpleApp]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -196,7 +232,13 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
 
     let simple_apps = context.octopus_database.get_simple_apps().await?;
 
@@ -210,6 +252,7 @@ pub async fn list(
     responses(
         (status = 200, description = "Simple app read.", body = SimpleApp),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Simple app not found.", body = ResponseError),
     ),
     params(
@@ -224,7 +267,13 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
 
     let simple_app = context
         .octopus_database
@@ -246,6 +295,7 @@ pub async fn read(
     responses(
         (status = 200, description = "Simple app updated.", body = SimpleApp),
         (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Simple app not found.", body = ResponseError),
     ),
@@ -262,7 +312,20 @@ pub async fn update(
     Path(id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     context
         .octopus_database
@@ -489,6 +552,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/simple-apps")
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn create_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -559,6 +672,68 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn create_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/simple-apps")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -677,6 +852,66 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn code_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let simple_app = simple_apps_create(router.clone(), session_id).await;
+        let simple_app_id = simple_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/simple-apps/{simple_app_id}/code"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn code_404() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -778,6 +1013,56 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn delete_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let simple_app = simple_apps_create(router.clone(), session_id).await;
+        let simple_app_id = simple_app.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn delete_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -846,6 +1131,66 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn delete_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let simple_app = simple_apps_create(router.clone(), session_id).await;
+        let simple_app_id = simple_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -1015,6 +1360,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let simple_app = simple_apps_create(router.clone(), session_id).await;
+        let simple_app_id = simple_app.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/simple-apps".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: Vec<SimpleApp> = serde_json::from_slice(&body).unwrap();
+
+        assert!(!body.is_empty());
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn read_200() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -1124,6 +1531,66 @@ mod tests {
             &[user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn read_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let simple_app = simple_apps_create(router.clone(), session_id).await;
+        let simple_app_id = simple_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/simple-apps/{simple_app_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        simple_apps_cleanup(app.context.clone(), &mut transaction, simple_app_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }

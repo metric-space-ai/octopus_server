@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::AppError,
-    session::{ensure_secured, require_authenticated, ExtractedSession},
+    session::{require_authenticated, ExtractedSession},
     NEXTCLOUD_FILES_DIR,
 };
 use axum::{
@@ -25,6 +25,7 @@ use uuid::Uuid;
     responses(
         (status = 201, description = "Nextcloud file created.", body = NextcloudFile),
         (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -36,7 +37,20 @@ pub async fn create(
     extracted_session: ExtractedSession,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let mut content_type = None;
     let mut data = None;
@@ -94,6 +108,7 @@ pub async fn create(
     path = "/api/v1/nextcloud-files/:id",
     responses(
         (status = 204, description = "Nextcloud file deleted."),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Nextcloud file not found.", body = ResponseError),
     ),
@@ -109,7 +124,20 @@ pub async fn delete(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let nextcloud_file = context
         .octopus_database
@@ -152,6 +180,7 @@ pub async fn delete(
     responses(
         (status = 200, description = "List of Nextcloud files.", body = [NextcloudFile]),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
         ("api_key" = [])
@@ -161,7 +190,13 @@ pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
 
     let nextcloud_files = context.octopus_database.get_nextcloud_files().await?;
 
@@ -175,6 +210,7 @@ pub async fn list(
     responses(
         (status = 200, description = "Nextcloud file read.", body = NextcloudFile),
         (status = 401, description = "Unauthorized request.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Nextcloud file not found.", body = ResponseError),
     ),
     params(
@@ -189,7 +225,13 @@ pub async fn read(
     extracted_session: ExtractedSession,
     Path(id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
-    require_authenticated(extracted_session).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
 
     let nextcloud_file = context
         .octopus_database
@@ -207,6 +249,7 @@ pub async fn read(
     responses(
         (status = 200, description = "Nextcloud file updated.", body = NextcloudFile),
         (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Nextcloud file not found.", body = ResponseError),
     ),
@@ -223,7 +266,20 @@ pub async fn update(
     Path(id): Path<Uuid>,
     mut multipart: Multipart,
 ) -> Result<impl IntoResponse, AppError> {
-    ensure_secured(context.clone(), extracted_session, ROLE_COMPANY_ADMIN_USER).await?;
+    let session = require_authenticated(extracted_session).await?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if !session_user
+        .roles
+        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    {
+        return Err(AppError::Forbidden);
+    }
 
     let nextcloud_file = context
         .octopus_database
@@ -440,6 +496,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/nextcloud-files")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn create_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -566,6 +684,58 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn delete_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/nextcloud-files/{nextcloud_file_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn delete_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -634,6 +804,66 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn delete_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/nextcloud-files/{nextcloud_file_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -803,6 +1033,66 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn list_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/nextcloud-files".to_string())
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn read_200() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -912,6 +1202,66 @@ mod tests {
             &[user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn read_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/nextcloud-files/{nextcloud_file_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -1089,6 +1439,65 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn update_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/nextcloud-files/{nextcloud_file_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn update_403() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -1164,6 +1573,73 @@ mod tests {
             &[user_id, second_user_id],
         )
         .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let nextcloud_file = nextcloud_files_create(router.clone(), session_id).await;
+        let nextcloud_file_id = nextcloud_file.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/nextcloud-files/{nextcloud_file_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        nextcloud_files_cleanup(app.context.clone(), &mut transaction, nextcloud_file_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
