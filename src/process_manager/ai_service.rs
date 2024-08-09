@@ -2,8 +2,8 @@ use crate::{
     ai,
     context::Context,
     entity::{
-        AiService, AiServiceHealthCheckStatus, AiServiceRequiredPythonVersion,
-        AiServiceSetupStatus, AiServiceStatus, ROLE_COMPANY_ADMIN_USER,
+        AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus,
+        ROLE_COMPANY_ADMIN_USER,
     },
     error::AppError,
     get_pwd, parser,
@@ -51,11 +51,7 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
     ))?;
     file.write_fmt(format_args!("then\n"))?;
 
-    let python = match ai_service.required_python_version {
-        AiServiceRequiredPythonVersion::Cp310 => "3.10",
-        AiServiceRequiredPythonVersion::Cp311 => "3.11",
-        AiServiceRequiredPythonVersion::Cp312 => "3.12",
-    };
+    let python = &ai_service.required_python_version;
 
     file.write_fmt(format_args!(
         "conda create --yes --prefix {full_service_dir_path} python={python}\n"

@@ -2,7 +2,7 @@ use crate::error::AppError;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{FromRow, Type};
-use std::str::FromStr;
+use std::{fmt, str::FromStr};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -97,6 +97,17 @@ pub enum AiServiceRequiredPythonVersion {
     Cp310,
     Cp311,
     Cp312,
+}
+
+impl fmt::Display for AiServiceRequiredPythonVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let printable = match *self {
+            AiServiceRequiredPythonVersion::Cp310 => "3.10".to_string(),
+            AiServiceRequiredPythonVersion::Cp311 => "3.11".to_string(),
+            AiServiceRequiredPythonVersion::Cp312 => "3.12".to_string(),
+        };
+        write!(f, "{}", printable)
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
