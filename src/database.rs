@@ -6,9 +6,9 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File, FileAccessType,
-        FileType, InspectionDisabling, NextcloudFile, OllamaModel, OllamaModelStatus, Parameter,
-        PasswordResetToken, Port, Profile, ScheduledPrompt, Session, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        FileType, InspectionDisabling, KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus,
+        Parameter, PasswordResetToken, Port, Profile, ScheduledPrompt, Session, SimpleApp, User,
+        UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
         WorkspacesType, KV,
     },
     error::AppError,
@@ -607,13 +607,33 @@ impl OctopusDatabase {
         Ok(files)
     }
 
+    pub async fn get_kvs_by_company_id_and_access_type(
+        &self,
+        company_id: Uuid,
+        access_type: KVAccessType,
+    ) -> Result<Vec<KV>> {
+        let kvs = sqlx::query_as::<_, KV>(
+            "SELECT id, company_id, user_id, access_type, kv_key, kv_value, created_at, expires_at, updated_at
+            FROM kvs
+            WHERE company_id = $1
+            AND access_type = $2
+            ORDER BY kv_key ASC",
+        )
+        .bind(company_id)
+        .bind(access_type)
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(kvs)
+    }
+
     pub async fn get_kvs_by_user_id(&self, user_id: Uuid) -> Result<Vec<KV>> {
         let kvs = sqlx::query_as!(
             KV,
-            "SELECT id, user_id, kv_key, kv_value, created_at, expires_at, updated_at
+            r#"SELECT id, company_id, user_id, access_type AS "access_type: _ ", kv_key, kv_value, created_at, expires_at, updated_at
             FROM kvs
             WHERE user_id = $1
-            ORDER BY kv_key ASC",
+            ORDER BY kv_key ASC"#,
             user_id
         )
         .fetch_all(&*self.pool)
@@ -1334,25 +1354,29 @@ impl OctopusDatabase {
         Ok(inspection_disabling)
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn insert_kv(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
+        company_id: Uuid,
         user_id: Uuid,
+        access_type: KVAccessType,
         kv_key: &str,
         kv_value: &str,
         expires_at: Option<DateTime<Utc>>,
     ) -> Result<KV> {
-        let kv = sqlx::query_as!(
-            KV,
+        let kv = sqlx::query_as::<_, KV>(
             "INSERT INTO kvs
-            (user_id, kv_key, kv_value, expires_at)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id, user_id, kv_key, kv_value, created_at, expires_at, updated_at",
-            user_id,
-            kv_key,
-            kv_value,
-            expires_at,
+            (company_id, user_id, access_type, kv_key, kv_value, expires_at)
+            VALUES ($1, $2, $3, $4, $5, $6)
+            RETURNING id, company_id, user_id, access_type, kv_key, kv_value, created_at, expires_at, updated_at",
         )
+        .bind(company_id)
+        .bind(user_id)
+        .bind(access_type)
+        .bind(kv_key)
+        .bind(kv_value)
+        .bind(expires_at)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -2789,9 +2813,9 @@ impl OctopusDatabase {
     pub async fn try_get_kv_by_kv_key(&self, kv_key: &str) -> Result<Option<KV>> {
         let kv = sqlx::query_as!(
             KV,
-            "SELECT id, user_id, kv_key, kv_value, created_at, expires_at, updated_at
+            r#"SELECT id, company_id, user_id, access_type AS "access_type: _ ", kv_key, kv_value, created_at, expires_at, updated_at
             FROM kvs
-            WHERE kv_key = $1",
+            WHERE kv_key = $1"#,
             kv_key
         )
         .fetch_optional(&*self.pool)
@@ -4421,21 +4445,22 @@ impl OctopusDatabase {
         &self,
         transaction: &mut Transaction<'_, Postgres>,
         id: Uuid,
+        access_type: KVAccessType,
         kv_key: &str,
         kv_value: &str,
         expires_at: Option<DateTime<Utc>>,
     ) -> Result<KV> {
-        let kv = sqlx::query_as!(
-            KV,
+        let kv = sqlx::query_as::<_, KV>(
             "UPDATE kvs
-            SET kv_key = $2, kv_value = $3, expires_at = $4, updated_at = current_timestamp(0)
+            SET access_type = $2, kv_key = $3, kv_value = $4, expires_at = $5, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, user_id, kv_key, kv_value, created_at, expires_at, updated_at",
-            id,
-            kv_key,
-            kv_value,
-            expires_at,
+            RETURNING id, company_id, user_id, access_type, kv_key, kv_value, created_at, expires_at, updated_at",
         )
+        .bind(id)
+        .bind(access_type)
+        .bind(kv_key)
+        .bind(kv_value)
+        .bind(expires_at)
         .fetch_one(&mut **transaction)
         .await?;
 

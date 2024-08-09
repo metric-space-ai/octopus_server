@@ -1,5 +1,6 @@
 use crate::{
     context::Context,
+    entity::{KVAccessType, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
     session::{require_authenticated, ExtractedSession},
 };
@@ -24,6 +25,7 @@ pub struct KVPost {
     #[validate(regex(path = *VALID_KEY))]
     pub kv_key: String,
     pub kv_value: String,
+    pub access_type: Option<KVAccessType>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -32,6 +34,7 @@ pub struct KVPut {
     #[validate(regex(path = *VALID_KEY))]
     pub kv_key: String,
     pub kv_value: String,
+    pub access_type: Option<KVAccessType>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -65,6 +68,8 @@ pub async fn create(
 
     input.validate()?;
 
+    let access_type = input.access_type.unwrap_or(KVAccessType::Owner);
+
     let kv_exists = context
         .octopus_database
         .try_get_kv_by_kv_key(&input.kv_key)
@@ -78,7 +83,9 @@ pub async fn create(
                 .octopus_database
                 .insert_kv(
                     &mut transaction,
+                    session_user.company_id,
                     session_user.id,
+                    access_type,
                     &input.kv_key,
                     &input.kv_value,
                     input.expires_at,
@@ -177,12 +184,20 @@ pub async fn list(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let kvs = context
+    let mut result = vec![];
+    let mut kvs = context
         .octopus_database
         .get_kvs_by_user_id(session_user.id)
         .await?;
+    result.append(&mut kvs);
 
-    Ok((StatusCode::OK, Json(kvs)).into_response())
+    let mut kvs = context
+        .octopus_database
+        .get_kvs_by_company_id_and_access_type(session_user.company_id, KVAccessType::Company)
+        .await?;
+    result.append(&mut kvs);
+
+    Ok((StatusCode::OK, Json(result)).into_response())
 }
 
 #[axum_macros::debug_handler]
@@ -221,8 +236,22 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != kv.user_id {
-        return Err(AppError::Forbidden);
+    match kv.access_type {
+        KVAccessType::Company => {
+            if session_user.company_id != kv.company_id {
+                return Err(AppError::Forbidden);
+            }
+        }
+        KVAccessType::Owner => {
+            if session_user.id != kv.user_id
+                || (session_user
+                    .roles
+                    .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+                    && session_user.company_id != kv.company_id)
+            {
+                return Err(AppError::Forbidden);
+            }
+        }
     }
 
     Ok((StatusCode::OK, Json(kv)).into_response())
@@ -262,6 +291,8 @@ pub async fn update(
 
     input.validate()?;
 
+    let access_type = input.access_type.unwrap_or(KVAccessType::Owner);
+
     let kv = context
         .octopus_database
         .try_get_kv_by_kv_key(&kv_key)
@@ -290,6 +321,7 @@ pub async fn update(
         .update_kv(
             &mut transaction,
             kv.id,
+            access_type,
             &input.kv_key,
             &input.kv_value,
             input.expires_at,
@@ -345,7 +377,13 @@ mod tests {
             .await;
     }
 
-    pub async fn kv_create(router: Router, session_id: Uuid, kv_key: &str, kv_value: &str) -> KV {
+    pub async fn kv_create(
+        router: Router,
+        session_id: Uuid,
+        access_type: &str,
+        kv_key: &str,
+        kv_value: &str,
+    ) -> KV {
         let response = router
             .oneshot(
                 Request::builder()
@@ -357,6 +395,7 @@ mod tests {
                         serde_json::json!({
                             "kv_key": &kv_key,
                             "kv_value": &kv_value,
+                            "access_type": &access_type,
                         })
                         .to_string(),
                     ))
@@ -396,7 +435,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router, session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router, session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let mut transaction = app
@@ -547,7 +586,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -607,7 +646,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
 
         let response = router
             .oneshot(
@@ -658,7 +697,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -711,7 +750,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -785,7 +824,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let mut transaction = app
@@ -901,7 +940,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -964,7 +1003,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -1017,7 +1056,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let mut transaction = app
@@ -1083,7 +1122,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -1132,6 +1171,90 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn read_200_public() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (kv_key, kv_value) = get_kv_create_params();
+        let kv = kv_create(router.clone(), session_id, "Company", &kv_key, &kv_value).await;
+        let kv_id = kv.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/kvs/{kv_key}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: KV = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.kv_key, kv_key);
+        assert_eq!(body.kv_value, kv_value);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        kv_cleanup(app.context.clone(), &mut transaction, kv_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn read_401() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -1147,7 +1270,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let response = router
@@ -1200,7 +1323,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -1274,7 +1397,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let mut transaction = app
@@ -1385,7 +1508,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (second_kv_key, second_kv_value) = get_kv_create_params();
@@ -1456,7 +1579,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (second_kv_key, second_kv_value) = get_kv_create_params();
@@ -1516,7 +1639,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (email, is_enabled, job_title, name, password, roles) =
@@ -1597,7 +1720,7 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let mut transaction = app
@@ -1722,11 +1845,18 @@ mod tests {
         let session_id = session_response.id;
 
         let (kv_key, kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &kv_key, &kv_value).await;
+        let kv = kv_create(router.clone(), session_id, "Owner", &kv_key, &kv_value).await;
         let kv_id = kv.id;
 
         let (second_kv_key, second_kv_value) = get_kv_create_params();
-        let kv = kv_create(router.clone(), session_id, &second_kv_key, &second_kv_value).await;
+        let kv = kv_create(
+            router.clone(),
+            session_id,
+            "Owner",
+            &second_kv_key,
+            &second_kv_value,
+        )
+        .await;
         let second_kv_id = kv.id;
 
         let response = router

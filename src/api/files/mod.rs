@@ -313,15 +313,22 @@ pub async fn read(
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != file.user_id
-        || (file.access_type == FileAccessType::Company
-            && session_user.company_id != file.company_id)
-        || (session_user
-            .roles
-            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
-            && session_user.company_id != file.company_id)
-    {
-        return Err(AppError::Forbidden);
+    match file.access_type {
+        FileAccessType::Company => {
+            if session_user.company_id != file.company_id {
+                return Err(AppError::Forbidden);
+            }
+        }
+        FileAccessType::Owner => {
+            if session_user.id != file.user_id
+                || (session_user
+                    .roles
+                    .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+                    && session_user.company_id != file.company_id)
+            {
+                return Err(AppError::Forbidden);
+            }
+        }
     }
 
     let octopus_api_url = context
@@ -1389,7 +1396,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(response.status(), StatusCode::OK);
 
         let mut transaction = app
             .context
