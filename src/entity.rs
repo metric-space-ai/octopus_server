@@ -520,10 +520,31 @@ pub struct InspectionDisabling {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "kvs_access_types", rename_all = "snake_case")]
+pub enum KVAccessType {
+    Company,
+    Owner,
+}
+
+impl FromStr for KVAccessType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Company" => Ok(KVAccessType::Company),
+            "Owner" => Ok(KVAccessType::Owner),
+            _ => Ok(KVAccessType::Owner),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct KV {
     pub id: Uuid,
+    pub company_id: Uuid,
     pub user_id: Uuid,
+    pub access_type: KVAccessType,
     pub kv_key: String,
     pub kv_value: String,
     pub created_at: DateTime<Utc>,

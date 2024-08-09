@@ -1,0 +1,80 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, company_id, user_id, access_type AS \"access_type: _ \", kv_key, kv_value, created_at, expires_at, updated_at\n            FROM kvs\n            WHERE user_id = $1\n            ORDER BY kv_key ASC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "company_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "access_type: _ ",
+        "type_info": {
+          "Custom": {
+            "name": "kvs_access_types",
+            "kind": {
+              "Enum": [
+                "company",
+                "owner"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "kv_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "kv_value",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "expires_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "0d2630dc8321a90ba62a63a362b8a1e2d9132c9e58b62cb316ded78d853d2815"
+}

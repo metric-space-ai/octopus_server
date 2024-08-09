@@ -1,5 +1,6 @@
 use crate::{
     context::Context,
+    entity::KVAccessType,
     error::AppError,
     session::{require_authenticated, ExtractedSession},
 };
@@ -24,6 +25,7 @@ pub struct KVPost {
     #[validate(regex(path = *VALID_KEY))]
     pub kv_key: String,
     pub kv_value: String,
+    pub access_type: Option<KVAccessType>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -32,6 +34,7 @@ pub struct KVPut {
     #[validate(regex(path = *VALID_KEY))]
     pub kv_key: String,
     pub kv_value: String,
+    pub access_type: Option<KVAccessType>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -65,6 +68,8 @@ pub async fn create(
 
     input.validate()?;
 
+    let access_type = input.access_type.unwrap_or(KVAccessType::Owner);
+
     let kv_exists = context
         .octopus_database
         .try_get_kv_by_kv_key(&input.kv_key)
@@ -79,6 +84,8 @@ pub async fn create(
                 .insert_kv(
                     &mut transaction,
                     session_user.id,
+                    session_user.company_id,
+                    access_type,
                     &input.kv_key,
                     &input.kv_value,
                     input.expires_at,
@@ -262,6 +269,8 @@ pub async fn update(
 
     input.validate()?;
 
+    let access_type = input.access_type.unwrap_or(KVAccessType::Owner);
+
     let kv = context
         .octopus_database
         .try_get_kv_by_kv_key(&kv_key)
@@ -290,6 +299,7 @@ pub async fn update(
         .update_kv(
             &mut transaction,
             kv.id,
+            access_type,
             &input.kv_key,
             &input.kv_value,
             input.expires_at,
