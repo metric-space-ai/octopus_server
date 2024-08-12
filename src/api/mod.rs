@@ -47,8 +47,8 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, ExamplePrompt, ExamplePromptCategory, FileWithUrl, InspectionDisabling,
-        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Profile,
-        ScheduledPrompt, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
+        KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken,
+        Profile, ScheduledPrompt, SimpleApp, User, UserExtended, WaspApp, WaspAppInstanceType,
         WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::ResponseError,
@@ -79,7 +79,7 @@ use utoipa::{
 use utoipa_swagger_ui::SwaggerUi;
 
 mod ai_functions;
-mod ai_service_generators;
+pub mod ai_service_generators;
 mod ai_services;
 mod auth;
 mod cached_files;
@@ -181,6 +181,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 InspectionDisabling,
                 InspectionDisablingPost,
                 KV,
+                KVAccessType,
                 KVPost,
                 KVPut,
                 LoginPost,

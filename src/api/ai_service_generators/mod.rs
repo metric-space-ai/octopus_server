@@ -4,7 +4,6 @@ use crate::{
     context::Context,
     entity::{AiServiceGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
     error::AppError,
-    parser,
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{
@@ -167,6 +166,8 @@ pub async fn delete(
         (status = 400, description = "Bad request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "AI Service generator not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
+
     ),
     params(
         ("id" = String, Path, description = "AI Service generator id")
@@ -214,65 +215,12 @@ pub async fn deploy(
     }
 
     if let Some(ref original_function_body) = ai_service_generator.original_function_body {
-        let mut transaction = context.octopus_database.transaction_begin().await?;
-
-        let ai_service = match ai_service_generator.ai_service_id {
-            None => {
-                let port = context
-                    .octopus_database
-                    .get_ai_services_max_port(&mut transaction)
-                    .await?;
-
-                let port = port.max.unwrap_or(9999) + 1;
-
-                context
-                    .octopus_database
-                    .insert_ai_service(
-                        &mut transaction,
-                        &format!("{}.py", ai_service_generator.id),
-                        original_function_body,
-                        port,
-                    )
-                    .await?
-            }
-            Some(ai_service_id) => {
-                context
-                    .octopus_database
-                    .update_ai_service(
-                        &mut transaction,
-                        ai_service_id,
-                        true,
-                        &format!("{}.py", ai_service_generator.id),
-                        original_function_body,
-                    )
-                    .await?
-            }
-        };
-
-        context
-            .octopus_database
-            .update_ai_service_ai_service_generator_id(
-                &mut transaction,
-                ai_service.id,
-                ai_service_generator.id,
-            )
-            .await?;
-
-        context
-            .octopus_database
-            .update_ai_service_generator_ai_service_id(
-                &mut transaction,
-                ai_service_generator.id,
-                ai_service.id,
-            )
-            .await?;
-
-        context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await?;
-
-        parser::ai_service_malicious_code_check(ai_service, true, context).await?;
+        generator::deploy(
+            ai_service_generator.clone(),
+            context,
+            original_function_body,
+        )
+        .await?;
     }
 
     Ok((StatusCode::CREATED, Json(ai_service_generator)).into_response())

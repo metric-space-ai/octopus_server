@@ -151,6 +151,24 @@ impl OctopusDatabase {
         Ok(ai_service_generators)
     }
 
+    pub async fn get_ai_service_generators_by_user_id(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Vec<AiServiceGenerator>> {
+        let ai_service_generators = sqlx::query_as!(
+            AiServiceGenerator,
+            r#"SELECT id, user_id, ai_service_id, description, internet_research_results, log, name, original_function_body, sample_code, status AS "status: _", version, created_at, deleted_at, updated_at
+            FROM ai_service_generators
+            WHERE user_id = $1
+            AND deleted_at IS NULL"#,
+            user_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(ai_service_generators)
+    }
+
     pub async fn get_ai_services(&self) -> Result<Vec<AiService>> {
         let ai_services = sqlx::query_as!(
             AiService,

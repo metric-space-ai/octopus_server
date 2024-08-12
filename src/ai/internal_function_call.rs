@@ -57,17 +57,101 @@ pub async fn handle_internal_function_call(
 
 pub async fn internal_function_call(
     context: Arc<Context>,
-    _function_args: &Value,
+    function_args: &Value,
     function_name: &str,
     user_id: Uuid,
 ) -> Result<Option<AiFunctionResponse>> {
-    let response = if function_name == "os_internal_list_user_files" {
-        let ai_function_response =
-            internal_functions::os_internal_list_user_files(context, user_id).await?;
+    let response = match function_name {
+        "os_internal_create_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_create_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
 
-        Some(ai_function_response)
-    } else {
-        None
+            Some(ai_function_response)
+        }
+        "os_internal_delete_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_delete_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_deploy_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_deploy_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_generate_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_generate_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_list_user_files" => {
+            let ai_function_response =
+                internal_functions::files::os_internal_list_user_files(context, user_id).await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_list_user_generated_ai_services" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_list_user_generated_ai_services(context, user_id).await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_show_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_show_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_show_ai_service_code" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_show_ai_service_code(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        "os_internal_update_ai_service" => {
+            let ai_function_response =
+                internal_functions::ai_service_generators::os_internal_update_ai_service(
+                    context,
+                    function_args,
+                    user_id,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
+        _ => None,
     };
 
     Ok(response)

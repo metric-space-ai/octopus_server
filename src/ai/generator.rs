@@ -8,13 +8,81 @@ use crate::{
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
         AiServiceSetupStatus, AiServiceStatus,
     },
-    get_pwd, Result, SERVICES_SAMPLES_DIR,
+    get_pwd, parser, Result, SERVICES_SAMPLES_DIR,
 };
 use serde::Serialize;
 use std::{
     fs::{read_dir, read_to_string},
     sync::Arc,
 };
+
+pub async fn deploy(
+    ai_service_generator: AiServiceGenerator,
+    context: Arc<Context>,
+    original_function_body: &str,
+) -> Result<AiServiceGenerator> {
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let ai_service = match ai_service_generator.ai_service_id {
+        None => {
+            let port = context
+                .octopus_database
+                .get_ai_services_max_port(&mut transaction)
+                .await?;
+
+            let port = port.max.unwrap_or(9999) + 1;
+
+            context
+                .octopus_database
+                .insert_ai_service(
+                    &mut transaction,
+                    &format!("{}.py", ai_service_generator.id),
+                    original_function_body,
+                    port,
+                )
+                .await?
+        }
+        Some(ai_service_id) => {
+            context
+                .octopus_database
+                .update_ai_service(
+                    &mut transaction,
+                    ai_service_id,
+                    true,
+                    &format!("{}.py", ai_service_generator.id),
+                    original_function_body,
+                )
+                .await?
+        }
+    };
+
+    context
+        .octopus_database
+        .update_ai_service_ai_service_generator_id(
+            &mut transaction,
+            ai_service.id,
+            ai_service_generator.id,
+        )
+        .await?;
+
+    context
+        .octopus_database
+        .update_ai_service_generator_ai_service_id(
+            &mut transaction,
+            ai_service_generator.id,
+            ai_service.id,
+        )
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+
+    parser::ai_service_malicious_code_check(ai_service, true, context).await?;
+
+    Ok(ai_service_generator)
+}
 
 #[derive(Debug, Serialize)]
 pub struct InternetResearchAgentPost {
