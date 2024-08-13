@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.9.35"
+version = "0.9.36"
 edition = "2021"
 rust-version = "1.80"
 
@@ -73,7 +73,7 @@ reqwest = { version = "0.12.5", default-features = false, features = [
     "json"
 ] }
 rev_buf_reader = "0.3.0"
-serde = { version = "1.0.204", default-features = false, features = [
+serde = { version = "1.0.207", default-features = false, features = [
     "derive"
 ] }
 serde_json = "1.0.122"
@@ -95,9 +95,9 @@ tokio = { version = "1.39.2", default-features = false, features = [
     "rt-multi-thread",
     "time"
 ] }
-tokio-cron-scheduler = { version = "0.10.2", default-features = false }
+tokio-cron-scheduler = { version = "0.11.0", default-features = false }
 tokio-tungstenite = { path = "crates/tokio-tungstenite" }
-tower = { version = "0.4.13", default-features = false, features = [
+tower = { version = "0.5.0", default-features = false, features = [
     "timeout",
     "util"
 ] }

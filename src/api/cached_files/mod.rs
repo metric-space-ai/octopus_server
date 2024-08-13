@@ -76,12 +76,20 @@ pub async fn create(
     if let (Some(cache_key), Some(content_type), Some(data), Some(original_file_name)) =
         (cache_key, content_type, data, original_file_name)
     {
+        if !original_file_name.contains('.') {
+            return Err(AppError::BadRequest);
+        }
+
         let extension = (*original_file_name
             .split('.')
             .collect::<Vec<&str>>()
             .last()
             .ok_or(AppError::File)?)
         .to_string();
+
+        if extension.contains(' ') {
+            return Err(AppError::BadRequest);
+        }
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");
@@ -326,12 +334,20 @@ pub async fn update(
     {
         let old_path = format!("{PUBLIC_DIR}/{}", cached_file.file_name);
 
+        if !original_file_name.contains('.') {
+            return Err(AppError::BadRequest);
+        }
+
         let extension = (*original_file_name
             .split('.')
             .collect::<Vec<&str>>()
             .last()
             .ok_or(AppError::File)?)
         .to_string();
+
+        if extension.contains(' ') {
+            return Err(AppError::BadRequest);
+        }
 
         let file_name = format!("{}.{}", Uuid::new_v4(), extension);
         let path = format!("{PUBLIC_DIR}/{file_name}");
@@ -514,6 +530,130 @@ mod tests {
             )
             .header("X-Auth-Token".to_string(), session_id.to_string())
             .body(Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn create_400_file1() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let body =
+            multipart::tests::file_data("text/html", "testhtml", "data/test/test.html", false)
+                .unwrap();
+
+        let cache_key = format!("{}{}", Word().fake::<String>(), Word().fake::<String>());
+        let mut fields = HashMap::new();
+        fields.insert("cache_key", cache_key.as_str());
+        fields.insert("ttl", "3600");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/cached-files")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn create_400_file2() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.ht ml", "data/test/test.html", false)
+                .unwrap();
+
+        let cache_key = format!("{}{}", Word().fake::<String>(), Word().fake::<String>());
+        let mut fields = HashMap::new();
+        fields.insert("cache_key", cache_key.as_str());
+        fields.insert("ttl", "3600");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/cached-files")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
             .unwrap();
 
         let response = router.oneshot(request).await.unwrap();
@@ -785,6 +925,63 @@ mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn delete_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let cached_file = cached_files_create(router.clone(), session_id).await;
+        let cached_file_cache_key = cached_file.cache_key;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/cached-files/{cached_file_cache_key}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        cached_files_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &cached_file_cache_key,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1523,6 +1720,215 @@ mod tests {
         let response = router.oneshot(request).await.unwrap();
 
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        cached_files_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &cached_file_cache_key,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_400_file1() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let cached_file = cached_files_create(router.clone(), session_id).await;
+        let cached_file_cache_key = cached_file.cache_key;
+
+        let body =
+            multipart::tests::file_data("text/html", "testhtml", "data/test/test.html", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("ttl", "3600");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/cached-files/{cached_file_cache_key}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        cached_files_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &cached_file_cache_key,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_400_file2() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let cached_file = cached_files_create(router.clone(), session_id).await;
+        let cached_file_cache_key = cached_file.cache_key;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.ht ml", "data/test/test.html", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("ttl", "3600");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/cached-files/{cached_file_cache_key}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        cached_files_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &cached_file_cache_key,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let cached_file = cached_files_create(router.clone(), session_id).await;
+        let cached_file_cache_key = cached_file.cache_key;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("ttl", "3600");
+
+        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/cached-files/{cached_file_cache_key}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 
         let mut transaction = app
             .context

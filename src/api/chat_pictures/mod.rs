@@ -32,6 +32,7 @@ pub struct Params {
     path = "/api/v1/chat-pictures/:chat_id",
     responses(
         (status = 201, description = "Chat picture created.", body = ChatPicture),
+        (status = 400, description = "Bad request.", body = ResponseError),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat not found.", body = ResponseError),
@@ -76,6 +77,10 @@ pub async fn create(
     match chat_picture_exists {
         None => {
             while let Some(field) = multipart.next_field().await? {
+                if !field.file_name().ok_or(AppError::File)?.contains('.') {
+                    return Err(AppError::BadRequest);
+                }
+
                 let extension = (*field
                     .file_name()
                     .ok_or(AppError::File)?
@@ -84,6 +89,11 @@ pub async fn create(
                     .last()
                     .ok_or(AppError::File)?)
                 .to_string();
+
+                if extension.contains(' ') {
+                    return Err(AppError::BadRequest);
+                }
+
                 let content_image = (*field
                     .content_type()
                     .ok_or(AppError::File)?
@@ -281,6 +291,7 @@ pub async fn read(
     path = "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
     responses(
         (status = 200, description = "Chat picture updated.", body = ChatPicture),
+        (status = 400, description = "Bad request.", body = ResponseError),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Chat picture not found.", body = ResponseError),
@@ -342,6 +353,10 @@ pub async fn update(
     }
 
     while let Some(field) = multipart.next_field().await? {
+        if !field.file_name().ok_or(AppError::File)?.contains('.') {
+            return Err(AppError::BadRequest);
+        }
+
         let extension = (*field
             .file_name()
             .ok_or(AppError::File)?
@@ -350,6 +365,11 @@ pub async fn update(
             .last()
             .ok_or(AppError::File)?)
         .to_string();
+
+        if extension.contains(' ') {
+            return Err(AppError::BadRequest);
+        }
+
         let content_image = (*field
             .content_type()
             .ok_or(AppError::File)?
@@ -481,6 +501,151 @@ mod tests {
         app.context
             .octopus_database
             .try_delete_chat_picture_by_id(&mut transaction, chat_picture_id)
+            .await
+            .unwrap();
+
+        api::chats::tests::chat_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn create_400_file1() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let body = multipart::tests::file_data("image/png", "testpng", "data/test/test.png", true)
+            .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri(format!("/api/v1/chat-pictures/{chat_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::chats::tests::chat_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn create_400_file2() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let body =
+            multipart::tests::file_data("image/png", "test.p ng", "data/test/test.png", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri(format!("/api/v1/chat-pictures/{chat_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
             .await
             .unwrap();
 
@@ -1732,6 +1897,169 @@ mod tests {
         assert_eq!(body.chat_id, chat_id);
 
         let chat_picture_id = body.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_picture_by_id(&mut transaction, chat_picture_id)
+            .await
+            .unwrap();
+
+        api::chats::tests::chat_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_400_file1() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let chat_picture = chat_picture_create(router.clone(), session_id, chat_id).await;
+        let chat_picture_id = chat_picture.id;
+
+        let body = multipart::tests::file_data("image/png", "testpng", "data/test/test.png", true)
+            .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/chat-pictures/{chat_id}/{chat_picture_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .try_delete_chat_picture_by_id(&mut transaction, chat_picture_id)
+            .await
+            .unwrap();
+
+        api::chats::tests::chat_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_400_file2() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, workspace_id) = api::chats::tests::chat_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let chat_picture = chat_picture_create(router.clone(), session_id, chat_id).await;
+        let chat_picture_id = chat_picture.id;
+
+        let body =
+            multipart::tests::file_data("image/png", "test.p ng", "data/test/test.png", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/chat-pictures/{chat_id}/{chat_picture_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
         let mut transaction = app
             .context
