@@ -43,6 +43,7 @@ pub struct ExamplePromptPut {
     request_body = ExamplePromptPost,
     responses(
         (status = 201, description = "Example prompt created.", body = ExamplePrompt),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -100,6 +101,7 @@ pub async fn create(
     path = "/api/v1/example-prompts/:id",
     responses(
         (status = 204, description = "Example prompt deleted."),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt not found.", body = ResponseError),
     ),
@@ -152,6 +154,7 @@ pub async fn delete(
     path = "/api/v1/example-prompts",
     responses(
         (status = 200, description = "List of Example prompts.", body = [ExamplePrompt]),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
     ),
     security(
@@ -181,7 +184,9 @@ pub async fn list(
     path = "/api/v1/example-prompts/by-category/:example_prompt_category_id",
     responses(
         (status = 200, description = "List of Example prompts by example prompt category.", body = [ExamplePrompt]),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "Example prompt category not found.", body = ResponseError),
     ),
     params(
         ("example_prompt_category_id" = String, Path, description = "Example prompt category id")
@@ -223,6 +228,7 @@ pub async fn list_by_category(
     path = "/api/v1/example-prompts/:id",
     responses(
         (status = 200, description = "Example prompt read.", body = ExamplePrompt),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt not found.", body = ResponseError),
     ),
@@ -262,6 +268,7 @@ pub async fn read(
     request_body = ExamplePromptPut,
     responses(
         (status = 200, description = "Example prompt updated.", body = ExamplePrompt),
+        (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "Example prompt not found.", body = ResponseError),
     ),

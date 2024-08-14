@@ -666,6 +666,65 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn create_409() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let name = get_ollama_model_create_params();
+        let ollama_model = ollama_model_create(router.clone(), session_id, &name).await;
+        let ollama_model_id = ollama_model.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/api/v1/ollama-models")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        ollama_model_cleanup(app.context.clone(), &mut transaction, ollama_model_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn delete_204() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -1681,6 +1740,75 @@ mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_409() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let name = get_ollama_model_create_params();
+        let ollama_model = ollama_model_create(router.clone(), session_id, &name).await;
+        let ollama_model_id = ollama_model.id;
+
+        let second_name = get_ollama_model_create_params();
+        let ollama_model = ollama_model_create(router.clone(), session_id, &second_name).await;
+        let second_ollama_model_id = ollama_model.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/ollama-models/{second_ollama_model_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "name": &name,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        ollama_model_cleanup(app.context.clone(), &mut transaction, ollama_model_id).await;
+        ollama_model_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            second_ollama_model_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),

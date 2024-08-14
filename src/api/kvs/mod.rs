@@ -267,6 +267,7 @@ pub async fn read(
         (status = 401, description = "Unauthorized request.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "KV not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("kv_key" = String, Path, description = "KV id")
@@ -809,7 +810,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn delete_204_deleted_user() {
+    async fn delete_403_deleted_user() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
