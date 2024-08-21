@@ -477,16 +477,20 @@ pub async fn start_or_manage_running(context: Arc<Context>) -> Result<()> {
                 || ai_service.status == AiServiceStatus::Running
                 || ai_service.status == AiServiceStatus::Setup)
         {
-            let ai_service = context
-                .octopus_database
-                .update_ai_service_is_enabled_and_status(
-                    &mut transaction,
-                    ai_service.id,
-                    true,
-                    100,
-                    AiServiceStatus::Restarting,
-                )
-                .await?;
+            let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
+
+            if pid.is_none() {
+                context
+                    .octopus_database
+                    .update_ai_service_is_enabled_and_status(
+                        &mut transaction,
+                        ai_service.id,
+                        true,
+                        100,
+                        AiServiceStatus::Restarting,
+                    )
+                    .await?;
+            }
 
             if let Some(ref _processed_function_body) = ai_service.processed_function_body {
                 ai_services_sequential.push(ai_service);
