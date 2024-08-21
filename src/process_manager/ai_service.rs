@@ -582,17 +582,21 @@ pub async fn start_or_manage_running_ai_service(
 }
 
 pub async fn stop(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
+    if !context.get_config().await?.test_mode {
+        let pid = try_get_pid(&format!("{}.py", ai_service.id))?;
 
-    if let Some(pid) = pid {
-        try_kill_process(pid).await?;
+        if let Some(pid) = pid {
+            try_kill_process(pid).await?;
+        }
+
+        try_kill_cgroup(&ai_service.id.to_string()).await?;
+
+        context
+            .process_manager
+            .remove_process(&ai_service.id.to_string())?;
+
+        return Ok(ai_service);
     }
-
-    try_kill_cgroup(&ai_service.id.to_string()).await?;
-
-    context
-        .process_manager
-        .remove_process(&ai_service.id.to_string())?;
 
     Ok(ai_service)
 }
@@ -606,23 +610,27 @@ pub async fn stop_and_remove(ai_service: AiService, context: Arc<Context>) -> Re
 }
 
 pub async fn try_restart(ai_service: AiService, context: Arc<Context>) -> Result<AiService> {
-    let ai_service = stop(ai_service, context.clone()).await?;
+    if !context.get_config().await?.test_mode {
+        let ai_service = stop(ai_service, context.clone()).await?;
 
-    let process = Process {
-        id: ai_service.id.to_string(),
-        client_port: None,
-        failed_connection_attempts: 0,
-        last_used_at: None,
-        pid: None,
-        server_port: Some(ai_service.port),
-        state: ProcessState::EnvironmentPrepared,
-        r#type: ProcessType::AiService,
-    };
+        let process = Process {
+            id: ai_service.id.to_string(),
+            client_port: None,
+            failed_connection_attempts: 0,
+            last_used_at: None,
+            pid: None,
+            server_port: Some(ai_service.port),
+            state: ProcessState::EnvironmentPrepared,
+            r#type: ProcessType::AiService,
+        };
 
-    let process = context.process_manager.insert_process(&process)?;
+        let process = context.process_manager.insert_process(&process)?;
 
-    if let Some(_process) = process {
-        let ai_service = run(ai_service, context.clone()).await?;
+        if let Some(_process) = process {
+            let ai_service = run(ai_service, context.clone()).await?;
+
+            return Ok(ai_service);
+        }
 
         return Ok(ai_service);
     }
