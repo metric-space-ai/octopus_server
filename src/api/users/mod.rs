@@ -428,6 +428,7 @@ pub async fn roles(
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
         (status = 404, description = "User not found.", body = ResponseError),
+        (status = 409, description = "Conflicting request.", body = ResponseError),
     ),
     params(
         ("user_id" = String, Path, description = "User id")
@@ -466,6 +467,17 @@ pub async fn update(
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Forbidden);
+    }
+
+    let existing_user = context
+        .octopus_database
+        .try_get_user_by_email(&email)
+        .await?;
+
+    if let Some(existing_user) = existing_user {
+        if existing_user.id != user_id {
+            return Err(AppError::Conflict);
+        }
     }
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
@@ -3609,6 +3621,80 @@ pub mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_409() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, admin_email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &admin_email, &password)
+                .await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &admin_email, &password, user_id)
+                .await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
+        let user = user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "email": &admin_email,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::CONFLICT);
 
         let mut transaction = app
             .context
