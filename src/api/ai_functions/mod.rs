@@ -993,7 +993,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri(format!("/api/v1/ai-functions/direct-call"))
+                    .uri("/api/v1/ai-functions/direct-call".to_string())
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({

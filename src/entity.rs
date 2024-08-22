@@ -106,7 +106,7 @@ impl fmt::Display for AiServiceRequiredPythonVersion {
             AiServiceRequiredPythonVersion::Cp311 => "3.11".to_string(),
             AiServiceRequiredPythonVersion::Cp312 => "3.12".to_string(),
         };
-        write!(f, "{}", printable)
+        write!(f, "{printable}")
     }
 }
 
