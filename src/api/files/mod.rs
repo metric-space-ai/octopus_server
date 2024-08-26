@@ -532,7 +532,7 @@ mod tests {
         fields.insert("access_type", access_type);
         fields.insert("type", r#type);
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -673,7 +673,7 @@ mod tests {
         fields.insert("access_type", "Owner");
         fields.insert("type", "Normal");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -734,7 +734,7 @@ mod tests {
         fields.insert("access_type", "Owner");
         fields.insert("type", "Normal");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -857,7 +857,7 @@ mod tests {
         fields.insert("access_type", "Owner");
         fields.insert("type", "Normal");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",

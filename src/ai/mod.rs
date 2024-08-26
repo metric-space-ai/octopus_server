@@ -57,11 +57,11 @@ pub async fn ai_request(
     let suggested_llm = chat_message.suggested_llm.clone().unwrap_or(main_llm);
     tracing::info!("suggested_llm = {:?}", suggested_llm);
     let chat_message = if suggested_llm == *ANTHROPIC {
-        anthropic::anthropic_request(context, chat_message, user).await?
+        Box::pin(anthropic::anthropic_request(context, chat_message, user)).await?
     } else if suggested_llm == *OLLAMA {
         ollama::ollama_request(context, chat_message, user).await?
     } else {
-        open_ai::open_ai_request(context, chat_message, user).await?
+        Box::pin(open_ai::open_ai_request(context, chat_message, user)).await?
     };
 
     Ok(chat_message)

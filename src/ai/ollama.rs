@@ -281,7 +281,7 @@ pub async fn get_tools_ai_functions(context: Arc<Context>, user_id: Uuid) -> Res
 pub async fn get_tools_all(context: Arc<Context>, user_id: Uuid) -> Result<Vec<Tool>> {
     let mut tools = vec![];
 
-    let mut internal_functions_tools = get_tools_internal_functions().await?;
+    let mut internal_functions_tools = get_tools_internal_functions()?;
     tools.append(&mut internal_functions_tools);
 
     let mut ai_functions_tools = get_tools_ai_functions(context.clone(), user_id).await?;
@@ -296,7 +296,7 @@ pub async fn get_tools_all(context: Arc<Context>, user_id: Uuid) -> Result<Vec<T
     Ok(tools)
 }
 
-pub async fn get_tools_internal_functions() -> Result<Vec<Tool>> {
+pub fn get_tools_internal_functions() -> Result<Vec<Tool>> {
     let mut tools = vec![];
 
     let parameters = r#"{

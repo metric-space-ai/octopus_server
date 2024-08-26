@@ -34,11 +34,7 @@ pub mod tests {
         Ok(data)
     }
 
-    pub fn text_field_data(
-        body: &str,
-        fields: HashMap<&str, &str>,
-        end_boundary: bool,
-    ) -> Result<String> {
+    pub fn text_field_data(body: &str, fields: HashMap<&str, &str>, end_boundary: bool) -> String {
         let mut data = body.to_string();
 
         for (key, value) in fields {
@@ -57,6 +53,6 @@ pub mod tests {
             data.push_str(&format!("--{BOUNDARY}--\r\n"));
         }
 
-        Ok(data)
+        data
     }
 }

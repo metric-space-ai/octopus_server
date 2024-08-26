@@ -1080,7 +1080,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1238,7 +1238,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1320,7 +1320,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1395,7 +1395,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2140,7 +2140,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2270,7 +2270,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2357,7 +2357,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2437,7 +2437,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2499,7 +2499,7 @@ mod tests {
         fields.insert("is_enabled", "true");
         fields.insert("instance_type", "Private");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",

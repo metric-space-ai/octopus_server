@@ -431,7 +431,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -578,7 +578,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -640,7 +640,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -698,7 +698,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -779,7 +779,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -853,7 +853,7 @@ mod tests {
         fields.insert("cache_key", cache_key.as_str());
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1634,7 +1634,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1771,7 +1771,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1841,7 +1841,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -1911,7 +1911,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2000,7 +2000,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
@@ -2069,7 +2069,7 @@ mod tests {
         let mut fields = HashMap::new();
         fields.insert("ttl", "3600");
 
-        let body = multipart::tests::text_field_data(&body, fields, true).unwrap();
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",

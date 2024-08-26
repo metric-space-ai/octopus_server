@@ -78,7 +78,7 @@ pub async fn execute(context: Arc<Context>, scheduled_prompt_id: Uuid) -> Result
                 let cloned_chat_message = chat_message.clone();
                 tokio::spawn(async move {
                     let chat_message =
-                        ai::ai_request(cloned_context, cloned_chat_message, user).await;
+                        Box::pin(ai::ai_request(cloned_context, cloned_chat_message, user)).await;
 
                     if let Err(e) = chat_message {
                         tracing::error!("Error: {:?}", e);

@@ -229,8 +229,12 @@ pub async fn anonymize(
                     .await;
 
                 if let Ok(cloned_chat_message) = cloned_chat_message {
-                    let chat_message =
-                        ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+                    let chat_message = Box::pin(ai::ai_request(
+                        cloned_context,
+                        cloned_chat_message,
+                        session_user,
+                    ))
+                    .await;
 
                     if let Err(e) = chat_message {
                         error!("Error: {:?}", e);
@@ -351,7 +355,12 @@ pub async fn create(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+        let chat_message = Box::pin(ai::ai_request(
+            cloned_context,
+            cloned_chat_message,
+            session_user,
+        ))
+        .await;
 
         if let Err(e) = chat_message {
             error!("Error: {:?}", e);
@@ -549,8 +558,12 @@ pub async fn flag(
         let cloned_context = context.clone();
         let cloned_chat_message = new_chat_message.clone();
         tokio::spawn(async move {
-            let chat_message =
-                ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+            let chat_message = Box::pin(ai::ai_request(
+                cloned_context,
+                cloned_chat_message,
+                session_user,
+            ))
+            .await;
 
             if let Err(e) = chat_message {
                 error!("Error: {:?}", e);
@@ -832,7 +845,12 @@ pub async fn not_sensitive(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+        let chat_message = Box::pin(ai::ai_request(
+            cloned_context,
+            cloned_chat_message,
+            session_user,
+        ))
+        .await;
 
         if let Err(e) = chat_message {
             error!("Error: {:?}", e);
@@ -1001,7 +1019,12 @@ pub async fn regenerate(
     let cloned_context = context.clone();
     let cloned_chat_message = chat_message.clone();
     tokio::spawn(async move {
-        let chat_message = ai::ai_request(cloned_context, cloned_chat_message, session_user).await;
+        let chat_message = Box::pin(ai::ai_request(
+            cloned_context,
+            cloned_chat_message,
+            session_user,
+        ))
+        .await;
 
         if let Err(e) = chat_message {
             error!("Error: {:?}", e);

@@ -433,7 +433,6 @@ impl FromStr for FileAccessType {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "Company" => Ok(FileAccessType::Company),
-            "Owner" => Ok(FileAccessType::Owner),
             _ => Ok(FileAccessType::Owner),
         }
     }
@@ -455,7 +454,6 @@ impl FromStr for FileType {
         match s {
             "Document" => Ok(FileType::Document),
             "KnowledgeBook" => Ok(FileType::KnowledgeBook),
-            "Normal" => Ok(FileType::Normal),
             "TaskBook" => Ok(FileType::TaskBook),
             _ => Ok(FileType::Normal),
         }
@@ -533,7 +531,6 @@ impl FromStr for KVAccessType {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "Company" => Ok(KVAccessType::Company),
-            "Owner" => Ok(KVAccessType::Owner),
             _ => Ok(KVAccessType::Owner),
         }
     }
@@ -734,7 +731,6 @@ impl FromStr for WaspAppInstanceType {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "Private" => Ok(WaspAppInstanceType::Private),
-            "Shared" => Ok(WaspAppInstanceType::Shared),
             "User" => Ok(WaspAppInstanceType::User),
             _ => Ok(WaspAppInstanceType::Shared),
         }

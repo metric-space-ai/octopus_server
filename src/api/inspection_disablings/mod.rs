@@ -219,14 +219,13 @@ pub async fn read(
             {
                 inspection_disabling = None;
             } else {
-                inspection_disabling =
-                    Some(get_temporaty_inspection_disabling(session.user_id).await?);
+                inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id)?);
             }
         } else {
-            inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id).await?);
+            inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id)?);
         }
     } else {
-        inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id).await?);
+        inspection_disabling = Some(get_temporaty_inspection_disabling(session.user_id)?);
     }
 
     if inspection_disabling.is_none() {
@@ -239,9 +238,7 @@ pub async fn read(
     Ok((StatusCode::OK, Json(inspection_disabling)).into_response())
 }
 
-async fn get_temporaty_inspection_disabling(
-    user_id: Uuid,
-) -> Result<InspectionDisabling, AppError> {
+fn get_temporaty_inspection_disabling(user_id: Uuid) -> Result<InspectionDisabling, AppError> {
     let created_at = Utc::now();
     let content_safety_disabled_until =
         Utc::now() + Duration::try_minutes(1).ok_or(AppError::FromTime)?;
