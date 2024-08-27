@@ -5033,6 +5033,27 @@ impl OctopusDatabase {
         Ok(wasp_generator)
     }
 
+    #[allow(dead_code)]
+    pub async fn update_wasp_app_is_enabled(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        is_enabled: bool,
+    ) -> Result<WaspApp> {
+        let wasp_app = sqlx::query_as::<_, WaspApp>(
+            "UPDATE wasp_apps
+            SET is_enabled = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, wasp_generator_id, allowed_user_ids, code, description, formatted_name, instance_type, is_enabled, name, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(is_enabled)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(wasp_app)
+    }
+
     pub async fn update_workspace(
         &self,
         transaction: &mut Transaction<'_, Postgres>,

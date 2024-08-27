@@ -28,7 +28,7 @@ use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Serialize, ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct AutoLoginUser {
     id: Uuid,
     email: String,
@@ -1030,7 +1030,14 @@ pub async fn update(
 
 #[cfg(test)]
 mod tests {
-    use crate::{api, app, context::Context, entity::WaspAppInstanceType, multipart};
+    use crate::{
+        api,
+        api::wasp_apps::AutoLoginUser,
+        app,
+        context::Context,
+        entity::{ChatMessageStatus, WaspAppInstanceType},
+        multipart,
+    };
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
@@ -1110,6 +1117,505 @@ mod tests {
         assert!(body.is_enabled);
 
         body
+    }
+
+    #[tokio::test]
+    async fn allowed_users_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let allowed_user_ids = vec![user_id];
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/allowed-users"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "allowed_user_ids": &allowed_user_ids,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: WaspApp = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.allowed_user_ids, Some(allowed_user_ids));
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn allowed_users_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let allowed_user_ids = vec![user_id];
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/allowed-users"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "allowed_user_ids": &allowed_user_ids,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn allowed_users_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let allowed_user_ids = vec![user_id];
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/allowed-users"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "allowed_user_ids": &allowed_user_ids,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn allowed_users_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let allowed_user_ids = vec![user_id];
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/allowed-users"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "allowed_user_ids": &allowed_user_ids,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn allowed_users_404() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let allowed_user_ids = vec![user_id];
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/allowed-users"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "allowed_user_ids": &allowed_user_ids,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn auto_login_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/wasp-apps/auto-login"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let _body: AutoLoginUser = serde_json::from_slice(&body).unwrap();
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn auto_login_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/wasp-apps/auto-login"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn auto_login_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/wasp-apps/auto-login"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
 
     #[tokio::test]
@@ -1715,6 +2221,260 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn extract_meta_400() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/wasp-apps/extract-meta")
+            .header(
+                http::header::CONTENT_TYPE,
+                mime::MULTIPART_FORM_DATA.as_ref(),
+            )
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(Body::empty())
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn extract_meta_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let body =
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/wasp-apps/extract-meta")
+            .header(http::header::CONTENT_TYPE, value)
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn extract_meta_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let body =
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/wasp-apps/extract-meta")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn extract_meta_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let body =
+            multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", true)
+                .unwrap();
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::POST)
+            .uri("/api/v1/wasp-apps/extract-meta")
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
     async fn list_200() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
@@ -1884,6 +2644,498 @@ mod tests {
 
         api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
             .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn logs_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_wasp_app_is_enabled(&mut transaction, wasp_app_id, true)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_chat_message_wasp_app_id(
+                &mut transaction,
+                chat_message_id,
+                100,
+                wasp_app_id,
+                ChatMessageStatus::Answered,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!(
+                        "/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/logs"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body = String::from_utf8(body).unwrap();
+
+        assert_eq!(body, "".to_string());
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn logs_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_wasp_app_is_enabled(&mut transaction, wasp_app_id, true)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_chat_message_wasp_app_id(
+                &mut transaction,
+                chat_message_id,
+                100,
+                wasp_app_id,
+                ChatMessageStatus::Answered,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!(
+                        "/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/logs"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn logs_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_wasp_app_is_enabled(&mut transaction, wasp_app_id, true)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_chat_message_wasp_app_id(
+                &mut transaction,
+                chat_message_id,
+                100,
+                wasp_app_id,
+                ChatMessageStatus::Answered,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!(
+                        "/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/logs"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn logs_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let message = api::chat_messages::tests::get_chat_message_create_params();
+        let (chat_id, chat_message_id, workspace_id) =
+            api::chat_messages::tests::chat_message_with_deps_create(
+                router.clone(),
+                session_id,
+                user_id,
+                &message,
+                &name,
+                &r#type,
+            )
+            .await;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_wasp_app_is_enabled(&mut transaction, wasp_app_id, true)
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .update_chat_message_wasp_app_id(
+                &mut transaction,
+                chat_message_id,
+                100,
+                wasp_app_id,
+                ChatMessageStatus::Answered,
+            )
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!(
+                        "/api/v1/wasp-apps/{wasp_app_id}/{chat_message_id}/logs"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::chat_messages::tests::chat_message_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            chat_message_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn logs_404() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/wasp-apps/{wasp_app_id}/logs"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -2132,6 +3384,83 @@ mod tests {
 
         let body =
             multipart::tests::file_data("application/zip", "test.zip", "data/test/test.zip", false)
+                .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("description", "test wasp application 2");
+        fields.insert("name", "test 2");
+        fields.insert("is_enabled", "true");
+        fields.insert("instance_type", "Private");
+
+        let body = multipart::tests::text_field_data(&body, fields, true);
+
+        let value = format!(
+            "{}; boundary={}",
+            mime::MULTIPART_FORM_DATA,
+            multipart::tests::BOUNDARY
+        );
+
+        let request = Request::builder()
+            .method(http::Method::PUT)
+            .uri(format!("/api/v1/wasp-apps/{wasp_app_id}"))
+            .header(http::header::CONTENT_TYPE, value)
+            .header("X-Auth-Token".to_string(), session_id.to_string())
+            .body(body)
+            .unwrap();
+
+        let response = router.oneshot(request).await.unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: WaspApp = serde_json::from_slice(&body).unwrap();
+
+        assert!(body.is_enabled);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        wasp_apps_cleanup(app.context.clone(), &mut transaction, wasp_app_id).await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn update_200_no_code() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let wasp_app = wasp_apps_create(router.clone(), session_id).await;
+        let wasp_app_id = wasp_app.id;
+
+        let body =
+            multipart::tests::file_data("text/html", "test.html", "data/test/test.html", false)
                 .unwrap();
 
         let mut fields = HashMap::new();
