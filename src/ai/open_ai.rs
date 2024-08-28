@@ -219,7 +219,7 @@ pub async fn get_messages(
                     let pwd = get_pwd()?;
                     let file_path = format!("{pwd}/{}", chat_message_file.file_name);
 
-                    if chat_message_file.media_type == "image/png"
+                    if chat_message_file.media_type == "image/png !disabled"
                         && (suggested_model.contains("4o") || suggested_model.contains("turbo"))
                     {
                         let file_exists = Path::new(&file_path).is_file();
