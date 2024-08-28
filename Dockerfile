@@ -220,13 +220,15 @@ COPY octopus_server /octopus_server/
 WORKDIR /octopus_server
 RUN cargo build --release
 ARG NEXT_PUBLIC_BASE_URL
+ARG NEXT_PUBLIC_THEME_NAME
+ARG NEXT_PUBLIC_DOMAIN
 WORKDIR /octopus_client
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json ./
-RUN npm install --frozen-lockfile
 COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.d.ts /octopus_client/next.config.js /octopus_client/package.json /octopus_client/package-lock.json /octopus_client/postcss.config.js /octopus_client/tailwind.config.js /octopus_client/tsconfig.json ./
 COPY /octopus_client/public public/
 COPY /octopus_client/src src/
+RUN npm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED 1
 #RUN npm run lint
 RUN npm run build
