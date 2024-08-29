@@ -98,12 +98,30 @@ pub fn fix_return_code(code_lines: Vec<String>) -> Vec<String> {
     parsed_code_lines
 }
 
+pub fn fix_return_type_image_jpg(code_lines: Vec<String>) -> Vec<String> {
+    let mut parsed_code_lines = vec![];
+
+    for code_line in code_lines {
+        if code_line.contains("return_type") && code_line.contains("image/jpg") {
+            let new_line = code_line.replace("image/jpg", "image/jpeg");
+            parsed_code_lines.push(new_line);
+        } else {
+            parsed_code_lines.push(code_line);
+        }
+    }
+
+    parsed_code_lines
+}
+
 pub fn fix_return_type_string(code_lines: Vec<String>) -> Vec<String> {
     let mut parsed_code_lines = vec![];
 
     for code_line in code_lines {
         if code_line.contains("return_type") && code_line.contains("string") {
             let new_line = code_line.replace("string", "text/plain");
+            parsed_code_lines.push(new_line);
+        } else if code_line.contains("return_type") && code_line.contains("String") {
+            let new_line = code_line.replace("String", "text/plain");
             parsed_code_lines.push(new_line);
         } else {
             parsed_code_lines.push(code_line);

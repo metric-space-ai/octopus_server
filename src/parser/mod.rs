@@ -177,6 +177,7 @@ pub async fn ai_service_parsing(ai_service: AiService, context: Arc<Context>) ->
     code_lines = fixes::fix_methods_get(code_lines);
     code_lines = fixes::fix_return_code(code_lines);
     code_lines = fixes::fix_return_setup_status(code_lines);
+    code_lines = fixes::fix_return_type_image_jpg(code_lines);
     code_lines = fixes::fix_return_type_string(code_lines);
     code_lines = fixes::fix_type_int(code_lines);
     code_lines = fixes::fix_type_str(code_lines);
