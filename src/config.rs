@@ -7,11 +7,12 @@ use crate::{
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
         PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
-        PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT,
-        PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
-        PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
-        PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_REGISTRATION_ALLOWED,
-        PARAMETER_NAME_SCRAPINGBEE_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE,
+        PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
+        PARAMETER_NAME_NEXTCLOUD_URL, PARAMETER_NAME_NEXTCLOUD_USERNAME,
+        PARAMETER_NAME_OCTOPUS_API_URL, PARAMETER_NAME_OCTOPUS_WS_URL,
+        PARAMETER_NAME_REGISTRATION_ALLOWED, PARAMETER_NAME_SCRAPINGBEE_API_KEY,
+        PARAMETER_NAME_SENDGRID_API_KEY,
     },
     Args, Result,
 };
@@ -221,6 +222,24 @@ impl Config {
         if let Some(main_llm_openai_secondary_model) = main_llm_openai_secondary_model {
             if main_llm_openai_secondary_model != *"default" {
                 return Some(main_llm_openai_secondary_model);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_main_llm_openai_temperature(&self) -> Option<f32> {
+        let main_llm_openai_temperature =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE);
+
+        if let Some(main_llm_openai_temperature) = main_llm_openai_temperature {
+            if main_llm_openai_temperature != *"default" {
+                let main_llm_openai_temperature = main_llm_openai_temperature.parse::<f32>();
+
+                match main_llm_openai_temperature {
+                    Err(_) => return Some(0.7),
+                    Ok(main_llm_openai_temperature) => return Some(main_llm_openai_temperature),
+                }
             }
         }
 

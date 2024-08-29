@@ -123,7 +123,7 @@ pub async fn get_messages(
                 let suggested_ai_function_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_ai_function.name);
                 let chat_completion_request_message =
                     ChatCompletionRequestSystemMessageArgs::default()
-                        .content(&suggested_ai_function_message)
+                        .content(suggested_ai_function_message.clone())
                         .build()?;
 
                 messages.push(ChatCompletionRequestMessage::System(
@@ -762,16 +762,24 @@ pub async fn open_ai_request(
     let messages = get_messages(context.clone(), &mut transaction, &chat_message).await?;
 
     if !context.get_config().await?.test_mode {
+        let main_llm_openai_temperature = context
+            .get_config()
+            .await?
+            .get_parameter_main_llm_openai_temperature()
+            .unwrap_or(0.7);
+
         let tools = get_tools_all(context.clone(), user.id).await?;
         let request = if tools.is_empty() {
             CreateChatCompletionRequestArgs::default()
                 .model(suggested_model.clone())
                 .messages(messages)
+                .temperature(main_llm_openai_temperature)
                 .build()
         } else {
             CreateChatCompletionRequestArgs::default()
                 .model(suggested_model.clone())
                 .messages(messages)
+                .temperature(main_llm_openai_temperature)
                 .tools(tools)
                 .build()
         };

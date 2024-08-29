@@ -10,7 +10,7 @@ rust-version = "1.80"
 argon2 = { version = "0.5.3", default-features = false, features = [
     "std"
 ] }
-async-openai = { version = "0.23.4", default-features = false, features = [
+async-openai = { version = "0.24.0", default-features = false, features = [
     "rustls"
 ] }
 async-recursion = "1.1.1"
@@ -77,7 +77,7 @@ rev_buf_reader = "0.3.0"
 serde = { version = "1.0.209", default-features = false, features = [
     "derive"
 ] }
-serde_json = "1.0.125"
+serde_json = "1.0.127"
 sha3 = { version = "0.10.8", default-features = false, features = [
     "std"
 ] }
