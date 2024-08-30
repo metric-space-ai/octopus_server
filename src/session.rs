@@ -31,20 +31,6 @@ pub struct SessionResponseData {
     pub roles: Vec<String>,
 }
 
-pub async fn ensure_secured(
-    context: Arc<Context>,
-    extracted_session: ExtractedSession,
-    role: &str,
-) -> Result<bool, AppError> {
-    let secured = secured(context, extracted_session, &role.to_owned()).await;
-
-    if let Ok(secured) = secured {
-        return Ok(secured);
-    }
-
-    Err(AppError::Forbidden)
-}
-
 pub async fn require_authenticated(
     extracted_session: ExtractedSession,
 ) -> Result<Session, AppError> {
@@ -59,29 +45,6 @@ pub async fn require_authenticated(
         }
         None => Err(AppError::Unauthorized),
     }
-}
-
-pub async fn secured(
-    context: Arc<Context>,
-    extracted_session: ExtractedSession,
-    role: &String,
-) -> Result<bool, AppError> {
-    let session = require_authenticated(extracted_session).await;
-
-    if let Ok(session) = session {
-        let user_roles = context
-            .octopus_database
-            .try_get_user_roles_by_id(session.user_id)
-            .await?;
-
-        if let Some(user_roles) = user_roles {
-            if user_roles.contains(role) {
-                return Ok(true);
-            }
-        }
-    }
-
-    Err(AppError::Unauthorized)
 }
 
 pub fn get_session_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {

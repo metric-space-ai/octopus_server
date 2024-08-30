@@ -3149,16 +3149,6 @@ impl OctopusDatabase {
         Ok(user)
     }
 
-    pub async fn try_get_user_roles_by_id(&self, id: Uuid) -> Result<Option<Vec<String>>> {
-        let user_roles =
-            sqlx::query_scalar::<_, Vec<String>>("SELECT roles FROM users WHERE id = $1")
-                .bind(id)
-                .fetch_optional(&*self.pool)
-                .await?;
-
-        Ok(user_roles)
-    }
-
     pub async fn try_get_wasp_app_by_id(&self, id: Uuid) -> Result<Option<WaspApp>> {
         let wasp_app = sqlx::query_as!(
             WaspApp,
