@@ -75,7 +75,7 @@ pub async fn scraper_search_service(
 ) -> Result<impl IntoResponse, AppError> {
     let result = scraper::scraper_search_service(context, &search_parameters.prompt).await?;
     let result = result.replace('\'', "\"");
-    let result: Vec<String> = serde_json::from_slice(result.as_bytes())?;
+    let result: Vec<String> = serde_json::from_str(&result)?;
 
     Ok((StatusCode::OK, Json(result)).into_response())
 }
@@ -117,5 +117,63 @@ mod tests {
         let body = String::from_utf8(body).unwrap();
 
         assert_eq!("", body);
+    }
+
+    #[tokio::test]
+    async fn scraper_service_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/scraper-service?url=https://octopus-ai.app")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body = String::from_utf8(body).unwrap();
+
+        assert_eq!("", body);
+    }
+
+    #[tokio::test]
+    async fn scraper_search_service_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri("/api/v1/scraper-search-service?prompt=test")
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: Vec<String> = serde_json::from_slice(&body).unwrap();
+
+        assert!(body.is_empty());
     }
 }

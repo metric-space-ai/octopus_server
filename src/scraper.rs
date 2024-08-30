@@ -90,7 +90,7 @@ pub async fn scraper_search_service(context: Arc<Context>, prompt: &str) -> Resu
         }
     }
 
-    Ok(String::new())
+    Ok(String::from("[]"))
 }
 
 pub async fn scraper_service(context: Arc<Context>, url: &str) -> Result<String> {
