@@ -165,6 +165,66 @@ pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -
         parameters.push_str(&format!("SCRAPINGBEE_API_KEY={scrapingbee_api_key} "));
     }
 
+    let superproxy_isp_password = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_isp_password();
+
+    if let Some(superproxy_isp_password) = superproxy_isp_password {
+        parameters.push_str(&format!(
+            "SUPERPROXY_ISP_PASSWORD={superproxy_isp_password} "
+        ));
+    }
+
+    let superproxy_isp_user = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_isp_user();
+
+    if let Some(superproxy_isp_user) = superproxy_isp_user {
+        parameters.push_str(&format!("SUPERPROXY_ISP_USER={superproxy_isp_user} "));
+    }
+
+    let superproxy_serp_password = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_serp_password();
+
+    if let Some(superproxy_serp_password) = superproxy_serp_password {
+        parameters.push_str(&format!(
+            "SUPERPROXY_SERP_PASSWORD={superproxy_serp_password} "
+        ));
+    }
+
+    let superproxy_serp_user = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_serp_user();
+
+    if let Some(superproxy_serp_user) = superproxy_serp_user {
+        parameters.push_str(&format!("SUPERPROXY_SERP_USER={superproxy_serp_user} "));
+    }
+
+    let superproxy_zone_password = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_zone_password();
+
+    if let Some(superproxy_zone_password) = superproxy_zone_password {
+        parameters.push_str(&format!(
+            "SUPERPROXY_ZONE_PASSWORD={superproxy_zone_password} "
+        ));
+    }
+
+    let superproxy_zone_user = context
+        .get_config()
+        .await?
+        .get_parameter_superproxy_zone_user();
+
+    if let Some(superproxy_zone_user) = superproxy_zone_user {
+        parameters.push_str(&format!("SUPERPROXY_ZONE_USER={superproxy_zone_user} "));
+    }
+
     let company = context.octopus_database.try_get_company_primary().await?;
 
     if let Some(company) = company {

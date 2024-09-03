@@ -7,12 +7,14 @@ use crate::{
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
         PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
-        PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE,
-        PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
-        PARAMETER_NAME_NEXTCLOUD_URL, PARAMETER_NAME_NEXTCLOUD_USERNAME,
-        PARAMETER_NAME_OCTOPUS_API_URL, PARAMETER_NAME_OCTOPUS_WS_URL,
-        PARAMETER_NAME_REGISTRATION_ALLOWED, PARAMETER_NAME_SCRAPINGBEE_API_KEY,
-        PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE, PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT,
+        PARAMETER_NAME_NEXTCLOUD_PASSWORD, PARAMETER_NAME_NEXTCLOUD_URL,
+        PARAMETER_NAME_NEXTCLOUD_USERNAME, PARAMETER_NAME_OCTOPUS_API_URL,
+        PARAMETER_NAME_OCTOPUS_WS_URL, PARAMETER_NAME_REGISTRATION_ALLOWED,
+        PARAMETER_NAME_SCRAPINGBEE_API_KEY, PARAMETER_NAME_SENDGRID_API_KEY,
+        PARAMETER_NAME_SUPERPROXY_ISP_PASSWORD, PARAMETER_NAME_SUPERPROXY_ISP_USER,
+        PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD, PARAMETER_NAME_SUPERPROXY_SERP_USER,
+        PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD, PARAMETER_NAME_SUPERPROXY_ZONE_USER,
     },
     Args, Result,
 };
@@ -362,6 +364,81 @@ impl Config {
             }
             Some(sendgrid_api_key) => Some(sendgrid_api_key),
         }
+    }
+
+    pub fn get_parameter_superproxy_isp_password(&self) -> Option<String> {
+        let superproxy_isp_password =
+            self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_ISP_PASSWORD);
+
+        if let Some(superproxy_isp_password) = superproxy_isp_password {
+            if superproxy_isp_password != *"default" {
+                return Some(superproxy_isp_password);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_superproxy_isp_user(&self) -> Option<String> {
+        let superproxy_isp_user = self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_ISP_USER);
+
+        if let Some(superproxy_isp_user) = superproxy_isp_user {
+            if superproxy_isp_user != *"default" {
+                return Some(superproxy_isp_user);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_superproxy_serp_password(&self) -> Option<String> {
+        let superproxy_serp_password =
+            self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD);
+
+        if let Some(superproxy_serp_password) = superproxy_serp_password {
+            if superproxy_serp_password != *"default" {
+                return Some(superproxy_serp_password);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_superproxy_serp_user(&self) -> Option<String> {
+        let superproxy_serp_user = self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_SERP_USER);
+
+        if let Some(superproxy_serp_user) = superproxy_serp_user {
+            if superproxy_serp_user != *"default" {
+                return Some(superproxy_serp_user);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_superproxy_zone_password(&self) -> Option<String> {
+        let superproxy_zone_password =
+            self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD);
+
+        if let Some(superproxy_zone_password) = superproxy_zone_password {
+            if superproxy_zone_password != *"default" {
+                return Some(superproxy_zone_password);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_parameter_superproxy_zone_user(&self) -> Option<String> {
+        let superproxy_zone_user = self.get_parameter_value(PARAMETER_NAME_SUPERPROXY_ZONE_USER);
+
+        if let Some(superproxy_zone_user) = superproxy_zone_user {
+            if superproxy_zone_user != *"default" {
+                return Some(superproxy_zone_user);
+            }
+        }
+
+        None
     }
 
     pub fn get_parameter_value(&self, name: &str) -> Option<String> {
