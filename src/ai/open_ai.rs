@@ -123,7 +123,7 @@ pub async fn get_messages(
                 let suggested_ai_function_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_ai_function.name);
                 let chat_completion_request_message =
                     ChatCompletionRequestSystemMessageArgs::default()
-                        .content(&suggested_ai_function_message)
+                        .content(suggested_ai_function_message.clone())
                         .build()?;
 
                 messages.push(ChatCompletionRequestMessage::System(
