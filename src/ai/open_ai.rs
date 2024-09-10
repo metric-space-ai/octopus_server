@@ -387,7 +387,7 @@ pub fn get_tools_internal_functions() -> Result<Vec<ChatCompletionTool>> {
         )
         .build()?;
     tools.push(tool);
-
+    /*
     let tool = ChatCompletionToolArgs::default()
         .r#type(ChatCompletionToolType::Function)
         .function(
@@ -578,7 +578,7 @@ pub fn get_tools_internal_functions() -> Result<Vec<ChatCompletionTool>> {
         )
         .build()?;
     tools.push(tool);
-
+    */
     Ok(tools)
 }
 
