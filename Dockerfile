@@ -232,6 +232,7 @@ RUN npm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED 1
 #RUN npm run lint
 RUN npm run build
+ENV GOARCH=amd64
 WORKDIR /
 RUN git clone https://github.com/ollama/ollama.git
 WORKDIR /ollama/
