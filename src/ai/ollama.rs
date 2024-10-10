@@ -143,14 +143,13 @@ pub async fn get_messages(
 
             if let Some(suggested_simple_app) = suggested_simple_app {
                 let suggested_simple_app_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_simple_app.name);
-                let chat_completion_request_message =
-                    ChatCompletionRequestSystemMessageArgs::default()
-                        .content(suggested_simple_app_message.clone())
-                        .build()?;
 
-                messages.push(ChatCompletionRequestMessage::System(
-                    chat_completion_request_message,
-                ));
+                let message = Message {
+                    content: suggested_simple_app_message.clone(),
+                    role: "system".to_string(),
+                };
+
+                messages.push(message);
 
                 let chat_audit_trail = ChatAuditTrail {
                     id: chat_message_tmp.id,
@@ -174,14 +173,13 @@ pub async fn get_messages(
 
             if let Some(suggested_wasp_app) = suggested_wasp_app {
                 let suggested_wasp_app_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_wasp_app.name);
-                let chat_completion_request_message =
-                    ChatCompletionRequestSystemMessageArgs::default()
-                        .content(suggested_wasp_app_message.clone())
-                        .build()?;
 
-                messages.push(ChatCompletionRequestMessage::System(
-                    chat_completion_request_message,
-                ));
+                let message = Message {
+                    content: suggested_wasp_app_message.clone(),
+                    role: "system".to_string(),
+                };
+
+                messages.push(message);
 
                 let chat_audit_trail = ChatAuditTrail {
                     id: chat_message_tmp.id,
