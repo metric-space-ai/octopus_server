@@ -171,15 +171,14 @@ pub async fn get_messages(
             }
 
             let suggested_wasp_app_id = chat_message.suggested_wasp_app_id;
-            let suggested_wasp_app =
-                if let Some(suggested_wasp_app_id) = suggested_wasp_app_id {
-                    context
-                        .octopus_database
-                        .try_get_wasp_app_by_id(suggested_wasp_app_id)
-                        .await?
-                } else {
-                    None
-                };
+            let suggested_wasp_app = if let Some(suggested_wasp_app_id) = suggested_wasp_app_id {
+                context
+                    .octopus_database
+                    .try_get_wasp_app_by_id(suggested_wasp_app_id)
+                    .await?
+            } else {
+                None
+            };
 
             if let Some(suggested_wasp_app) = suggested_wasp_app {
                 let suggested_wasp_app_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_wasp_app.name);
