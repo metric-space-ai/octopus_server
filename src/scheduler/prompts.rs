@@ -66,6 +66,8 @@ pub async fn execute(context: Arc<Context>, scheduled_prompt_id: Uuid) -> Result
                         None,
                         None,
                         false,
+                        None,
+                        None,
                     )
                     .await?;
 
