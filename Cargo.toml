@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.3"
+version = "0.10.4"
 edition = "2021"
 rust-version = "1.80"
 
@@ -10,7 +10,7 @@ rust-version = "1.80"
 argon2 = { version = "0.5.3", default-features = false, features = [
     "std"
 ] }
-async-openai = { version = "0.24.0", default-features = false, features = [
+async-openai = { version = "0.25.0", default-features = false, features = [
     "rustls"
 ] }
 async-recursion = "1.1.1"
