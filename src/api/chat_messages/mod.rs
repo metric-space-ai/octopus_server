@@ -32,6 +32,8 @@ pub struct ChatMessagePost {
     pub suggested_ai_function_id: Option<Uuid>,
     pub suggested_llm: Option<String>,
     pub suggested_model: Option<String>,
+    pub suggested_simple_app_id: Option<Uuid>,
+    pub suggested_wasp_app_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -41,6 +43,8 @@ pub struct ChatMessagePut {
     pub suggested_ai_function_id: Option<Uuid>,
     pub suggested_llm: Option<String>,
     pub suggested_model: Option<String>,
+    pub suggested_simple_app_id: Option<Uuid>,
+    pub suggested_wasp_app_id: Option<Uuid>,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
@@ -344,6 +348,8 @@ pub async fn create(
             input.suggested_llm,
             input.suggested_model,
             false,
+            input.suggested_simple_app_id,
+            input.suggested_wasp_app_id,
         )
         .await?;
 
@@ -547,6 +553,8 @@ pub async fn flag(
                 chat_message.suggested_llm.clone(),
                 chat_message.suggested_model.clone(),
                 true,
+                chat_message.suggested_simple_app_id,
+                chat_message.suggested_wasp_app_id,
             )
             .await?;
 
@@ -1136,6 +1144,8 @@ pub async fn update(
             input.suggested_llm,
             input.suggested_model,
             false,
+            input.suggested_simple_app_id,
+            input.suggested_wasp_app_id,
         )
         .await?;
 
