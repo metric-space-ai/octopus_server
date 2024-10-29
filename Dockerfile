@@ -558,6 +558,9 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib
 WORKDIR /wasp_mage
 COPY octopus_server/wasp_mage /wasp_mage
 WORKDIR /octopus_client
+ARG NEXT_PUBLIC_SLACK_BOT_TOKEN
+ARG NEXT_PUBLIC_SLACK_CHANNEL_ID
+ARG NEXT_PUBLIC_SLACK_WEBHOOK_URL
 COPY /octopus_client/.env.example .env
 COPY /octopus_client/package.json ./
 COPY /octopus_client/LICENSE /octopus_client/README.md /octopus_client/next-env.d.ts /octopus_client/next.config.js /octopus_client/package.json /octopus_client/package-lock.json /octopus_client/postcss.config.js /octopus_client/tailwind.config.js /octopus_client/tsconfig.json ./
