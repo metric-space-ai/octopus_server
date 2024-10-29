@@ -113,6 +113,7 @@ pub async fn schedule(
     scheduled_prompt: ScheduledPrompt,
 ) -> Result<ScheduledPrompt> {
     if let Some(ref schedule) = scheduled_prompt.schedule {
+        tracing::info!("AAAAAAAA");
         let cloned_context = context.clone();
         let cloned_scheduled_prompt = scheduled_prompt.clone();
         let job = Job::new_async(schedule.as_str(), move |_uuid, _lock| {
@@ -122,21 +123,26 @@ pub async fn schedule(
                     let _ = execute(inner_cloned_context, cloned_scheduled_prompt.id).await;
                 }
             })
-        })?;
-        let job_id = context.job_scheduler.add(job).await?;
-        let mut transaction = context.octopus_database.transaction_begin().await?;
+        });
+        match job {
+            Err(_) => {}
+            Ok(job) => {
+                let job_id = context.job_scheduler.add(job).await?;
+                let mut transaction = context.octopus_database.transaction_begin().await?;
 
-        let scheduled_prompt = context
-            .octopus_database
-            .update_scheduled_job_id(&mut transaction, scheduled_prompt.id, job_id)
-            .await?;
+                let scheduled_prompt = context
+                    .octopus_database
+                    .update_scheduled_job_id(&mut transaction, scheduled_prompt.id, job_id)
+                    .await?;
 
-        context
-            .octopus_database
-            .transaction_commit(transaction)
-            .await?;
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await?;
 
-        return Ok(scheduled_prompt);
+                return Ok(scheduled_prompt);
+            }
+        }
     }
 
     Ok(scheduled_prompt)
