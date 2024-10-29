@@ -1,10 +1,11 @@
 use crate::{
-    ai::function_call::function_call,
+    ai::function_call::{function_call, AiFunctionResponse},
     context::Context,
     entity::{
-        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ROLE_COMPANY_ADMIN_USER,
+        AiFunction, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus,
+        ROLE_COMPANY_ADMIN_USER,
     },
-    error::AppError,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

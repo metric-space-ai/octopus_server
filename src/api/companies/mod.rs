@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
-    error::AppError,
+    entity::{Company, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

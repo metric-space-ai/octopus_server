@@ -2,8 +2,8 @@ use crate::{
     api::auth,
     canon,
     context::Context,
-    entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
-    error::AppError,
+    entity::{User, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+    error::{AppError, ResponseError},
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;

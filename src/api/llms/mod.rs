@@ -5,7 +5,7 @@ use crate::{
         open_ai::{OPENAI, PRIMARY_MODEL, SECONDARY_MODEL},
     },
     context::Context,
-    error::AppError,
+    error::{AppError, ResponseError},
     ollama,
     session::{require_authenticated, ExtractedSession},
 };

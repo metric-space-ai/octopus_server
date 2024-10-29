@@ -19,9 +19,13 @@ use uuid::Uuid;
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
 pub enum AiFunctionResponse {
+    #[schema(no_recursion)]
     Error(AiFunctionErrorResponse),
+    #[schema(no_recursion)]
     File(AiFunctionFileResponse),
+    #[schema(no_recursion)]
     Mixed(Vec<AiFunctionResponse>),
+    #[schema(no_recursion)]
     Text(AiFunctionTextResponse),
 }
 

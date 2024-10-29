@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
-    error::AppError,
+    entity::{Profile, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };

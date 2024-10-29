@@ -3,7 +3,7 @@ use crate::{
     entity::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, InspectionDisabling,
     },
-    error::AppError,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

@@ -1,8 +1,8 @@
 use crate::{
-    ai::code_tools::open_ai_wasp_app_advanced_meta_extraction,
+    ai::code_tools::{open_ai_wasp_app_advanced_meta_extraction, WaspAppMeta},
     context::Context,
-    entity::{WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
-    error::AppError,
+    entity::{WaspApp, WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     get_pwd, process_manager,
     session::{require_authenticated, ExtractedSession},
     wasp_app, WASP_APPS_DIR,

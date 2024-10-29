@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::WorkspacesType,
-    error::AppError,
+    entity::{ScheduledPrompt, WorkspacesType},
+    error::{AppError, ResponseError},
     scheduler::prompts,
     session::{require_authenticated, ExtractedSession},
 };

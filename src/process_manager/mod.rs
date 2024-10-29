@@ -25,7 +25,9 @@ pub struct Process {
     pub last_used_at: Option<DateTime<Utc>>,
     pub pid: Option<i32>,
     pub server_port: Option<i32>,
+    #[schema(no_recursion)]
     pub state: ProcessState,
+    #[schema(no_recursion)]
     pub r#type: ProcessType,
 }
 

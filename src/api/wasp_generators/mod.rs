@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::{WaspAppInstanceType, WaspGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
-    error::AppError,
+    entity::{WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     get_pwd, process_manager,
     session::{require_authenticated, ExtractedSession},
     wasp_app::{self, generator},

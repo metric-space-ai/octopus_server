@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    error::AppError,
+    error::{AppError, ResponseError},
     ollama::proxy,
     session::{require_authenticated, ExtractedSession},
 };

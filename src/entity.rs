@@ -70,7 +70,9 @@ pub struct AiFunction {
     pub is_enabled: bool,
     pub name: String,
     pub parameters: serde_json::Value,
+    #[schema(no_recursion)]
     pub request_content_type: AiFunctionRequestContentType,
+    #[schema(no_recursion)]
     pub response_content_type: AiFunctionResponseContentType,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -149,6 +151,7 @@ pub struct AiService {
     pub color: Option<String>,
     pub device_map: Option<serde_json::Value>,
     pub health_check_execution_time: i32,
+    #[schema(no_recursion)]
     pub health_check_status: AiServiceHealthCheckStatus,
     pub is_enabled: bool,
     pub original_file_name: String,
@@ -158,10 +161,14 @@ pub struct AiService {
     pub priority: i32,
     pub processed_function_body: Option<String>,
     pub progress: i32,
+    #[schema(no_recursion)]
     pub required_python_version: AiServiceRequiredPythonVersion,
     pub setup_execution_time: i32,
+    #[schema(no_recursion)]
     pub setup_status: AiServiceSetupStatus,
+    #[schema(no_recursion)]
     pub status: AiServiceStatus,
+    #[schema(no_recursion)]
     pub r#type: AiServiceType,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -193,6 +200,7 @@ pub struct AiServiceGenerator {
     pub name: String,
     pub original_function_body: Option<String>,
     pub sample_code: Option<String>,
+    #[schema(no_recursion)]
     pub status: AiServiceGeneratorStatus,
     pub version: i32,
     pub created_at: DateTime<Utc>,
@@ -313,7 +321,9 @@ pub struct ChatMessageExtended {
     pub bad_reply_is_not_helpful: bool,
     pub bad_reply_is_not_true: bool,
     pub bypass_sensitive_information_filter: bool,
+    #[schema(no_recursion)]
     pub chat_message_files: Vec<ChatMessageFile>,
+    #[schema(no_recursion)]
     pub chat_message_pictures: Vec<ChatMessagePicture>,
     pub color: Option<String>,
     pub estimated_response_at: DateTime<Utc>,
@@ -469,10 +479,12 @@ pub struct File {
     pub id: Uuid,
     pub company_id: Uuid,
     pub user_id: Uuid,
+    #[schema(no_recursion)]
     pub access_type: FileAccessType,
     pub file_name: String,
     pub media_type: String,
     pub original_file_name: String,
+    #[schema(no_recursion)]
     pub r#type: FileType,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -483,10 +495,12 @@ pub struct FileWithUrl {
     pub id: Uuid,
     pub company_id: Uuid,
     pub user_id: Uuid,
+    #[schema(no_recursion)]
     pub access_type: FileAccessType,
     pub file_name: String,
     pub media_type: String,
     pub original_file_name: String,
+    #[schema(no_recursion)]
     pub r#type: FileType,
     pub url: String,
     pub created_at: DateTime<Utc>,
@@ -545,6 +559,7 @@ pub struct KV {
     pub id: Uuid,
     pub company_id: Uuid,
     pub user_id: Uuid,
+    #[schema(no_recursion)]
     pub access_type: KVAccessType,
     pub kv_key: String,
     pub kv_value: String,
@@ -585,6 +600,7 @@ pub struct OllamaModel {
     pub o_model: Option<String>,
     pub o_modified_at: Option<String>,
     pub o_size: Option<String>,
+    #[schema(no_recursion)]
     pub status: OllamaModelStatus,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
@@ -721,6 +737,7 @@ pub struct UserExtended {
     pub email: String,
     pub is_enabled: bool,
     pub is_invited: bool,
+    #[schema(no_recursion)]
     pub profile: Option<Profile>,
     pub roles: Vec<String>,
     pub created_at: DateTime<Utc>,
@@ -786,6 +803,7 @@ pub struct WaspGenerator {
     pub description: String,
     pub log: Option<String>,
     pub name: String,
+    #[schema(no_recursion)]
     pub status: WaspGeneratorStatus,
     pub version: i32,
     pub created_at: DateTime<Utc>,
@@ -807,6 +825,7 @@ pub struct Workspace {
     pub company_id: Uuid,
     pub user_id: Uuid,
     pub name: String,
+    #[schema(no_recursion)]
     pub r#type: WorkspacesType,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,

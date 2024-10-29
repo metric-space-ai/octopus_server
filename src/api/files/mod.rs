@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{FileAccessType, FileType, FileWithUrl, ROLE_COMPANY_ADMIN_USER},
-    error::AppError,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };
