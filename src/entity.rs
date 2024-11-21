@@ -220,12 +220,31 @@ pub struct CachedFile {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "chat_types", rename_all = "snake_case")]
+pub enum ChatType {
+    Chat,
+    Task,
+}
+
+impl FromStr for ChatType {
+    type Err = AppError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Task" => Ok(ChatType::Task),
+            _ => Ok(ChatType::Chat),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct Chat {
     pub id: Uuid,
     pub user_id: Uuid,
     pub workspace_id: Uuid,
     pub name: Option<String>,
+    pub r#type: ChatType,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
@@ -285,6 +304,7 @@ pub struct ChatMessage {
     pub is_marked_as_not_sensitive: bool,
     pub is_not_checked_by_system: bool,
     pub is_sensitive: bool,
+    pub is_task_description: bool,
     pub message: String,
     pub progress: i32,
     pub response: Option<String>,
@@ -331,6 +351,7 @@ pub struct ChatMessageExtended {
     pub is_marked_as_not_sensitive: bool,
     pub is_not_checked_by_system: bool,
     pub is_sensitive: bool,
+    pub is_task_description: bool,
     pub message: String,
     pub profile: Option<Profile>,
     pub progress: i32,
@@ -712,10 +733,56 @@ pub struct SimpleApp {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "task_statuses", rename_all = "snake_case")]
+pub enum TaskStatus {
+    Completed,
+    NotCompleted,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize, ToSchema, Type)]
+#[sqlx(type_name = "task_types", rename_all = "snake_case")]
+pub enum TaskType {
+    Normal,
+    Test,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct Task {
+    pub id: Uuid,
+    pub assigned_user_chat_id: Option<Uuid>,
+    pub assigned_user_id: Option<Uuid>,
+    pub chat_id: Uuid,
+    pub existing_task_id: Option<Uuid>,
+    pub user_id: Uuid,
+    pub workspace_id: Uuid,
+    pub description: Option<String>,
+    pub status: TaskStatus,
+    pub title: Option<String>,
+    pub r#type: TaskType,
+    pub use_task_book_generation: bool,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct TaskTest {
+    pub id: Uuid,
+    pub task_id: Uuid,
+    pub user_id: Uuid,
+    pub answer: Option<String>,
+    pub question: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 pub const ROLE_ADMIN: &str = "ROLE_ADMIN";
 pub const ROLE_COMPANY_ADMIN_USER: &str = "ROLE_COMPANY_ADMIN_USER";
 pub const ROLE_PRIVATE_USER: &str = "ROLE_PRIVATE_USER";
 pub const ROLE_PUBLIC_USER: &str = "ROLE_PUBLIC_USER";
+pub const ROLE_SUPERVISOR: &str = "ROLE_SUPERVISOR";
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct User {

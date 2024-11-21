@@ -19,7 +19,7 @@ use crate::{
         PARAMETER_NAME_SUPERPROXY_ISP_USER, PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_SERP_USER, PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_ZONE_USER, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
-        ROLE_PUBLIC_USER,
+        ROLE_PUBLIC_USER, ROLE_SUPERVISOR,
     },
     error::{AppError, ResponseError},
 };
@@ -159,6 +159,7 @@ pub async fn setup(
                         ROLE_COMPANY_ADMIN_USER.to_string(),
                         ROLE_PRIVATE_USER.to_string(),
                         ROLE_PUBLIC_USER.to_string(),
+                        ROLE_SUPERVISOR.to_string(),
                     ],
                 )
                 .await?;

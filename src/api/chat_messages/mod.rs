@@ -344,6 +344,7 @@ pub async fn create(
             session_user.id,
             bypass_sensitive_information_filter,
             estimated_response_at,
+            false,
             &input.message,
             input.suggested_ai_function_id,
             input.suggested_llm,
@@ -549,6 +550,7 @@ pub async fn flag(
                 chat_message.user_id,
                 chat_message.bypass_sensitive_information_filter,
                 estimated_response_at,
+                false,
                 &chat_message.message,
                 chat_message.suggested_ai_function_id,
                 chat_message.suggested_llm.clone(),
@@ -1140,6 +1142,7 @@ pub async fn update(
             session_user.id,
             bypass_sensitive_information_filter,
             estimated_response_at,
+            false,
             &input.message,
             input.suggested_ai_function_id,
             input.suggested_llm,
@@ -1266,6 +1269,7 @@ pub mod tests {
             user_id,
             name,
             r#type,
+            "Chat",
         )
         .await;
 
@@ -1366,6 +1370,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1437,6 +1442,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1521,6 +1527,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1826,6 +1833,7 @@ pub mod tests {
             session_id,
             second_user_id,
             workspace_id,
+            "Chat",
         )
         .await;
         let chat_id = chat.id;
@@ -2215,6 +2223,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -3641,6 +3650,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -4102,6 +4112,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -4593,6 +4604,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -5068,6 +5080,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -5728,6 +5741,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -6212,6 +6226,7 @@ pub mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 

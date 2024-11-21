@@ -1,6 +1,6 @@
 use crate::{
     context::Context,
-    entity::{ScheduledPrompt, WorkspacesType},
+    entity::{ChatType, ScheduledPrompt, WorkspacesType},
     error::{AppError, ResponseError},
     scheduler::prompts,
     session::{require_authenticated, ExtractedSession},
@@ -87,7 +87,12 @@ pub async fn create(
 
     let chat = context
         .octopus_database
-        .insert_chat(&mut transaction, session.user_id, workspace_id)
+        .insert_chat(
+            &mut transaction,
+            session.user_id,
+            workspace_id,
+            ChatType::Chat,
+        )
         .await?;
 
     let scheduled_prompt = context
