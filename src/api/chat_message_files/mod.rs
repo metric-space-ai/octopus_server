@@ -1,6 +1,7 @@
 use crate::{
     context::Context,
-    error::AppError,
+    entity::ChatMessageFile,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
     PUBLIC_DIR,
 };

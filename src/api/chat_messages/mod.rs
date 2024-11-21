@@ -5,10 +5,11 @@ use crate::{
     },
     context::Context,
     entity::{
-        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessageStatus,
-        WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
+        ChatMessageExtended, ChatMessageStatus, WorkspacesType, ROLE_COMPANY_ADMIN_USER,
+        ROLE_PRIVATE_USER,
     },
-    error::AppError,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
     util,
 };

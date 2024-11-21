@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::ROLE_COMPANY_ADMIN_USER,
-    error::AppError,
+    entity::{OllamaModel, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     ollama,
     session::{require_authenticated, ExtractedSession},
 };

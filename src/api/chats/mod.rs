@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
-    entity::{WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
-    error::AppError,
+    entity::{Chat, WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

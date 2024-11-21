@@ -1,6 +1,7 @@
 use crate::{
     context::Context,
-    error::AppError,
+    entity::ChatActivity,
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

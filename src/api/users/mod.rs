@@ -3,8 +3,8 @@ use crate::{
     canon,
     context::Context,
     email_service::send_invitation_email,
-    entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
-    error::AppError,
+    entity::{UserExtended, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+    error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
 use axum::{

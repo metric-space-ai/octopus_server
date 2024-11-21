@@ -1,6 +1,10 @@
 use crate::{
-    api::auth, canon, context::Context, email_service::send_password_reset_request_email,
-    error::AppError,
+    api::auth,
+    canon,
+    context::Context,
+    email_service::send_password_reset_request_email,
+    entity::{PasswordResetToken, User},
+    error::{AppError, ResponseError},
 };
 use axum::{
     extract::{Path, State},

@@ -2,7 +2,7 @@ use crate::{
     api::auth,
     canon,
     context::Context,
-    error::AppError,
+    error::{AppError, ResponseError},
     session::{SessionResponse, SessionResponseData},
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};

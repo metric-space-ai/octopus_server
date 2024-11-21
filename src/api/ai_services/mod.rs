@@ -1,8 +1,8 @@
 use crate::{
     ai,
     context::Context,
-    entity::{AiServiceStatus, AiServiceType, ROLE_COMPANY_ADMIN_USER},
-    error::AppError,
+    entity::{AiService, AiServiceStatus, AiServiceType, ROLE_COMPANY_ADMIN_USER},
+    error::{AppError, ResponseError},
     get_pwd, parser, process_manager,
     session::{require_authenticated, ExtractedSession},
     SERVICES_DIR,

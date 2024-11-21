@@ -3,7 +3,7 @@ use crate::{
     canon,
     context::Context,
     entity::{
-        WorkspacesType, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
+        User, WorkspacesType, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
         PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
@@ -21,7 +21,7 @@ use crate::{
         PARAMETER_NAME_SUPERPROXY_ZONE_USER, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
         ROLE_PUBLIC_USER,
     },
-    error::AppError,
+    error::{AppError, ResponseError},
 };
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
