@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, user_id, workspace_id, name, created_at, deleted_at, updated_at\n            FROM chats\n            WHERE workspace_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
+  "query": "INSERT INTO task_tests\n            (task_id, user_id, answer, question)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, task_id, user_id, answer, question, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -10,38 +10,46 @@
       },
       {
         "ordinal": 1,
-        "name": "user_id",
+        "name": "task_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 2,
-        "name": "workspace_id",
+        "name": "user_id",
         "type_info": "Uuid"
       },
       {
         "ordinal": 3,
-        "name": "name",
+        "name": "answer",
         "type_info": "Text"
       },
       {
         "ordinal": 4,
+        "name": "question",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -50,9 +58,10 @@
       false,
       true,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "ba722b632604da22e966f7e4d8cf701d091449e12167ecc95985f44dfae14c9b"
+  "hash": "df8a51ea74fe4500aa150fb84f7fc5a2433ff0803a9e2bd5a269d8c5bcca3c63"
 }

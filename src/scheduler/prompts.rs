@@ -61,6 +61,7 @@ pub async fn execute(context: Arc<Context>, scheduled_prompt_id: Uuid) -> Result
                         scheduled_prompt.user_id,
                         false,
                         estimated_response_at,
+                        false,
                         &scheduled_prompt.prompt,
                         None,
                         None,
