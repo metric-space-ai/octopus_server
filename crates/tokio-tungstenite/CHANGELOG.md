@@ -1,3 +1,27 @@
+# 0.24.0
+
+- Update dependencies (TLS, tungstenite).
+- Return a runtime error when WSS URLs are used without a proper TLS feature enabled.
+
+# 0.23.1
+
+- Introduce a `url` feature (proxies to `tungstenite/url`).
+
+# 0.23.0
+
+- Update `tungstenite` to `0.23.0`.
+- Disable default features on TLS crates.
+
+# 0.22.0
+
+- Update TLS dependencies.
+- ~~Update `tungstenite` to match `0.22.0`.~~
+
+# 0.21.0
+
+- Update TLS dependencies.
+- Update `tungstenite` to `0.21.0`.
+
 # 0.20.1
 
 - Fix RUSTSEC-2023-0053.
