@@ -1,11 +1,6 @@
 use crate::{
-    api::auth,
-    canon,
     context::Context,
-    email_service::send_invitation_email,
-    entity::{
-        UserExtended, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER, ROLE_SUPERVISOR,
-    },
+    entity::{TaskTest, ROLE_SUPERVISOR},
     error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
 };
@@ -15,55 +10,119 @@ use axum::{
     response::IntoResponse,
     Json,
 };
-use rand::{distributions::Alphanumeric, Rng};
 use serde::Deserialize;
 use std::sync::Arc;
-use utoipa::ToSchema;
+use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
 
-#[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct UserInvitationPost {
-    #[validate(email, length(max = 256))]
-    email: String,
-    roles: Vec<String>,
+#[derive(Deserialize, IntoParams)]
+pub struct Params {
+    task_id: Uuid,
+    task_test_id: Uuid,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct UserPost {
-    #[validate(email, length(max = 256))]
-    email: String,
-    is_enabled: bool,
-    #[validate(length(max = 256, min = 1))]
-    job_title: Option<String>,
-    #[validate(length(max = 256, min = 1))]
-    name: Option<String>,
-    #[validate(length(min = 8))]
-    password: String,
-    #[validate(length(min = 8))]
-    repeat_password: String,
-    roles: Vec<String>,
+pub struct TaskTestAnswerPut {
+    pub answer: String,
 }
 
 #[derive(Debug, Deserialize, ToSchema, Validate)]
-pub struct UserPut {
-    #[validate(email, length(max = 256))]
-    email: String,
-    is_enabled: Option<bool>,
-    roles: Option<Vec<String>>,
+pub struct TaskTestPost {
+    pub answer: Option<String>,
+    pub question: String,
+}
+
+#[derive(Debug, Deserialize, ToSchema, Validate)]
+pub struct TaskTestPut {
+    pub answer: Option<String>,
+    pub question: String,
+}
+
+#[axum_macros::debug_handler]
+#[utoipa::path(
+    put,
+    path = "/api/v1/task-tests/:task_id/:task_test_id/answer",
+    request_body = TaskTestAnswerPut,
+    responses(
+        (status = 200, description = "Task test answered.", body = TaskTest),
+        (status = 401, description = "Unauthorized.", body = ResponseError),
+        (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "Task test not found.", body = ResponseError),
+    ),
+    params(
+        ("task_id" = String, Path, description = "Task id"),
+        ("task_test_id" = String, Path, description = "Task test id")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+pub async fn answer(
+    State(context): State<Arc<Context>>,
+    extracted_session: ExtractedSession,
+    Path(Params {
+        task_id,
+        task_test_id,
+    }): Path<Params>,
+    Json(input): Json<TaskTestAnswerPut>,
+) -> Result<impl IntoResponse, AppError> {
+    let session = require_authenticated(extracted_session).await?;
+    input.validate()?;
+
+    let session_user = context
+        .octopus_database
+        .try_get_user_by_id(session.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    let task = context
+        .octopus_database
+        .try_get_task_by_id(task_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if task.user_id != session_user.id && task.assigned_user_id != Some(session_user.id) {
+        return Err(AppError::Forbidden);
+    }
+
+    let task_test = context
+        .octopus_database
+        .try_get_task_test_by_id(task_test_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if task_test.task_id != task_id {
+        return Err(AppError::Forbidden);
+    }
+
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let task_test = context
+        .octopus_database
+        .update_task_test_answer(&mut transaction, task_test_id, input.answer)
+        .await?;
+
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
+
+    Ok((StatusCode::OK, Json(task_test)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     post,
-    path = "/api/v1/users",
-    request_body = UserPost,
+    path = "/api/v1/task-tests/:task_id",
+    request_body = TaskTestPost,
     responses(
-        (status = 201, description = "User created.", body = UserExtended),
-        (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 201, description = "Task test created.", body = TaskTest),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
-        (status = 409, description = "Conflicting request.", body = ResponseError),
+    ),
+    params(
+        ("task_id" = String, Path, description = "Task id")
     ),
     security(
         ("api_key" = [])
@@ -72,12 +131,11 @@ pub struct UserPut {
 pub async fn create(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Json(input): Json<UserPost>,
+    Path(task_id): Path<Uuid>,
+    Json(input): Json<TaskTestPost>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated(extracted_session).await?;
     input.validate()?;
-
-    let email = canon::canonicalize(&input.email);
 
     let session_user = context
         .octopus_database
@@ -85,79 +143,59 @@ pub async fn create(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    if !session_user
-        .roles
-        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    let task = context
+        .octopus_database
+        .try_get_task_by_id(task_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(task.user_id)
+        .await?
+        .ok_or(AppError::Forbidden)?;
+
+    if session_user.id != task.user_id
+        && (!session_user.roles.contains(&ROLE_SUPERVISOR.to_string())
+            || session_user.company_id != user.company_id)
     {
         return Err(AppError::Forbidden);
     }
 
-    let user_exists = context
+    let mut transaction = context.octopus_database.transaction_begin().await?;
+
+    let task_test = context
         .octopus_database
-        .try_get_user_by_email(&email)
+        .insert_task_test(
+            &mut transaction,
+            task.id,
+            session_user.id,
+            input.answer,
+            input.question,
+        )
         .await?;
 
-    match user_exists {
-        None => {
-            if input.password != input.repeat_password {
-                return Err(AppError::PasswordDoesNotMatch);
-            }
+    context
+        .octopus_database
+        .transaction_commit(transaction)
+        .await?;
 
-            let cloned_password = input.password.clone();
-            let config = context.get_config().await?;
-            let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
-                    .await??;
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let user = context
-                .octopus_database
-                .insert_user(
-                    &mut transaction,
-                    session_user.company_id,
-                    &email,
-                    input.is_enabled,
-                    false,
-                    context.get_config().await?.pepper_id,
-                    &pw_hash,
-                    &input.roles,
-                )
-                .await?;
-
-            let profile = context
-                .octopus_database
-                .insert_profile(&mut transaction, user.id, input.job_title, input.name)
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            let user_extended = context
-                .octopus_database
-                .map_to_user_extended(&user, Some(profile))
-                .await?;
-
-            Ok((StatusCode::CREATED, Json(user_extended)).into_response())
-        }
-        Some(_user_exists) => Err(AppError::UserAlreadyExists),
-    }
+    Ok((StatusCode::CREATED, Json(task_test)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     delete,
-    path = "/api/v1/users/:user_id",
+    path = "/api/v1/task-tests/:task_id/:task_test_id",
     responses(
-        (status = 204, description = "User deleted."),
+        (status = 204, description = "Task test deleted."),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
-        (status = 404, description = "User not found.", body = ResponseError),
+        (status = 404, description = "Task test not found.", body = ResponseError),
     ),
     params(
-        ("user_id" = String, Path, description = "User id")
+        ("task_id" = String, Path, description = "Task id"),
+        ("task_test_id" = String, Path, description = "Task test id")
     ),
     security(
         ("api_key" = [])
@@ -166,7 +204,10 @@ pub async fn create(
 pub async fn delete(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(user_id): Path<Uuid>,
+    Path(Params {
+        task_id,
+        task_test_id,
+    }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated(extracted_session).await?;
 
@@ -176,17 +217,36 @@ pub async fn delete(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let user = context
+    let task = context
         .octopus_database
-        .try_get_user_by_id(user_id)
+        .try_get_task_by_id(task_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if !session_user
-        .roles
-        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
-        || session_user.company_id != user.company_id
+    if task.user_id != session_user.id {
+        return Err(AppError::Forbidden);
+    }
+
+    let task_test = context
+        .octopus_database
+        .try_get_task_test_by_id(task_test_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(task_test.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.id != task_test.user_id
+        && (!session_user.roles.contains(&ROLE_SUPERVISOR.to_string())
+            || session_user.company_id != user.company_id)
     {
+        return Err(AppError::Forbidden);
+    }
+
+    if task_test.task_id != task_id {
         return Err(AppError::Forbidden);
     }
 
@@ -194,7 +254,7 @@ pub async fn delete(
 
     context
         .octopus_database
-        .try_delete_user_by_id(&mut transaction, user_id)
+        .try_delete_task_test_by_id(&mut transaction, task_test_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
@@ -208,109 +268,16 @@ pub async fn delete(
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
-    post,
-    path = "/api/v1/users/invitation",
-    request_body = UserInvitationPost,
-    responses(
-        (status = 201, description = "User invited.", body = UserExtended),
-        (status = 400, description = "Bad request.", body = ResponseError),
-        (status = 401, description = "Unauthorized.", body = ResponseError),
-        (status = 403, description = "Forbidden.", body = ResponseError),
-        (status = 409, description = "Conflicting request.", body = ResponseError),
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn invitation(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-    Json(input): Json<UserInvitationPost>,
-) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated(extracted_session).await?;
-    input.validate()?;
-
-    let email = canon::canonicalize(&input.email);
-
-    let session_user = context
-        .octopus_database
-        .try_get_user_by_id(session.user_id)
-        .await?
-        .ok_or(AppError::Forbidden)?;
-
-    if !session_user
-        .roles
-        .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
-    {
-        return Err(AppError::Forbidden);
-    }
-
-    let user_exists = context
-        .octopus_database
-        .try_get_user_by_email(&email)
-        .await?;
-
-    match user_exists {
-        None => {
-            let password = rand::thread_rng()
-                .sample_iter(&Alphanumeric)
-                .take(12)
-                .map(char::from)
-                .collect::<String>();
-
-            let cloned_password = password.clone();
-            let config = context.get_config().await?;
-            let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
-                    .await??;
-
-            let mut transaction = context.octopus_database.transaction_begin().await?;
-
-            let user = context
-                .octopus_database
-                .insert_user(
-                    &mut transaction,
-                    session_user.company_id,
-                    &email,
-                    true,
-                    true,
-                    context.get_config().await?.pepper_id,
-                    &pw_hash,
-                    &input.roles,
-                )
-                .await?;
-
-            let profile = context
-                .octopus_database
-                .insert_profile(&mut transaction, user.id, None, None)
-                .await?;
-
-            context
-                .octopus_database
-                .transaction_commit(transaction)
-                .await?;
-
-            let user_extended = context
-                .octopus_database
-                .map_to_user_extended(&user, Some(profile))
-                .await?;
-
-            send_invitation_email(context, &email, &password).await?;
-
-            Ok((StatusCode::CREATED, Json(user_extended)).into_response())
-        }
-        Some(_user_exists) => Err(AppError::UserAlreadyExists),
-    }
-}
-
-#[axum_macros::debug_handler]
-#[utoipa::path(
     get,
-    path = "/api/v1/users",
+    path = "/api/v1/task-tests/:task_id",
     responses(
-        (status = 200, description = "List of users.", body = UserExtended),
+        (status = 200, description = "List of task tests.", body = [TaskTest]),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
+        (status = 404, description = "Task not found.", body = ResponseError),
+    ),
+    params(
+        ("task_id" = String, Path, description = "Task id")
     ),
     security(
         ("api_key" = [])
@@ -319,6 +286,7 @@ pub async fn invitation(
 pub async fn list(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
+    Path(task_id): Path<Uuid>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated(extracted_session).await?;
 
@@ -328,26 +296,37 @@ pub async fn list(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let users_extended = context
+    let task = context
         .octopus_database
-        .get_users_extended_by_company_id(session_user.company_id)
+        .try_get_task_by_id(task_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if task.user_id != session_user.id && task.assigned_user_id != Some(session_user.id) {
+        return Err(AppError::Forbidden);
+    }
+
+    let task_tests = context
+        .octopus_database
+        .get_task_tests_by_task_id(task.id)
         .await?;
 
-    Ok((StatusCode::OK, Json(users_extended)).into_response())
+    Ok((StatusCode::OK, Json(task_tests)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     get,
-    path = "/api/v1/users/:user_id",
+    path = "/api/v1/task-tests/:task_id/:task_test_id",
     responses(
-        (status = 200, description = "User read.", body = UserExtended),
+        (status = 200, description = "Task test read.", body = TaskTest),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
-        (status = 404, description = "User not found.", body = ResponseError),
+        (status = 404, description = "Task test not found.", body = ResponseError),
     ),
     params(
-        ("user_id" = String, Path, description = "User id")
+        ("task_id" = String, Path, description = "Task id"),
+        ("task_test_id" = String, Path, description = "Task test id")
     ),
     security(
         ("api_key" = [])
@@ -356,7 +335,10 @@ pub async fn list(
 pub async fn read(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(user_id): Path<Uuid>,
+    Path(Params {
+        task_id,
+        task_test_id,
+    }): Path<Params>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated(extracted_session).await?;
 
@@ -366,79 +348,43 @@ pub async fn read(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let user = context
+    let task = context
         .octopus_database
-        .try_get_user_by_id(user_id)
+        .try_get_task_by_id(task_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != user_id
-        && (!session_user
-            .roles
-            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
-            || session_user.company_id != user.company_id)
-    {
+    if task.user_id != session_user.id && task.assigned_user_id != Some(session_user.id) {
         return Err(AppError::Forbidden);
     }
 
-    let user_extended = context
+    let task_test = context
         .octopus_database
-        .map_to_user_extended(&user, None)
-        .await?;
-
-    Ok((StatusCode::OK, Json(user_extended)).into_response())
-}
-
-#[axum_macros::debug_handler]
-#[utoipa::path(
-    get,
-    path = "/api/v1/users/roles",
-    responses(
-        (status = 200, description = "Roles read.", body = [String]),
-        (status = 401, description = "Unauthorized.", body = ResponseError),
-        (status = 403, description = "Forbidden.", body = ResponseError),
-    ),
-    security(
-        ("api_key" = [])
-    )
-)]
-pub async fn roles(
-    State(context): State<Arc<Context>>,
-    extracted_session: ExtractedSession,
-) -> Result<impl IntoResponse, AppError> {
-    let session = require_authenticated(extracted_session).await?;
-
-    context
-        .octopus_database
-        .try_get_user_by_id(session.user_id)
+        .try_get_task_test_by_id(task_test_id)
         .await?
-        .ok_or(AppError::Forbidden)?;
+        .ok_or(AppError::NotFound)?;
 
-    let roles = vec![
-        ROLE_COMPANY_ADMIN_USER,
-        ROLE_PRIVATE_USER,
-        ROLE_PUBLIC_USER,
-        ROLE_SUPERVISOR,
-    ];
+    if task_test.task_id != task_id {
+        return Err(AppError::Forbidden);
+    }
 
-    Ok((StatusCode::OK, Json(roles)).into_response())
+    Ok((StatusCode::OK, Json(task_test)).into_response())
 }
 
 #[axum_macros::debug_handler]
 #[utoipa::path(
     put,
-    path = "/api/v1/users/:user_id",
-    request_body = UserPut,
+    path = "/api/v1/task-tests/:task_id/:task_test_id",
+    request_body = TaskTestPut,
     responses(
-        (status = 200, description = "User updated.", body = UserExtended),
-        (status = 400, description = "Bad request.", body = ResponseError),
+        (status = 200, description = "Task test updated.", body = TaskTest),
         (status = 401, description = "Unauthorized.", body = ResponseError),
         (status = 403, description = "Forbidden.", body = ResponseError),
-        (status = 404, description = "User not found.", body = ResponseError),
-        (status = 409, description = "Conflicting request.", body = ResponseError),
+        (status = 404, description = "Task test not found.", body = ResponseError),
     ),
     params(
-        ("user_id" = String, Path, description = "User id")
+        ("task_id" = String, Path, description = "Task id"),
+        ("task_test_id" = String, Path, description = "Task test id")
     ),
     security(
         ("api_key" = [])
@@ -447,13 +393,14 @@ pub async fn roles(
 pub async fn update(
     State(context): State<Arc<Context>>,
     extracted_session: ExtractedSession,
-    Path(user_id): Path<Uuid>,
-    Json(input): Json<UserPut>,
+    Path(Params {
+        task_id,
+        task_test_id,
+    }): Path<Params>,
+    Json(input): Json<TaskTestPut>,
 ) -> Result<impl IntoResponse, AppError> {
     let session = require_authenticated(extracted_session).await?;
     input.validate()?;
-
-    let email = canon::canonicalize(&input.email);
 
     let session_user = context
         .octopus_database
@@ -461,128 +408,136 @@ pub async fn update(
         .await?
         .ok_or(AppError::Forbidden)?;
 
-    let user = context
+    let task = context
         .octopus_database
-        .try_get_user_by_id(user_id)
+        .try_get_task_by_id(task_id)
         .await?
         .ok_or(AppError::NotFound)?;
 
-    if session_user.id != user_id
-        && (!session_user
-            .roles
-            .contains(&ROLE_COMPANY_ADMIN_USER.to_string())
+    if task.user_id != session_user.id {
+        return Err(AppError::Forbidden);
+    }
+
+    let task_test = context
+        .octopus_database
+        .try_get_task_test_by_id(task_test_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    let user = context
+        .octopus_database
+        .try_get_user_by_id(task_test.user_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+
+    if session_user.id != task_test.user_id
+        && (!session_user.roles.contains(&ROLE_SUPERVISOR.to_string())
             || session_user.company_id != user.company_id)
     {
         return Err(AppError::Forbidden);
     }
 
-    let existing_user = context
-        .octopus_database
-        .try_get_user_by_email(&email)
-        .await?;
-
-    if let Some(existing_user) = existing_user {
-        if existing_user.id != user_id {
-            return Err(AppError::Conflict);
-        }
+    if task_test.task_id != task_id {
+        return Err(AppError::Forbidden);
     }
 
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
-    let user = if session_user.id == user_id {
-        context
-            .octopus_database
-            .update_user_email(&mut transaction, user.id, &email)
-            .await?
-    } else {
-        let is_enabled = input.is_enabled.ok_or(AppError::BadRequest)?;
-        let roles = input.roles.ok_or(AppError::BadRequest)?;
-
-        context
-            .octopus_database
-            .update_user(&mut transaction, user.id, &email, is_enabled, &roles)
-            .await?
-    };
+    let task_test = context
+        .octopus_database
+        .update_task_test(&mut transaction, task_test_id, input.answer, input.question)
+        .await?;
 
     context
         .octopus_database
         .transaction_commit(transaction)
         .await?;
 
-    let user_extended = context
-        .octopus_database
-        .map_to_user_extended(&user, None)
-        .await?;
-
-    Ok((StatusCode::OK, Json(user_extended)).into_response())
+    Ok((StatusCode::OK, Json(task_test)).into_response())
 }
 
 #[cfg(test)]
 pub mod tests {
     use crate::{
         api, app,
-        entity::{UserExtended, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+        context::Context,
+        entity::{TaskTest, ROLE_SUPERVISOR},
     };
     use axum::{
         body::Body,
         http::{self, Request, StatusCode},
         Router,
     };
-    use fake::{
-        faker::{
-            internet::en::SafeEmail,
-            lorem::en::{Paragraph, Word},
-            name::en::Name,
-        },
-        Fake,
-    };
+    use fake::{faker::lorem::en::Word, Fake};
     use http_body_util::BodyExt;
+    use sqlx::{Postgres, Transaction};
+    use std::sync::Arc;
     use tower::ServiceExt;
     use uuid::Uuid;
 
-    pub fn get_user_create_params() -> (String, bool, String, String, String, Vec<String>) {
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = true;
-        let job_title = Paragraph(1..2).fake::<String>();
-        let name = Name().fake::<String>();
-        let password = format!("password123{}", Word().fake::<String>());
-        let roles = vec![ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        (email, is_enabled, job_title, name, password, roles)
+    pub async fn task_test_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        task_id: Uuid,
+    ) {
+        let _ = context
+            .octopus_database
+            .try_delete_task_test_by_id(transaction, task_id)
+            .await;
     }
 
-    #[allow(clippy::too_many_arguments)]
-    pub async fn user_create(
+    pub async fn task_test_with_deps_cleanup(
+        context: Arc<Context>,
+        transaction: &mut Transaction<'_, Postgres>,
+        chat_id: Uuid,
+        task_id: Uuid,
+        task_test_id: Uuid,
+        workspace_id: Uuid,
+    ) {
+        task_test_cleanup(context.clone(), transaction, task_test_id).await;
+
+        api::tasks::tests::task_with_deps_cleanup(
+            context,
+            transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
+    }
+
+    pub fn get_task_test_create_params() -> (String, String) {
+        let answer = format!(
+            "question {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+        let question = format!(
+            "question {}{}",
+            Word().fake::<String>(),
+            Word().fake::<String>()
+        );
+
+        (answer, question)
+    }
+
+    pub async fn task_test_create(
         router: Router,
         session_id: Uuid,
-        email: &str,
-        is_enabled: bool,
-        job_title: &str,
-        name: &str,
-        password: &str,
-        roles: &[String],
-    ) -> UserExtended {
+        user_id: Uuid,
+        task_id: Uuid,
+        question: &str,
+    ) -> TaskTest {
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -598,13 +553,34 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.email, email);
-        assert_eq!(body.is_enabled, is_enabled);
-        assert_eq!(body.roles, roles);
+        assert_eq!(body.user_id, user_id);
+        assert_eq!(body.question, question);
 
         body
+    }
+
+    pub async fn task_test_with_deps_create(
+        router: Router,
+        session_id: Uuid,
+        user_id: Uuid,
+        name: &str,
+        r#type: &str,
+        question: &str,
+    ) -> (Uuid, Uuid, Uuid, Uuid) {
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(router, session_id, user_id, task_id, question).await;
+
+        (chat_id, task_id, task_test.id, workspace_id)
     }
 
     #[tokio::test]
@@ -620,35 +596,19 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router,
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let third_user_id = user.id;
 
         let mut transaction = app
             .context
@@ -657,86 +617,21 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        task_test_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id, third_user_id],
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
         )
         .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn create_400() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let (email, is_enabled, job_title, name, _password, roles) = get_user_create_params();
-        let password = "pass";
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -756,41 +651,28 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
         )
         .await;
-        let second_user_id = user.id;
 
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -808,11 +690,20 @@ pub mod tests {
             .await
             .unwrap();
 
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -832,12 +723,24 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
             router.clone(),
-            admin_session_id,
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
             &email,
             is_enabled,
             &job_title,
@@ -853,23 +756,16 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -886,6 +782,15 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -911,7 +816,38 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
 
         let mut transaction = app
             .context
@@ -925,23 +861,16 @@ pub mod tests {
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -959,111 +888,14 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
-            .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn create_409() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
         )
         .await;
-        let second_user_id = user.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-        assert_eq!(body.is_enabled, is_enabled);
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "job_title": &job_title,
-                            "name": &name,
-                            "password": &password,
-                            "repeat_password": &password,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CONFLICT);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1091,25 +923,23 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
             session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1126,6 +956,15 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1153,8 +992,10 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -1167,11 +1008,37 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(
+            router.clone(),
+            session_id,
+            second_user_id,
+            task_id,
+            &question,
+        )
+        .await;
+        let task_test_id = task_test.id;
+
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::empty())
@@ -1189,11 +1056,20 @@ pub mod tests {
             .await
             .unwrap();
 
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id],
+            &[user_id, second_user_id],
         )
         .await;
 
@@ -1213,30 +1089,25 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -1253,11 +1124,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -1279,8 +1160,9 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -1298,11 +1180,23 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1319,6 +1213,16 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -1346,28 +1250,26 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
             admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
 
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let second_company_id = user.company_id;
-        let third_user_id = user.id;
+        let second_user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, third_user_id)
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
 
@@ -1375,7 +1277,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1393,11 +1295,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id, second_company_id],
-            &[user_id, second_user_id, third_user_id],
+            &[user_id, second_user_id],
         )
         .await;
 
@@ -1419,19 +1331,17 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
             session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
 
         let mut transaction = app
             .context
@@ -1449,7 +1359,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::DELETE)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -1466,6 +1376,16 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
             .await;
@@ -1486,31 +1406,27 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
         )
         .await;
-        let second_user_id = user.id;
 
-        let third_user_id = "33847746-0030-4964-a496-f75d04499160";
+        let task_test_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = router
             .oneshot(
                 Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{third_user_id}"))
+                    .method(http::Method::DELETE)
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -1526,502 +1442,20 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        api::tasks::tests::task_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
+            chat_id,
+            task_id,
+            workspace_id,
         )
         .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_201() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_400() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let email = "wrong email";
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_401() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_403() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_403_deleted_user() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
-            .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
-            .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn invitation_409() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
-        let response = router
-            .clone()
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CREATED);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
-
-        assert_eq!(body.email, email);
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::POST)
-                    .uri("/api/v1/users/invitation".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "roles": &roles,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::CONFLICT);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -2041,32 +1475,25 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2082,7 +1509,7 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: Vec<UserExtended> = serde_json::from_slice(&body).unwrap();
+        let body: Vec<TaskTest> = serde_json::from_slice(&body).unwrap();
 
         assert!(!body.is_empty());
 
@@ -2093,11 +1520,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -2117,30 +1554,25 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -2157,10 +1589,101 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn list_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let second_company_id = user.company_id;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id, second_company_id],
             &[user_id, second_user_id],
         )
         .await;
@@ -2181,26 +1704,19 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
 
         let mut transaction = app
             .context
@@ -2209,13 +1725,8 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[],
-            &[second_user_id],
-        )
-        .await;
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
 
@@ -2223,7 +1734,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri("/api/v1/users".to_string())
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2233,6 +1744,61 @@ pub mod tests {
             .unwrap();
 
         assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn list_404() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let task_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/task-tests/{task_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
 
         let mut transaction = app
             .context
@@ -2265,32 +1831,25 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2306,10 +1865,9 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, second_user_id);
-        assert_eq!(body.email, email);
+        assert_eq!(body.user_id, user_id);
 
         let mut transaction = app
             .context
@@ -2318,11 +1876,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -2344,8 +1912,10 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -2358,11 +1928,37 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(
+            router.clone(),
+            session_id,
+            second_user_id,
+            task_id,
+            &question,
+        )
+        .await;
+        let task_test_id = task_test.id;
+
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::empty())
@@ -2378,10 +1974,9 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, second_user_id);
-        assert_eq!(body.email, email);
+        assert_eq!(body.user_id, second_user_id);
 
         let mut transaction = app
             .context
@@ -2389,6 +1984,151 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn read_200_private() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        let task = app
+            .context
+            .octopus_database
+            .try_get_task_by_id(task_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let _ = app
+            .context
+            .octopus_database
+            .update_task(
+                &mut transaction,
+                task.id,
+                task.assigned_user_chat_id,
+                Some(second_user_id),
+                task.existing_task_id,
+                task.description,
+                task.status,
+                task.title,
+                task.r#type,
+                task.use_task_book_generation,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::GET)
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.user_id, user_id);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -2414,30 +2154,25 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::empty())
                     .unwrap(),
@@ -2454,11 +2189,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -2480,8 +2225,9 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -2499,11 +2245,23 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{user_id}"))
+                    .uri(format!("/api/v1/tasks/{workspace_id}/{task_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2520,85 +2278,22 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
             &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn read_403_different_company_admin() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let second_company_id = user.company_id;
-        let third_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, third_user_id)
-                .await;
-        let session_id = session_response.id;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id, second_company_id],
-            &[user_id, second_user_id, third_user_id],
         )
         .await;
 
@@ -2618,26 +2313,19 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (_answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
 
         let mut transaction = app
             .context
@@ -2646,13 +2334,8 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[],
-            &[second_user_id],
-        )
-        .await;
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
 
@@ -2660,7 +2343,7 @@ pub mod tests {
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
@@ -2678,13 +2361,18 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        task_test_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id],
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
         )
         .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -2702,31 +2390,27 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
         )
         .await;
-        let second_user_id = user.id;
 
-        let third_user_id = "33847746-0030-4964-a496-f75d04499160";
+        let task_test_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::GET)
-                    .uri(format!("/api/v1/users/{third_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -2742,229 +2426,14 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        api::tasks::tests::task_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
+            chat_id,
+            task_id,
+            workspace_id,
         )
         .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn roles_200() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri("/api/v1/users/roles".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let body = BodyExt::collect(response.into_body())
-            .await
-            .unwrap()
-            .to_bytes()
-            .to_vec();
-        let body: Vec<String> = serde_json::from_slice(&body).unwrap();
-
-        assert!(!body.is_empty());
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn roles_401() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri("/api/v1/users/roles".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn roles_403_deleted_user() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
-
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[],
-            &[second_user_id],
-        )
-        .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::GET)
-                    .uri("/api/v1/users/roles".to_string())
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), session_id.to_string())
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::FORBIDDEN);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -2990,44 +2459,31 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
         let session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3043,10 +2499,9 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, second_user_id);
-        assert_eq!(body.email, email);
+        assert_eq!(body.answer.unwrap(), answer);
 
         let mut transaction = app
             .context
@@ -3055,11 +2510,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -3081,8 +2546,10 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -3095,27 +2562,43 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(
+            router.clone(),
+            session_id,
+            second_user_id,
+            task_id,
+            &question,
+        )
+        .await;
+        let task_test_id = task_test.id;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), admin_session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "roles": &roles,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3131,11 +2614,9 @@ pub mod tests {
             .unwrap()
             .to_bytes()
             .to_vec();
-        let body: UserExtended = serde_json::from_slice(&body).unwrap();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
 
-        assert_eq!(body.id, second_user_id);
-        assert_eq!(body.email, email);
-        assert_eq!(body.is_enabled, is_enabled);
+        assert_eq!(body.answer.unwrap(), answer);
 
         let mut transaction = app
             .context
@@ -3144,81 +2625,15 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        task_test_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id, second_user_id],
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
         )
         .await;
-
-        api::tests::transaction_commit(app.context.clone(), transaction).await;
-    }
-
-    #[tokio::test]
-    async fn update_400() {
-        let app = app::tests::get_test_app().await;
-        let router = app.router;
-
-        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
-        let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
-        let company_id = user.company_id;
-        let user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
-
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
-            router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
-            &name,
-            &password,
-            &roles,
-        )
-        .await;
-        let second_user_id = user.id;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-
-        let response = router
-            .oneshot(
-                Request::builder()
-                    .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
-                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
-                    .body(Body::from(
-                        serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                        })
-                        .to_string(),
-                    ))
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
-
-        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
-
-        let mut transaction = app
-            .context
-            .octopus_database
-            .transaction_begin()
-            .await
-            .unwrap();
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -3244,41 +2659,30 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-            .await;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3296,11 +2700,21 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
-            &[user_id, second_user_id],
+            &[user_id],
         )
         .await;
 
@@ -3322,8 +2736,9 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -3341,23 +2756,29 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3374,6 +2795,16 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -3401,8 +2832,10 @@ pub mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -3415,6 +2848,32 @@ pub mod tests {
         .await;
         let second_user_id = user.id;
 
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(
+            router.clone(),
+            session_id,
+            second_user_id,
+            task_id,
+            &question,
+        )
+        .await;
+        let task_test_id = task_test.id;
+
         let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
             api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
@@ -3426,27 +2885,17 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
-        let is_enabled = false;
-        let roles = [ROLE_PRIVATE_USER.to_string(), ROLE_PUBLIC_USER.to_string()];
-
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
-                            "is_enabled": &is_enabled,
-                            "roles": &roles,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3463,6 +2912,16 @@ pub mod tests {
             .transaction_begin()
             .await
             .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
 
         api::setup::tests::setup_cleanup(
             app.context.clone(),
@@ -3488,26 +2947,19 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
+            &question,
         )
         .await;
-        let second_user_id = user.id;
-
-        let session_response =
-            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
-                .await;
-        let session_id = session_response.id;
 
         let mut transaction = app
             .context
@@ -3516,33 +2968,22 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
-            app.context.clone(),
-            &mut transaction,
-            &[],
-            &[second_user_id],
-        )
-        .await;
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3560,13 +3001,18 @@ pub mod tests {
             .await
             .unwrap();
 
-        api::setup::tests::setup_cleanup(
+        task_test_with_deps_cleanup(
             app.context.clone(),
             &mut transaction,
-            &[company_id],
-            &[user_id],
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
         )
         .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
 
         api::tests::transaction_commit(app.context.clone(), transaction).await;
     }
@@ -3584,41 +3030,32 @@ pub mod tests {
 
         let session_response =
             api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
-        let admin_session_id = session_response.id;
+        let session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
             router.clone(),
-            admin_session_id,
-            &email,
-            is_enabled,
-            &job_title,
+            session_id,
+            user_id,
             &name,
-            &password,
-            &roles,
+            &r#type,
         )
         .await;
-        let second_user_id = user.id;
 
-        let third_user_id = "33847746-0030-4964-a496-f75d04499160";
-
-        let email = format!(
-            "{}{}{}",
-            Word().fake::<String>(),
-            Word().fake::<String>(),
-            SafeEmail().fake::<String>()
-        );
+        let task_test_id = "33847746-0030-4964-a496-f75d04499160";
 
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{third_user_id}"))
+                    .uri(format!("/api/v1/task-tests/{task_id}/{task_test_id}"))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
-                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &email,
+                            "answer": &answer,
+                            "question": &question,
                         })
                         .to_string(),
                     ))
@@ -3636,6 +3073,157 @@ pub mod tests {
             .await
             .unwrap();
 
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_200() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
+            router.clone(),
+            session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        let task = app
+            .context
+            .octopus_database
+            .try_get_task_by_id(task_id)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let _ = app
+            .context
+            .octopus_database
+            .update_task(
+                &mut transaction,
+                task.id,
+                task.assigned_user_chat_id,
+                Some(second_user_id),
+                task.existing_task_id,
+                task.description,
+                task.status,
+                task.title,
+                task.r#type,
+                task.use_task_book_generation,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.answer.unwrap(), answer);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
@@ -3648,24 +3236,185 @@ pub mod tests {
     }
 
     #[tokio::test]
-    async fn update_409() {
+    async fn answer_200_company_admin() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
-        let (company_name, admin_email, password) = api::setup::tests::get_setup_post_params();
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
         let user =
-            api::setup::tests::setup_post(router.clone(), &company_name, &admin_email, &password)
-                .await;
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
         let company_id = user.company_id;
         let user_id = user.id;
 
         let session_response =
-            api::auth::login::tests::login_post(router.clone(), &admin_email, &password, user_id)
-                .await;
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
         let admin_session_id = session_response.id;
 
-        let (email, is_enabled, job_title, name, password, roles) = get_user_create_params();
-        let user = user_create(
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), admin_session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = BodyExt::collect(response.into_body())
+            .await
+            .unwrap()
+            .to_bytes()
+            .to_vec();
+        let body: TaskTest = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(body.answer.unwrap(), answer);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_401() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_403() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, roles) =
+            api::users::tests::get_user_create_params();
+        let user = api::users::tests::user_create(
             router.clone(),
             admin_session_id,
             &email,
@@ -3683,16 +3432,30 @@ pub mod tests {
                 .await;
         let session_id = session_response.id;
 
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
         let response = router
             .oneshot(
                 Request::builder()
                     .method(http::Method::PUT)
-                    .uri(format!("/api/v1/users/{second_user_id}"))
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
                     .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
                     .header("X-Auth-Token".to_string(), session_id.to_string())
                     .body(Body::from(
                         serde_json::json!({
-                            "email": &admin_email,
+                            "answer": &answer,
                         })
                         .to_string(),
                     ))
@@ -3701,7 +3464,7 @@ pub mod tests {
             .await
             .unwrap();
 
-        assert_eq!(response.status(), StatusCode::CONFLICT);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
 
         let mut transaction = app
             .context
@@ -3710,11 +3473,300 @@ pub mod tests {
             .await
             .unwrap();
 
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
         api::setup::tests::setup_cleanup(
             app.context.clone(),
             &mut transaction,
             &[company_id],
             &[user_id, second_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_403_different_company_admin() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let admin_session_id = session_response.id;
+
+        let (email, is_enabled, job_title, name, password, mut roles) =
+            api::users::tests::get_user_create_params();
+        roles.push(ROLE_SUPERVISOR.to_string());
+        let user = api::users::tests::user_create(
+            router.clone(),
+            admin_session_id,
+            &email,
+            is_enabled,
+            &job_title,
+            &name,
+            &password,
+            &roles,
+        )
+        .await;
+        let second_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            admin_session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test = task_test_create(
+            router.clone(),
+            session_id,
+            second_user_id,
+            task_id,
+            &question,
+        )
+        .await;
+        let task_test_id = task_test.id;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let second_company_id = user.company_id;
+        let third_user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, third_user_id)
+                .await;
+        let session_id = session_response.id;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id, second_company_id],
+            &[user_id, second_user_id, third_user_id],
+        )
+        .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_403_deleted_user() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, question) = get_task_test_create_params();
+        let (chat_id, task_id, task_test_id, workspace_id) = task_test_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+            &question,
+        )
+        .await;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[], &[user_id])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        task_test_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            task_test_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(app.context.clone(), &mut transaction, &[company_id], &[])
+            .await;
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+    }
+
+    #[tokio::test]
+    async fn answer_404() {
+        let app = app::tests::get_test_app().await;
+        let router = app.router;
+
+        let (company_name, email, password) = api::setup::tests::get_setup_post_params();
+        let user =
+            api::setup::tests::setup_post(router.clone(), &company_name, &email, &password).await;
+        let company_id = user.company_id;
+        let user_id = user.id;
+
+        let session_response =
+            api::auth::login::tests::login_post(router.clone(), &email, &password, user_id).await;
+        let session_id = session_response.id;
+
+        let (name, r#type) = api::workspaces::tests::get_workspace_create_params_public();
+        let (answer, _question) = get_task_test_create_params();
+        let (chat_id, task_id, workspace_id) = api::tasks::tests::task_with_deps_create(
+            router.clone(),
+            session_id,
+            user_id,
+            &name,
+            &r#type,
+        )
+        .await;
+
+        let task_test_id = "33847746-0030-4964-a496-f75d04499160";
+
+        let response = router
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::PUT)
+                    .uri(format!(
+                        "/api/v1/task-tests/{task_id}/{task_test_id}/answer"
+                    ))
+                    .header(http::header::CONTENT_TYPE, mime::APPLICATION_JSON.as_ref())
+                    .header("X-Auth-Token".to_string(), session_id.to_string())
+                    .body(Body::from(
+                        serde_json::json!({
+                            "answer": &answer,
+                        })
+                        .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        api::tasks::tests::task_with_deps_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            chat_id,
+            task_id,
+            workspace_id,
+        )
+        .await;
+
+        api::setup::tests::setup_cleanup(
+            app.context.clone(),
+            &mut transaction,
+            &[company_id],
+            &[user_id],
         )
         .await;
 

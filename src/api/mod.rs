@@ -21,7 +21,7 @@ use crate::{
             register, register::RegisterPost,
         },
         chat_messages::{ChatMessageFlagPut, ChatMessagePost, ChatMessagePut},
-        chats::ChatPut,
+        chats::{ChatPost, ChatPut},
         companies::CompanyPut,
         example_prompt_categories::{ExamplePromptCategoryPost, ExamplePromptCategoryPut},
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
@@ -33,6 +33,8 @@ use crate::{
         profiles::ProfilePut,
         scheduled_prompts::{ScheduledPromptPost, ScheduledPromptPut},
         setup::{SetupInfoResponse, SetupPost},
+        task_tests::{TaskTestAnswerPut, TaskTestPost, TaskTestPut},
+        tasks::{TaskPost, TaskPut},
         users::{UserInvitationPost, UserPost, UserPut},
         version::VersionInfoResponse,
         wasp_apps::{AutoLoginUser, WaspAppAllowedUsersPut},
@@ -48,9 +50,9 @@ use crate::{
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, ExamplePrompt, ExamplePromptCategory, FileAccessType, FileType, FileWithUrl,
         InspectionDisabling, KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus,
-        Parameter, PasswordResetToken, Profile, ScheduledPrompt, SimpleApp, User, UserExtended,
-        WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
-        WorkspacesType, KV,
+        Parameter, PasswordResetToken, Profile, ScheduledPrompt, SimpleApp, Task, TaskStatus,
+        TaskTest, TaskType, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
+        WaspGeneratorStatus, Workspace, WorkspacesType, KV,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -113,6 +115,8 @@ mod scraper;
 mod server_resources;
 mod setup;
 mod simple_apps;
+mod task_tests;
+mod tasks;
 mod users;
 mod version;
 mod wasp_apps;
@@ -167,6 +171,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 ChatMessagePut,
                 ChatMessageStatus,
                 ChatPicture,
+                ChatPost,
                 ChatPut,
                 ChatTokenAudit,
                 Company,
@@ -215,6 +220,15 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 SetupInfoResponse,
                 SetupPost,
                 SimpleApp,
+                Task,
+                TaskPost,
+                TaskPut,
+                TaskStatus,
+                TaskTest,
+                TaskTestAnswerPut,
+                TaskTestPost,
+                TaskTestPut,
+                TaskType,
                 User,
                 UserExtended,
                 UserInvitationPost,
@@ -384,6 +398,20 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             simple_apps::list,
             simple_apps::read,
             simple_apps::update,
+            task_tests::answer,
+            task_tests::create,
+            task_tests::delete,
+            task_tests::list,
+            task_tests::read,
+            task_tests::update,
+            tasks::create,
+            tasks::delete,
+            tasks::latest,
+            tasks::latest_assigned,
+            tasks::list,
+            tasks::list_assigned,
+            tasks::read,
+            tasks::update,
             users::create,
             users::delete,
             users::invitation,
@@ -459,6 +487,8 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "server_resources", description = "Server resources API."),
             (name = "setup", description = "Setup API."),
             (name = "simple_apps", description = "Simple apps API."),
+            (name = "task_tests", description = "Task tests API."),
+            (name = "tasks", description = "Tasks API."),
             (name = "users", description = "Users API."),
             (name = "version", description = "Version API."),
             (name = "wasp_apps", description = "Wasp apps API."),
@@ -792,6 +822,37 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             delete(simple_apps::delete)
                 .get(simple_apps::read)
                 .put(simple_apps::update),
+        )
+        .route(
+            "/api/v1/tasks/:workspace_id",
+            get(tasks::list).post(tasks::create),
+        )
+        .route(
+            "/api/v1/tasks/:workspace_id/assigned",
+            get(tasks::list_assigned),
+        )
+        .route("/api/v1/tasks/:workspace_id/latest", get(tasks::latest))
+        .route(
+            "/api/v1/tasks/:workspace_id/latest/assigned",
+            get(tasks::latest_assigned),
+        )
+        .route(
+            "/api/v1/tasks/:workspace_id/:task_id",
+            delete(tasks::delete).get(tasks::read).put(tasks::update),
+        )
+        .route(
+            "/api/v1/task-tests/:task_id",
+            get(task_tests::list).post(task_tests::create),
+        )
+        .route(
+            "/api/v1/task-tests/:task_id/:task_test_id",
+            delete(task_tests::delete)
+                .get(task_tests::read)
+                .put(task_tests::update),
+        )
+        .route(
+            "/api/v1/task-tests/:task_id/:task_test_id/answer",
+            put(task_tests::answer),
         )
         .route("/api/v1/users", get(users::list).post(users::create))
         .route("/api/v1/users/invitation", post(users::invitation))
