@@ -1,15 +1,14 @@
 //! Methods to connect to a WebSocket as a client.
 
 use std::{
+    convert::TryFrom,
     io::{Read, Write},
     net::{SocketAddr, TcpStream, ToSocketAddrs},
     result::Result as StdResult,
 };
 
-use http::{request::Parts, Uri};
+use http::{request::Parts, HeaderName, Uri};
 use log::*;
-
-use url::Url;
 
 use crate::{
     handshake::client::{generate_key, Request, Response},
@@ -53,6 +52,12 @@ pub fn connect_with_config<Req: IntoClientRequest>(
     ) -> Result<(WebSocket<MaybeTlsStream<TcpStream>>, Response)> {
         let uri = request.uri();
         let mode = uri_mode(uri)?;
+
+        #[cfg(not(any(feature = "native-tls", feature = "__rustls-tls")))]
+        if let Mode::Tls = mode {
+            return Err(Error::Url(UrlError::TlsFeatureNotEnabled));
+        }
+
         let host = request.uri().host().ok_or(Error::Url(UrlError::NoHostName))?;
         let host = if host.starts_with('[') { &host[1..host.len() - 1] } else { host };
         let port = uri.port_u16().unwrap_or(match mode {
@@ -181,7 +186,7 @@ where
 
 /// Trait for converting various types into HTTP requests used for a client connection.
 ///
-/// This trait is implemented by default for string slices, strings, `url::Url`, `http::Uri` and
+/// This trait is implemented by default for string slices, strings, `http::Uri` and
 /// `http::Request<()>`. Note that the implementation for `http::Request<()>` is trivial and will
 /// simply take your request and pass it as is further without altering any headers or URLs, so
 /// be aware of this. If you just want to connect to the endpoint with a certain URL, better pass
@@ -241,13 +246,15 @@ impl IntoClientRequest for Uri {
     }
 }
 
-impl<'a> IntoClientRequest for &'a Url {
+#[cfg(feature = "url")]
+impl<'a> IntoClientRequest for &'a url::Url {
     fn into_client_request(self) -> Result<Request> {
         self.as_str().into_client_request()
     }
 }
 
-impl IntoClientRequest for Url {
+#[cfg(feature = "url")]
+impl IntoClientRequest for url::Url {
     fn into_client_request(self) -> Result<Request> {
         self.as_str().into_client_request()
     }
@@ -263,5 +270,75 @@ impl<'h, 'b> IntoClientRequest for httparse::Request<'h, 'b> {
     fn into_client_request(self) -> Result<Request> {
         use crate::handshake::headers::FromHttparse;
         Request::from_httparse(self)
+    }
+}
+
+/// Builder for a custom [`IntoClientRequest`] with options to add
+/// custom additional headers and sub protocols.
+///
+/// # Example
+///
+/// ```rust no_run
+/// # use crate::*;
+/// use http::Uri;
+/// use tungstenite::{connect, ClientRequestBuilder};
+///
+/// let uri: Uri = "ws://localhost:3012/socket".parse().unwrap();
+/// let token = "my_jwt_token";
+/// let builder = ClientRequestBuilder::new(uri)
+///     .with_header("Authorization", format!("Bearer {token}"))
+///     .with_sub_protocol("my_sub_protocol");
+/// let socket = connect(builder).unwrap();
+/// ```
+#[derive(Debug, Clone)]
+pub struct ClientRequestBuilder {
+    uri: Uri,
+    /// Additional [`Request`] handshake headers
+    additional_headers: Vec<(String, String)>,
+    /// Handsake subprotocols
+    subprotocols: Vec<String>,
+}
+
+impl ClientRequestBuilder {
+    /// Initializes an empty request builder
+    #[must_use]
+    pub const fn new(uri: Uri) -> Self {
+        Self { uri, additional_headers: Vec::new(), subprotocols: Vec::new() }
+    }
+
+    /// Adds (`key`, `value`) as an additional header to the handshake request
+    pub fn with_header<K, V>(mut self, key: K, value: V) -> Self
+    where
+        K: Into<String>,
+        V: Into<String>,
+    {
+        self.additional_headers.push((key.into(), value.into()));
+        self
+    }
+
+    /// Adds `protocol` to the handshake request subprotocols (`Sec-WebSocket-Protocol`)
+    pub fn with_sub_protocol<P>(mut self, protocol: P) -> Self
+    where
+        P: Into<String>,
+    {
+        self.subprotocols.push(protocol.into());
+        self
+    }
+}
+
+impl IntoClientRequest for ClientRequestBuilder {
+    fn into_client_request(self) -> Result<Request> {
+        let mut request = self.uri.into_client_request()?;
+        let headers = request.headers_mut();
+        for (k, v) in self.additional_headers {
+            let key = HeaderName::try_from(k)?;
+            let value = v.parse()?;
+            headers.append(key, value);
+        }
+        if !self.subprotocols.is_empty() {
+            let protocols = self.subprotocols.join(", ").parse()?;
+            headers.append("Sec-WebSocket-Protocol", protocols);
+        }
+        Ok(request)
     }
 }
