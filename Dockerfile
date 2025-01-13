@@ -232,7 +232,7 @@ ENV GOARCH=amd64
 WORKDIR /
 RUN git clone https://github.com/ollama/ollama.git
 WORKDIR /ollama/
-RUN git checkout v0.3.12
+RUN git checkout v0.5.5
 WORKDIR /ollama/llm/generate
 ARG CGO_CFLAGS
 RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
