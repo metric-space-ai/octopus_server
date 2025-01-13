@@ -28,7 +28,7 @@ RUN apt-get update --fix-missing && \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.82.0
+    RUST_VERSION=1.84.0
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -52,43 +52,43 @@ RUN set -eux; \
     rustc --version;
 # https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
 ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.9
+ENV GOLANG_VERSION 1.22.10
 RUN set -eux; \
     now="$(date '+%s')"; \
     arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
     url=; \
     case "$arch" in \
         'amd64') \
-            url='https://dl.google.com/go/go1.22.9.linux-amd64.tar.gz'; \
-            sha256='84a8f05b7b969d8acfcaf194ce9298ad5d3ddbfc7034930c280006b5c85a574c'; \
+            url='https://dl.google.com/go/go1.22.10.linux-amd64.tar.gz'; \
+            sha256='736ce492a19d756a92719a6121226087ccd91b652ed5caec40ad6dbfb2252092'; \
             ;; \
         'armhf') \
-            url='https://dl.google.com/go/go1.22.9.linux-armv6l.tar.gz'; \
-            sha256='ae3651ba40b3b1ec615b01ff9091734b25f7ff3dc9c5b9fb0a261d7a33e00215'; \
+            url='https://dl.google.com/go/go1.22.10.linux-armv6l.tar.gz'; \
+            sha256='a7bbbc80fe736269820bbdf3555e91ada5d18a5cde2276aac3b559bc1d52fc70'; \
             ;; \
         'arm64') \
-            url='https://dl.google.com/go/go1.22.9.linux-arm64.tar.gz'; \
-            sha256='5beec5ef9f019e1779727ef0d9643fa8bf2495e7222014d2fc4fbfce5999bf01'; \
+            url='https://dl.google.com/go/go1.22.10.linux-arm64.tar.gz'; \
+            sha256='5213c5e32fde3bd7da65516467b7ffbfe40d2bb5a5f58105e387eef450583eec'; \
             ;; \
         'i386') \
-            url='https://dl.google.com/go/go1.22.9.linux-386.tar.gz'; \
-            sha256='bd70967c67b52f446596687dbe7f3f057a661d32e4d5f6658f1353ae7bb8f676'; \
+            url='https://dl.google.com/go/go1.22.10.linux-386.tar.gz'; \
+            sha256='2ae9f00e9621489b75494fa2b8abfc5d09e0cae6effdd4c13867957ad2e4deba'; \
             ;; \
         'mips64el') \
-            url='https://dl.google.com/go/go1.22.9.linux-mips64le.tar.gz'; \
-            sha256='4f542da7d7ebf90aa5809c07c1af6d9f007117983f9337dd8d304188d6b96cf1'; \
+            url='https://dl.google.com/go/go1.22.10.linux-mips64le.tar.gz'; \
+            sha256='e66c440c03dd19bf8423034cbde7f6813321beb18d3fcf2ef234c13a25467952'; \
             ;; \
         'ppc64el') \
-            url='https://dl.google.com/go/go1.22.9.linux-ppc64le.tar.gz'; \
-            sha256='dcee55b402eaf46e7ffb2018b9e30b27ae5e821367697d8f8ff1ed1cecfd7948'; \
+            url='https://dl.google.com/go/go1.22.10.linux-ppc64le.tar.gz'; \
+            sha256='db05b9838f69d741fb9a5301220b1a62014aee025b0baf341aba3d280087b981'; \
             ;; \
         'riscv64') \
-            url='https://dl.google.com/go/go1.22.9.linux-riscv64.tar.gz'; \
-            sha256='9f87c5e7fe2e8743bddfcafe1eadd494710122f7f57d584ed5bc926d474e4a40'; \
+            url='https://dl.google.com/go/go1.22.10.linux-riscv64.tar.gz'; \
+            sha256='aef9b186c1b9b58c0472dbf54978f97682852a91b2e8d6bf354e59ba9c24438a'; \
             ;; \
         's390x') \
-            url='https://dl.google.com/go/go1.22.9.linux-s390x.tar.gz'; \
-            sha256='11d4ced279bd8c40ee90a682dadf9d03c2524d996e605d4088e3afbe38be6e37'; \
+            url='https://dl.google.com/go/go1.22.10.linux-s390x.tar.gz'; \
+            sha256='4ab2286adb096576771801b5099760b1d625fd7b44080449151a4d9b21303672'; \
             ;; \
         *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
     esac; \
@@ -306,12 +306,12 @@ RUN ubuntu-drivers install nvidia-driver-550
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV PATH=/opt/conda/bin:$PATH
 CMD [ "/bin/bash" ]
-ARG INSTALLER_URL_LINUX64="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-x86_64.sh"
-ARG SHA256SUM_LINUX64="8d936ba600300e08eca3d874dee88c61c6f39303597b2b66baee54af4f7b4122"
-ARG INSTALLER_URL_S390X="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-s390x.sh"
-ARG SHA256SUM_S390X="876db345b31db6d2b96ab1e2aedfbcea8af6b951a3218e6fd36f657452d1305c"
-ARG INSTALLER_URL_AARCH64="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.9.2-0-Linux-aarch64.sh"
-ARG SHA256SUM_AARCH64="86b8df7481646cf87e77873e9789adb7569b58248d3aa629eb2da35e6f2e2eed"
+ARG INSTALLER_URL_LINUX64="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.11.1-0-Linux-x86_64.sh"
+ARG SHA256SUM_LINUX64="636b209b00b6673471f846581829d4b96b9c3378679925a59a584257c3fef5a3"
+ARG INSTALLER_URL_S390X="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.11.1-0-Linux-s390x.sh"
+ARG SHA256SUM_S390X="105bce6b0137f574147b8fdfd5e3a7d6c92f3ea9fbf3e0de61331ea43586e9af"
+ARG INSTALLER_URL_AARCH64="https://repo.anaconda.com/miniconda/Miniconda3-py312_24.11.1-0-Linux-aarch64.sh"
+ARG SHA256SUM_AARCH64="9180a2f1fab799fd76e9ef914643269dcf5bad9d455623b905b87f5d39ae140f"
 RUN set -x && \
     UNAME_M="$(uname -m)" && \
     if [ "${UNAME_M}" = "x86_64" ]; then \
