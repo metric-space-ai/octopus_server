@@ -230,16 +230,19 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 ENV GOARCH=amd64
 WORKDIR /
-RUN git clone https://github.com/ollama/ollama.git
-WORKDIR /ollama/
-RUN git checkout v0.5.5
-WORKDIR /ollama/llm/generate
-ARG CGO_CFLAGS
-RUN OLLAMA_SKIP_CPU_GENERATE=1 /bin/bash gen_linux.sh
-WORKDIR /ollama/
-ENV CGO_ENABLED 1
-ARG GOFLAGS
-RUN go build -trimpath .
+RUN wget https://github.com/ollama/ollama/releases/download/v0.5.5/ollama-linux-amd64.tgz
+RUN mkdir ollama
+RUN tar xzvf ollama-linux-amd64.tgz -C /ollama
+#RUN git clone https://github.com/ollama/ollama.git
+#WORKDIR /ollama/
+#RUN git checkout v0.5.5
+#WORKDIR /ollama/llm/generate
+#ARG CGO_CFLAGS
+#RUN OLLAMA_SKIP_CPU_GENERATE=1 make -j 5 dist
+#WORKDIR /ollama/
+#ENV CGO_ENABLED 1
+#ARG GOFLAGS
+#RUN go build -trimpath -o dist/linux-amd64/bin/ollama .
 
 FROM octopus_server_base AS octopus_server_runtime
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
@@ -547,7 +550,9 @@ RUN ./run build
 RUN ./run install
 ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
-COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
+#COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
+COPY --from=octopus_server_builder /ollama/bin/* /bin/
+COPY --from=octopus_server_builder /ollama/lib/* /lib/
 ENV OLLAMA_HOST http://localhost:5050
 ENV OLLAMA_KEEP_ALIVE 2m
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
