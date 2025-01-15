@@ -226,7 +226,6 @@ COPY /octopus_client/public public/
 COPY /octopus_client/src src/
 RUN npm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED 1
-#RUN npm run lint
 RUN npm run build
 ENV GOARCH=amd64
 WORKDIR /
@@ -519,7 +518,6 @@ ARG SENDGRID_API_KEY
 ARG NEXT_PUBLIC_BASE_URL
 ARG NEXT_PUBLIC_DOMAIN
 ARG NEXT_PUBLIC_THEME_NAME
-ARG WASP_MAGE_DATABASE_URL
 ARG NEXTCLOUD_PASSWORD
 ARG NEXTCLOUD_SUBDIR
 ARG NEXTCLOUD_URL
@@ -529,8 +527,6 @@ ENV NVIDIA_VISIBLE_DEVICES all
 ENV NVIDIA_DRIVER_CAPABILITIES all
 ENV NEXT_TELEMETRY_DISABLED 1
 ENV PORT 3000
-ENV WASP_MAGE_BACKEND_PORT 4031
-ENV WASP_MAGE_PORT 4030
 RUN conda init
 RUN conda config --add channels conda-forge
 RUN conda install -y -n base mamba
@@ -556,8 +552,6 @@ COPY --from=octopus_server_builder /ollama/lib/* /lib/
 ENV OLLAMA_HOST http://localhost:5050
 ENV OLLAMA_KEEP_ALIVE 2m
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
-WORKDIR /wasp_mage
-COPY octopus_server/wasp_mage /wasp_mage
 WORKDIR /octopus_client
 ARG NEXT_PUBLIC_SLACK_BOT_TOKEN
 ARG NEXT_PUBLIC_SLACK_CHANNEL_ID
@@ -579,11 +573,9 @@ COPY --from=octopus_server_builder /octopus_server/migrations ./migrations
 COPY --from=octopus_server_builder /octopus_server/docker-entrypoint.sh ./
 COPY --from=octopus_server_builder /octopus_server/frontend-start.sh ./
 COPY --from=octopus_server_builder /octopus_server/mount-nextcloud.sh ./
-COPY --from=octopus_server_builder /octopus_server/wasp-mage-start.sh ./
 RUN chmod +x docker-entrypoint.sh && \
     chmod +x frontend-start.sh && \
     chmod +x mount-nextcloud.sh && \
-    chmod +x wasp-mage-start.sh && \
     mkdir ./nextcloud_files/ && \
     mkdir ./public/ && \
     mkdir ./services/ && \
