@@ -25,6 +25,7 @@ pub enum AppError {
     Conflict,
     File,
     Forbidden,
+    Framework(axum::Error),
     FromTime,
     Generic(Box<dyn Error + Send + Sync>),
     Gone,
@@ -69,6 +70,7 @@ impl IntoResponse for AppError {
             AppError::Conflict => (StatusCode::CONFLICT, "Conflicting request."),
             AppError::File => (StatusCode::BAD_REQUEST, "File error."),
             AppError::Forbidden => (StatusCode::FORBIDDEN, "Forbidden."),
+            AppError::Framework(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Framework error."),
             AppError::FromTime => (StatusCode::INTERNAL_SERVER_ERROR, "From time error."),
             AppError::Generic(error) => {
                 error!("Error: {:?}", error);
@@ -129,6 +131,12 @@ impl IntoResponse for AppError {
 impl From<argon2::password_hash::Error> for AppError {
     fn from(inner: argon2::password_hash::Error) -> Self {
         AppError::PasswordHash(inner)
+    }
+}
+
+impl From<axum::Error> for AppError {
+    fn from(inner: axum::Error) -> Self {
+        AppError::Framework(inner)
     }
 }
 

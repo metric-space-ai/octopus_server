@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, suggested_simple_app_id, suggested_wasp_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, message, progress, response, simple_app_data, status AS \"status: _\", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, suggested_simple_app_id, suggested_wasp_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, is_task_description, message, progress, response, simple_app_data, status AS \"status: _\", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at\n            FROM chat_messages\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -125,26 +125,31 @@
       },
       {
         "ordinal": 24,
+        "name": "is_task_description",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 25,
         "name": "message",
         "type_info": "Text"
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "progress",
         "type_info": "Int4"
       },
       {
-        "ordinal": 26,
+        "ordinal": 27,
         "name": "response",
         "type_info": "Text"
       },
       {
-        "ordinal": 27,
+        "ordinal": 28,
         "name": "simple_app_data",
         "type_info": "Json"
       },
       {
-        "ordinal": 28,
+        "ordinal": 29,
         "name": "status: _",
         "type_info": {
           "Custom": {
@@ -159,42 +164,42 @@
         }
       },
       {
-        "ordinal": 29,
+        "ordinal": 30,
         "name": "suggested_llm",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 30,
+        "ordinal": 31,
         "name": "suggested_model",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 31,
+        "ordinal": 32,
         "name": "suggested_secondary_model",
         "type_info": "Bool"
       },
       {
-        "ordinal": 32,
+        "ordinal": 33,
         "name": "used_llm",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 33,
+        "ordinal": 34,
         "name": "used_model",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 34,
+        "ordinal": 35,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 35,
+        "ordinal": 36,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 36,
+        "ordinal": 37,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -231,6 +236,7 @@
       false,
       false,
       false,
+      false,
       true,
       true,
       false,
@@ -244,5 +250,5 @@
       false
     ]
   },
-  "hash": "d9dca604836a682df97cc8506a8d7dfb805e11ff902584d9373b3e923dac951d"
+  "hash": "10b899f76b9f6b990b0a65c0ef8aa08ca42477de4a353ab38f9963c5c72367d6"
 }

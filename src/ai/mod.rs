@@ -21,6 +21,7 @@ pub mod internal_function_call;
 pub mod ollama;
 pub mod open_ai;
 pub mod service;
+pub mod tasks;
 
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
 
@@ -184,7 +185,7 @@ pub async fn update_chat_name(
         if chat.name.is_none() {
             context
                 .octopus_database
-                .update_chat(transaction, chat.id, &chat_message.message)
+                .update_chat(transaction, chat.id, &chat_message.message, chat.r#type)
                 .await?;
         }
     }

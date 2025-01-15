@@ -485,6 +485,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -545,6 +546,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -617,6 +619,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -690,6 +693,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -761,6 +765,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -853,6 +858,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -988,6 +994,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1069,6 +1076,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1138,6 +1146,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1212,6 +1221,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1307,6 +1317,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1383,6 +1394,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1451,6 +1463,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1537,6 +1550,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1611,6 +1625,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1710,6 +1725,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1792,6 +1808,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1860,6 +1877,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -1952,6 +1970,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -2033,6 +2052,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -2115,6 +2135,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -2195,6 +2216,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -2300,6 +2322,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 
@@ -2388,6 +2411,7 @@ mod tests {
             user_id,
             &name,
             &r#type,
+            "Chat",
         )
         .await;
 

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO chats\n            (user_id, workspace_id)\n            VALUES ($1, $2)\n            RETURNING id, user_id, workspace_id, name, created_at, deleted_at, updated_at",
+  "query": "SELECT id, user_id, workspace_id, name, type AS \"type: _\", created_at, deleted_at, updated_at\n            FROM chats\n            WHERE id = $1\n            AND deleted_at IS NULL",
   "describe": {
     "columns": [
       {
@@ -25,23 +25,37 @@
       },
       {
         "ordinal": 4,
+        "name": "type: _",
+        "type_info": {
+          "Custom": {
+            "name": "chat_types",
+            "kind": {
+              "Enum": [
+                "chat",
+                "task"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid"
       ]
     },
@@ -51,9 +65,10 @@
       false,
       true,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "e41d416c165e9f4f49888ccc2366ae5eb4325a1d6b271aca295a16f8667c8abb"
+  "hash": "220bd5bf63fdf5766e25a392f7399337a9d280298ece2293735f403f9d7992b3"
 }

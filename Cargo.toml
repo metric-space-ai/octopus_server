@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.9"
+version = "0.10.10"
 edition = "2021"
 rust-version = "1.80"
 
@@ -126,7 +126,7 @@ utoipa = { version = "~5.2.0", default-features = false, features = [
 utoipa-swagger-ui = { version = "~8.0.3", default-features = false, features = [
     "axum"
 ] }
-uuid = { version = "1.11.0", default-features = false, features = [
+uuid = { version = "1.12.0", default-features = false, features = [
     "serde",
     "v4"
 ] }
@@ -139,7 +139,8 @@ zip = { version = "2.2.2", default-features = false, features = [
 ] }
 
 [profile.release]
+codegen-units = 1
 lto = true
-opt-level = "z"
+opt-level = "s"
 panic = "abort"
 strip = true
