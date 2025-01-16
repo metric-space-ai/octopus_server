@@ -616,7 +616,8 @@ pub async fn proxy_backend(
                     Some(id),
                     None,
                 )
-                .await?;
+                .await
+                .map_err(|_| AppError::WaspAppCommunicationProblem)?;
 
                 process_manager::try_update_last_used_at(&context, &app_id)?;
 
@@ -638,7 +639,8 @@ pub async fn proxy_backend(
                 Some(id),
                 None,
             )
-            .await?;
+            .await
+            .map_err(|_| AppError::WaspAppCommunicationProblem)?;
 
             process_manager::try_update_last_used_at(&context, &app_id)?;
 
@@ -821,7 +823,8 @@ pub async fn proxy_frontend(
                     Some(id),
                     None,
                 )
-                .await?;
+                .await
+                .map_err(|_| AppError::WaspAppCommunicationProblem)?;
 
                 process_manager::try_update_last_used_at(&context, &app_id)?;
 
@@ -843,7 +846,8 @@ pub async fn proxy_frontend(
                 Some(id),
                 None,
             )
-            .await?;
+            .await
+            .map_err(|_| AppError::WaspAppCommunicationProblem)?;
 
             process_manager::try_update_last_used_at(&context, &app_id)?;
 

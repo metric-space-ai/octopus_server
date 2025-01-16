@@ -58,43 +58,43 @@ pub async fn register(
         return Err(AppError::NotFound);
     }
 
+    if input.password != input.repeat_password {
+        return Err(AppError::PasswordDoesNotMatch);
+    }
+
+    let cloned_password = input.password.clone();
+    let config = context.get_config().await?;
+    let pw_hash =
+        tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
+            .await??;
+
+    let company = context
+        .octopus_database
+        .try_get_company_primary()
+        .await?
+        .ok_or(AppError::CompanyNotFound)?;
+
+    if let Some(allowed_domains) = company.allowed_domains {
+        let mut registration_allowed = false;
+
+        for allowed_domain in allowed_domains {
+            if email.contains(&allowed_domain) {
+                registration_allowed = true;
+            }
+        }
+
+        if !registration_allowed {
+            return Err(AppError::NotAllowedDomain);
+        }
+    }
+
     let user_exists = context
         .octopus_database
-        .try_get_user_by_email(&email)
+        .try_get_user_by_email_even_deleted(&email)
         .await?;
 
     match user_exists {
         None => {
-            if input.password != input.repeat_password {
-                return Err(AppError::PasswordDoesNotMatch);
-            }
-
-            let cloned_password = input.password.clone();
-            let config = context.get_config().await?;
-            let pw_hash =
-                tokio::task::spawn_blocking(move || auth::hash_password(&config, &cloned_password))
-                    .await??;
-
-            let company = context
-                .octopus_database
-                .try_get_company_primary()
-                .await?
-                .ok_or(AppError::CompanyNotFound)?;
-
-            if let Some(allowed_domains) = company.allowed_domains {
-                let mut registration_allowed = false;
-
-                for allowed_domain in allowed_domains {
-                    if email.contains(&allowed_domain) {
-                        registration_allowed = true;
-                    }
-                }
-
-                if !registration_allowed {
-                    return Err(AppError::NotAllowedDomain);
-                }
-            }
-
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
             let user = context
@@ -128,7 +128,65 @@ pub async fn register(
 
             Ok((StatusCode::CREATED, Json(user)).into_response())
         }
-        Some(_user_exists) => Err(AppError::UserAlreadyExists),
+        Some(user_exists) => {
+            if let Some(_deleted_at) = user_exists.deleted_at {
+                let mut transaction = context.octopus_database.transaction_begin().await?;
+
+                let user = context
+                    .octopus_database
+                    .update_user_undelete(
+                        &mut transaction,
+                        user_exists.id,
+                        company.id,
+                        &email,
+                        true,
+                        false,
+                        context.get_config().await?.pepper_id,
+                        &pw_hash,
+                        &[ROLE_PUBLIC_USER.to_string(), ROLE_PRIVATE_USER.to_string()],
+                    )
+                    .await?;
+
+                let profile = context
+                    .octopus_database
+                    .try_get_profile_by_user_id_even_deleted(user.id)
+                    .await?;
+
+                match profile {
+                    None => {
+                        context
+                            .octopus_database
+                            .insert_profile(
+                                &mut transaction,
+                                user.id,
+                                Some(input.job_title),
+                                Some(input.name),
+                            )
+                            .await?;
+                    }
+                    Some(profile) => {
+                        context
+                            .octopus_database
+                            .update_profile_undelete(
+                                &mut transaction,
+                                profile.id,
+                                Some(input.job_title),
+                                Some(input.name),
+                            )
+                            .await?;
+                    }
+                }
+
+                context
+                    .octopus_database
+                    .transaction_commit(transaction)
+                    .await?;
+
+                return Ok((StatusCode::CREATED, Json(user)).into_response());
+            }
+
+            Err(AppError::UserAlreadyExists)
+        }
     }
 }
 

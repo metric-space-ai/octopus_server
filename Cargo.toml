@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.10"
+version = "0.10.11"
 edition = "2021"
 rust-version = "1.80"
 
@@ -14,7 +14,7 @@ async-openai = { version = "0.27.1", default-features = false, features = [
     "rustls"
 ] }
 async-recursion = "1.1.1"
-axum = { version = "0.7.9", default-features = false, features = [
+axum = { version = "0.8.1", default-features = false, features = [
     "http1",
     "json",
     "matched-path",
@@ -25,11 +25,11 @@ axum = { version = "0.7.9", default-features = false, features = [
     "tracing",
     "ws"
 ] }
-axum-extra = { version = "0.9.6", default-features = false, features = [
+axum-extra = { version = "0.10.0", default-features = false, features = [
     "tracing",
     "typed-header"
 ] }
-axum-macros = "0.4.2"
+axum-macros = "0.5.0"
 base64 = { version = "0.22.1", default-features = false, features = [
     "std"
 ] }
@@ -118,12 +118,12 @@ tracing-subscriber = { version = "0.3.19", default-features = false, features = 
     "env-filter",
     "fmt"
 ] }
-utoipa = { version = "~5.2.0", default-features = false, features = [
+utoipa = { version = "5.3.1", default-features = false, features = [
     "axum_extras",
     "chrono",
     "uuid"
 ] }
-utoipa-swagger-ui = { version = "~8.0.3", default-features = false, features = [
+utoipa-swagger-ui = { version = "9.0.0", default-features = false, features = [
     "axum"
 ] }
 uuid = { version = "1.12.0", default-features = false, features = [

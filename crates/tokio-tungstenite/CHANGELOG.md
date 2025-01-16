@@ -1,3 +1,15 @@
+# 0.26.1
+
+- Update `tungstenite` to address an issue that might cause UB in certain cases.
+
+# 0.26.0
+
+- Update `tungstenite` to `0.26.0` ([breaking changes](https://github.com/snapview/tungstenite-rs/blob/master/CHANGELOG.md#0260)).
+
+# 0.25.0
+
+- Update `tungstenite` to `0.25.0` ([important updates!](https://github.com/snapview/tungstenite-rs/blob/master/CHANGELOG.md#0250)).
+
 # 0.24.0
 
 - Update dependencies (TLS, tungstenite).

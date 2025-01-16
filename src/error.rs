@@ -51,6 +51,7 @@ pub enum AppError {
     Utf8(FromUtf8Error),
     Uuid(uuid::Error),
     Validation(ValidationErrors),
+    WaspAppCommunicationProblem,
     Zip(ZipError),
 }
 
@@ -117,6 +118,7 @@ impl IntoResponse for AppError {
             AppError::Utf8(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Utf8 error."),
             AppError::Uuid(_error) => (StatusCode::BAD_REQUEST, "Invalid API key."),
             AppError::Validation(_error) => (StatusCode::BAD_REQUEST, "Validation problem."),
+            AppError::WaspAppCommunicationProblem => (StatusCode::INTERNAL_SERVER_ERROR, "There is a problem in communication with WASP application. Please check WASP application logs."),
             AppError::Zip(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Zip error."),
         };
 
