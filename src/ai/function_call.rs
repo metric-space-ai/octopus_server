@@ -104,7 +104,7 @@ pub async fn handle_function_call(
             break;
         }
 
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(60)).await;
     }
 
     Ok(chat_message.clone())
