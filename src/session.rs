@@ -1,6 +1,5 @@
 use crate::{context::Context, entity::Session, error::AppError};
 use axum::{
-    async_trait,
     extract::{FromRef, FromRequestParts},
     http::{request::Parts, HeaderMap},
 };
@@ -59,7 +58,6 @@ pub fn get_session_id(headers: &HeaderMap) -> Result<Option<Uuid>, AppError> {
     }
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for ExtractedSession
 where
     Arc<Context>: FromRef<S>,

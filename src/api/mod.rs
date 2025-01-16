@@ -517,7 +517,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         .route("/api/v1/auth", delete(logout::logout).post(login::login))
         .route("/api/v1/auth/register", post(register::register))
         .route(
-            "/api/v1/auth/:user_id",
+            "/api/v1/auth/{user_id}",
             put(change_password::change_password),
         )
         .route("/api/v1/ai-functions", get(ai_functions::list_all))
@@ -526,11 +526,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             post(ai_functions::direct_call),
         )
         .route(
-            "/api/v1/ai-functions/:ai_service_id",
+            "/api/v1/ai-functions/{ai_service_id}",
             get(ai_functions::list),
         )
         .route(
-            "/api/v1/ai-functions/:ai_service_id/:ai_function_id",
+            "/api/v1/ai-functions/{ai_service_id}/{ai_function_id}",
             delete(ai_functions::delete)
                 .get(ai_functions::read)
                 .put(ai_functions::update),
@@ -540,21 +540,21 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(ai_service_generators::list).post(ai_service_generators::create),
         )
         .route(
-            "/api/v1/ai-service-generators/:id",
+            "/api/v1/ai-service-generators/{id}",
             delete(ai_service_generators::delete)
                 .get(ai_service_generators::read)
                 .put(ai_service_generators::update),
         )
         .route(
-            "/api/v1/ai-service-generators/:id/deploy",
+            "/api/v1/ai-service-generators/{id}/deploy",
             post(ai_service_generators::deploy),
         )
         .route(
-            "/api/v1/ai-service-generators/:id/download-original-function-body",
+            "/api/v1/ai-service-generators/{id}/download-original-function-body",
             get(ai_service_generators::download_original_function_body),
         )
         .route(
-            "/api/v1/ai-service-generators/:id/generate",
+            "/api/v1/ai-service-generators/{id}/generate",
             post(ai_service_generators::generate),
         )
         .route(
@@ -562,34 +562,34 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(ai_services::list).post(ai_services::create),
         )
         .route(
-            "/api/v1/ai-services/:id/allowed-users",
+            "/api/v1/ai-services/{id}/allowed-users",
             put(ai_services::allowed_users),
         )
-        .route("/api/v1/ai-services/:id/color", put(ai_services::color))
+        .route("/api/v1/ai-services/{id}/color", put(ai_services::color))
         .route(
-            "/api/v1/ai-services/:id/configuration",
+            "/api/v1/ai-services/{id}/configuration",
             put(ai_services::configuration),
         )
-        .route("/api/v1/ai-services/:id/diff", get(ai_services::diff))
+        .route("/api/v1/ai-services/{id}/diff", get(ai_services::diff))
         .route(
-            "/api/v1/ai-services/:id/download-original-function-body",
+            "/api/v1/ai-services/{id}/download-original-function-body",
             get(ai_services::download_original_function_body),
         )
         .route(
-            "/api/v1/ai-services/:id/download-processed-function-body",
+            "/api/v1/ai-services/{id}/download-processed-function-body",
             get(ai_services::download_processed_function_body),
         )
         .route(
-            "/api/v1/ai-services/:id/installation",
+            "/api/v1/ai-services/{id}/installation",
             put(ai_services::installation),
         )
-        .route("/api/v1/ai-services/:id/logs", get(ai_services::logs))
+        .route("/api/v1/ai-services/{id}/logs", get(ai_services::logs))
         .route(
-            "/api/v1/ai-services/:id/priority",
+            "/api/v1/ai-services/{id}/priority",
             put(ai_services::priority),
         )
         .route(
-            "/api/v1/ai-services/:id",
+            "/api/v1/ai-services/{id}",
             delete(ai_services::delete)
                 .get(ai_services::read)
                 .post(ai_services::operation)
@@ -600,100 +600,103 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(cached_files::list).post(cached_files::create),
         )
         .route(
-            "/api/v1/cached-files/:cache_key",
+            "/api/v1/cached-files/{cache_key}",
             delete(cached_files::delete)
                 .get(cached_files::read)
                 .put(cached_files::update),
         )
         .route(
-            "/api/v1/chat-activities/:chat_id",
+            "/api/v1/chat-activities/{chat_id}",
             get(chat_activities::list).post(chat_activities::create),
         )
         .route("/api/v1/chat-audits", get(chat_audits::list))
-        .route("/api/v1/chat-audits/:chat_audit_id", get(chat_audits::read))
         .route(
-            "/api/v1/chat-messages/:chat_id",
+            "/api/v1/chat-audits/{chat_audit_id}",
+            get(chat_audits::read),
+        )
+        .route(
+            "/api/v1/chat-messages/{chat_id}",
             get(chat_messages::list).post(chat_messages::create),
         )
         .route(
-            "/api/v1/chat-messages/:chat_id/latest",
+            "/api/v1/chat-messages/{chat_id}/latest",
             get(chat_messages::latest),
         )
         .route(
-            "/api/v1/chat-messages/:chat_id/:chat_message_id",
+            "/api/v1/chat-messages/{chat_id}/{chat_message_id}",
             delete(chat_messages::delete)
                 .get(chat_messages::read)
                 .post(chat_messages::regenerate)
                 .put(chat_messages::update),
         )
         .route(
-            "/api/v1/chat-messages/:chat_id/:chat_message_id/anonymize",
+            "/api/v1/chat-messages/{chat_id}/{chat_message_id}/anonymize",
             put(chat_messages::anonymize),
         )
         .route(
-            "/api/v1/chat-messages/:chat_id/:chat_message_id/flag",
+            "/api/v1/chat-messages/{chat_id}/{chat_message_id}/flag",
             put(chat_messages::flag),
         )
         .route(
-            "/api/v1/chat-messages/:chat_id/:chat_message_id/not-sensitive",
+            "/api/v1/chat-messages/{chat_id}/{chat_message_id}/not-sensitive",
             put(chat_messages::not_sensitive),
         )
         .route(
-            "/api/v1/chat-messages/:chat_message_id/history",
+            "/api/v1/chat-messages/{chat_message_id}/history",
             get(chat_messages::history),
         )
         .route(
-            "/api/v1/chat-message-files/:chat_message_id",
+            "/api/v1/chat-message-files/{chat_message_id}",
             get(chat_message_files::list),
         )
         .route(
-            "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id",
+            "/api/v1/chat-message-files/{chat_message_id}/{chat_message_file_id}",
             delete(chat_message_files::delete).get(chat_message_files::read),
         )
         .route(
-            "/api/v1/chat-message-files/:chat_message_id/:chat_message_file_id/render-html",
+            "/api/v1/chat-message-files/{chat_message_id}/{chat_message_file_id}/render-html",
             get(chat_message_files::read_render_html),
         )
         .route(
-            "/api/v1/chat-message-pictures/:chat_message_id",
+            "/api/v1/chat-message-pictures/{chat_message_id}",
             post(chat_message_pictures::create),
         )
         .route(
-            "/api/v1/chat-message-pictures/:chat_message_id/:chat_message_picture_id",
+            "/api/v1/chat-message-pictures/{chat_message_id}/{chat_message_picture_id}",
             delete(chat_message_pictures::delete)
                 .get(chat_message_pictures::read)
                 .put(chat_message_pictures::update),
         )
         .route(
-            "/api/v1/chat-pictures/:chat_id",
+            "/api/v1/chat-pictures/{chat_id}",
             post(chat_pictures::create),
         )
         .route(
-            "/api/v1/chat-pictures/:chat_id/:chat_picture_id",
+            "/api/v1/chat-pictures/{chat_id}/{chat_picture_id}",
             delete(chat_pictures::delete)
                 .get(chat_pictures::read)
                 .put(chat_pictures::update),
         )
         .route("/api/v1/chat-token-audits", get(chat_token_audits::list))
         .route(
-            "/api/v1/chat-token-audits/:chat_token_audit_id",
+            "/api/v1/chat-token-audits/{chat_token_audit_id}",
             get(chat_token_audits::read),
         )
         .route(
-            "/api/v1/chat-token-audits/:company_id/report",
+            "/api/v1/chat-token-audits/{company_id}/report",
             get(chat_token_audits::report),
         )
         .route(
-            "/api/v1/chats/:workspace_id",
+            "/api/v1/chats/{workspace_id}",
             get(chats::list).post(chats::create),
         )
-        .route("/api/v1/chats/:workspace_id/latest", get(chats::latest))
+        .route("/api/v1/chats/{workspace_id}/latest", get(chats::latest))
         .route(
-            "/api/v1/chats/:workspace_id/:chat_id",
+            "/api/v1/chats/{workspace_id}/{chat_id}",
             delete(chats::delete).get(chats::read).put(chats::update),
         )
         .route(
-            "/api/v1/companies/:id",
+            "/api/v1/companies/{id}",
             get(companies::read).put(companies::update),
         )
         .route(
@@ -701,11 +704,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(example_prompts::list).post(example_prompts::create),
         )
         .route(
-            "/api/v1/example-prompts/by-category/:example_prompt_category_id",
+            "/api/v1/example-prompts/by-category/{example_prompt_category_id}",
             get(example_prompts::list_by_category),
         )
         .route(
-            "/api/v1/example-prompts/:id",
+            "/api/v1/example-prompts/{id}",
             delete(example_prompts::delete)
                 .get(example_prompts::read)
                 .put(example_prompts::update),
@@ -715,29 +718,29 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(example_prompt_categories::list).post(example_prompt_categories::create),
         )
         .route(
-            "/api/v1/example-prompt-categories/:id",
+            "/api/v1/example-prompt-categories/{id}",
             delete(example_prompt_categories::delete)
                 .get(example_prompt_categories::read)
                 .put(example_prompt_categories::update),
         )
         .route("/api/v1/files", get(files::list).post(files::create))
         .route(
-            "/api/v1/files/:id",
+            "/api/v1/files/{id}",
             delete(files::delete).get(files::read).put(files::update),
         )
         .route(
-            "/api/v1/inspection-disablings/:user_id",
+            "/api/v1/inspection-disablings/{user_id}",
             delete(inspection_disablings::delete)
                 .get(inspection_disablings::read)
                 .post(inspection_disablings::create),
         )
         .route("/api/v1/kvs", get(kvs::list).post(kvs::create))
         .route(
-            "/api/v1/kvs/:id",
+            "/api/v1/kvs/{id}",
             delete(kvs::delete).get(kvs::read).put(kvs::update),
         )
         .route(
-            "/api/v1/llm-proxy/*pass",
+            "/api/v1/llm-proxy/{*pass}",
             delete(llm_proxy::proxy)
                 .get(llm_proxy::proxy)
                 .post(llm_proxy::proxy)
@@ -749,7 +752,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(nextcloud_files::list).post(nextcloud_files::create),
         )
         .route(
-            "/api/v1/nextcloud-files/:id",
+            "/api/v1/nextcloud-files/{id}",
             delete(nextcloud_files::delete)
                 .get(nextcloud_files::read)
                 .put(nextcloud_files::update),
@@ -764,7 +767,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         )
         .route("/api/v1/ollama-models/models", get(ollama_models::models))
         .route(
-            "/api/v1/ollama-models/:id",
+            "/api/v1/ollama-models/{id}",
             delete(ollama_models::delete)
                 .get(ollama_models::read)
                 .put(ollama_models::update),
@@ -775,23 +778,23 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
         )
         .route("/api/v1/parameters/names", get(parameters::names))
         .route(
-            "/api/v1/parameters/:id",
+            "/api/v1/parameters/{id}",
             delete(parameters::delete)
                 .get(parameters::read)
                 .put(parameters::update),
         )
         .route("/api/v1/password-resets", post(password_resets::request))
         .route(
-            "/api/v1/password-resets/:token",
+            "/api/v1/password-resets/{token}",
             get(password_resets::validate).put(password_resets::change_password),
         )
         .route("/api/v1/process-manager", get(process_manager::list))
         .route(
-            "/api/v1/profile-pictures/:user_id",
+            "/api/v1/profile-pictures/{user_id}",
             delete(profile_pictures::delete).put(profile_pictures::update),
         )
         .route(
-            "/api/v1/profiles/:user_id",
+            "/api/v1/profiles/{user_id}",
             get(profiles::read).put(profiles::update),
         )
         .route(
@@ -799,7 +802,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(scheduled_prompts::list).post(scheduled_prompts::create),
         )
         .route(
-            "/api/v1/scheduled-prompts/:id",
+            "/api/v1/scheduled-prompts/{id}",
             delete(scheduled_prompts::delete)
                 .get(scheduled_prompts::read)
                 .put(scheduled_prompts::update),
@@ -816,49 +819,49 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             "/api/v1/simple-apps",
             get(simple_apps::list).post(simple_apps::create),
         )
-        .route("/api/v1/simple-apps/:id/code", get(simple_apps::code))
+        .route("/api/v1/simple-apps/{id}/code", get(simple_apps::code))
         .route(
-            "/api/v1/simple-apps/:id",
+            "/api/v1/simple-apps/{id}",
             delete(simple_apps::delete)
                 .get(simple_apps::read)
                 .put(simple_apps::update),
         )
         .route(
-            "/api/v1/tasks/:workspace_id",
+            "/api/v1/tasks/{workspace_id}",
             get(tasks::list).post(tasks::create),
         )
         .route(
-            "/api/v1/tasks/:workspace_id/assigned",
+            "/api/v1/tasks/{workspace_id}/assigned",
             get(tasks::list_assigned),
         )
-        .route("/api/v1/tasks/:workspace_id/latest", get(tasks::latest))
+        .route("/api/v1/tasks/{workspace_id}/latest", get(tasks::latest))
         .route(
-            "/api/v1/tasks/:workspace_id/latest/assigned",
+            "/api/v1/tasks/{workspace_id}/latest/assigned",
             get(tasks::latest_assigned),
         )
         .route(
-            "/api/v1/tasks/:workspace_id/:task_id",
+            "/api/v1/tasks/{workspace_id}/{task_id}",
             delete(tasks::delete).get(tasks::read).put(tasks::update),
         )
         .route(
-            "/api/v1/task-tests/:task_id",
+            "/api/v1/task-tests/{task_id}",
             get(task_tests::list).post(task_tests::create),
         )
         .route(
-            "/api/v1/task-tests/:task_id/:task_test_id",
+            "/api/v1/task-tests/{task_id}/{task_test_id}",
             delete(task_tests::delete)
                 .get(task_tests::read)
                 .put(task_tests::update),
         )
         .route(
-            "/api/v1/task-tests/:task_id/:task_test_id/answer",
+            "/api/v1/task-tests/{task_id}/{task_test_id}/answer",
             put(task_tests::answer),
         )
         .route("/api/v1/users", get(users::list).post(users::create))
         .route("/api/v1/users/invitation", post(users::invitation))
         .route("/api/v1/users/roles", get(users::roles))
         .route(
-            "/api/v1/users/:user_id",
+            "/api/v1/users/{user_id}",
             delete(users::delete).get(users::read).put(users::update),
         )
         .route("/api/v1/version", get(version::info))
@@ -872,50 +875,50 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             post(wasp_apps::extract_meta),
         )
         .route(
-            "/api/v1/wasp-apps/:id/allowed-users",
+            "/api/v1/wasp-apps/{id}/allowed-users",
             put(wasp_apps::allowed_users),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/logs",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/logs",
             get(wasp_apps::logs),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-backend",
             delete(wasp_apps::proxy_backend)
                 .get(wasp_apps::proxy_backend)
                 .post(wasp_apps::proxy_backend)
                 .put(wasp_apps::proxy_backend),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/*pass",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-backend/{*pass}",
             delete(wasp_apps::proxy_backend)
                 .get(wasp_apps::proxy_backend)
                 .post(wasp_apps::proxy_backend)
                 .put(wasp_apps::proxy_backend),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-frontend",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)
                 .post(wasp_apps::proxy_frontend)
                 .put(wasp_apps::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-frontend/",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)
                 .post(wasp_apps::proxy_frontend)
                 .put(wasp_apps::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-apps/:id/:chat_message_id/proxy-frontend/*pass",
+            "/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-frontend/{*pass}",
             delete(wasp_apps::proxy_frontend)
                 .get(wasp_apps::proxy_frontend)
                 .post(wasp_apps::proxy_frontend)
                 .put(wasp_apps::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-apps/:id",
+            "/api/v1/wasp-apps/{id}",
             delete(wasp_apps::delete)
                 .get(wasp_apps::read)
                 .put(wasp_apps::update),
@@ -925,56 +928,56 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(wasp_generators::list).post(wasp_generators::create),
         )
         .route(
-            "/api/v1/wasp-generators/:id/logs",
+            "/api/v1/wasp-generators/{id}/logs",
             get(wasp_generators::logs),
         )
         .route(
-            "/api/v1/wasp-generators/:id/proxy-backend",
+            "/api/v1/wasp-generators/{id}/proxy-backend",
             delete(wasp_generators::proxy_backend)
                 .get(wasp_generators::proxy_backend)
                 .post(wasp_generators::proxy_backend)
                 .put(wasp_generators::proxy_backend),
         )
         .route(
-            "/api/v1/wasp-generators/:id/proxy-backend/*pass",
+            "/api/v1/wasp-generators/{id}/proxy-backend/{*pass}",
             delete(wasp_generators::proxy_backend)
                 .get(wasp_generators::proxy_backend)
                 .post(wasp_generators::proxy_backend)
                 .put(wasp_generators::proxy_backend),
         )
         .route(
-            "/api/v1/wasp-generators/:id/proxy-frontend",
+            "/api/v1/wasp-generators/{id}/proxy-frontend",
             delete(wasp_generators::proxy_frontend)
                 .get(wasp_generators::proxy_frontend)
                 .post(wasp_generators::proxy_frontend)
                 .put(wasp_generators::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-generators/:id/proxy-frontend/",
+            "/api/v1/wasp-generators/{id}/proxy-frontend/",
             delete(wasp_generators::proxy_frontend)
                 .get(wasp_generators::proxy_frontend)
                 .post(wasp_generators::proxy_frontend)
                 .put(wasp_generators::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-generators/:id/proxy-frontend/*pass",
+            "/api/v1/wasp-generators/{id}/proxy-frontend/{*pass}",
             delete(wasp_generators::proxy_frontend)
                 .get(wasp_generators::proxy_frontend)
                 .post(wasp_generators::proxy_frontend)
                 .put(wasp_generators::proxy_frontend),
         )
         .route(
-            "/api/v1/wasp-generators/:id",
+            "/api/v1/wasp-generators/{id}",
             delete(wasp_generators::delete)
                 .get(wasp_generators::read)
                 .put(wasp_generators::update),
         )
         .route(
-            "/api/v1/wasp-generators/:id/deploy",
+            "/api/v1/wasp-generators/{id}/deploy",
             post(wasp_generators::deploy),
         )
         .route(
-            "/api/v1/wasp-generators/:id/generate",
+            "/api/v1/wasp-generators/{id}/generate",
             post(wasp_generators::generate),
         )
         .route(
@@ -982,7 +985,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             get(workspaces::list).post(workspaces::create),
         )
         .route(
-            "/api/v1/workspaces/:id",
+            "/api/v1/workspaces/{id}",
             delete(workspaces::delete)
                 .get(workspaces::read)
                 .put(workspaces::update),
@@ -1054,14 +1057,14 @@ pub fn ws_router(context: Arc<Context>) -> Result<Router> {
     let router = Router::new()
         .merge(SwaggerUi::new("/ws/swagger-ui").url("/ws/api-doc/openapi.json", ApiDoc::openapi()))
         .route(
-            "/ws/api/v1/wasp-apps/:id/:chat_message_id/proxy-backend/",
+            "/ws/api/v1/wasp-apps/{id}/{chat_message_id}/proxy-backend/",
             delete(wasp_apps::proxy_backend_web_socket)
                 .get(wasp_apps::proxy_backend_web_socket)
                 .post(wasp_apps::proxy_backend_web_socket)
                 .put(wasp_apps::proxy_backend_web_socket),
         )
         .route(
-            "/ws/api/v1/wasp-generators/:id/proxy-backend/",
+            "/ws/api/v1/wasp-generators/{id}/proxy-backend/",
             delete(wasp_generators::proxy_backend_web_socket)
                 .get(wasp_generators::proxy_backend_web_socket)
                 .post(wasp_generators::proxy_backend_web_socket)
