@@ -3233,6 +3233,23 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn try_get_profile_by_user_id_even_deleted(
+        &self,
+        user_id: Uuid,
+    ) -> Result<Option<Profile>> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "SELECT id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at
+            FROM profiles
+            WHERE user_id = $1",
+            user_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(profile)
+    }
+
     pub async fn try_get_scheduled_prompt_by_id(
         &self,
         id: Uuid,
@@ -3372,6 +3389,20 @@ impl OctopusDatabase {
             FROM users
             WHERE email = $1
             AND deleted_at IS NULL",
+            email
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(user)
+    }
+
+    pub async fn try_get_user_by_email_even_deleted(&self, email: &str) -> Result<Option<User>> {
+        let user = sqlx::query_as!(
+            User,
+            "SELECT id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at
+            FROM users
+            WHERE email = $1",
             email
         )
         .fetch_optional(&*self.pool)
@@ -4861,6 +4892,29 @@ impl OctopusDatabase {
         Ok(profile)
     }
 
+    pub async fn update_profile_undelete(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        job_title: Option<String>,
+        name: Option<String>,
+    ) -> Result<Profile> {
+        let profile = sqlx::query_as!(
+            Profile,
+            "UPDATE profiles
+            SET job_title = $2, name = $3, updated_at = current_timestamp(0), deleted_at = NULL
+            WHERE id = $1
+            RETURNING id, user_id, job_title, language, name, photo_file_name, text_size, created_at, deleted_at, updated_at",
+            id,
+            job_title,
+            name
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(profile)
+    }
+
     pub async fn update_profile_photo_file_name(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -5073,6 +5127,40 @@ impl OctopusDatabase {
             id,
             email,
             is_enabled,
+            roles
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(user)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub async fn update_user_undelete(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        company_id: Uuid,
+        email: &str,
+        is_enabled: bool,
+        is_invited: bool,
+        pepper_id: i32,
+        password: &str,
+        roles: &[String],
+    ) -> Result<User> {
+        let user = sqlx::query_as!(
+            User,
+            "UPDATE users
+            SET company_id = $2, email = $3, is_enabled = $4, is_invited = $5, pepper_id = $6, password = $7, roles = $8, updated_at = current_timestamp(0), deleted_at = NULL
+            WHERE id = $1
+            RETURNING id, company_id, email, is_enabled, is_invited, roles, created_at, deleted_at, updated_at",
+            id,
+            company_id,
+            email,
+            is_enabled,
+            is_invited,
+            pepper_id,
+            password,
             roles
         )
         .fetch_one(&mut **transaction)
