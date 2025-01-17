@@ -3344,6 +3344,24 @@ impl OctopusDatabase {
         Ok(task)
     }
 
+    pub async fn try_get_task_by_assigned_user_chat_id(
+        &self,
+        chat_id: Uuid,
+    ) -> Result<Option<Task>> {
+        let task = sqlx::query_as!(
+            Task,
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            FROM tasks
+            WHERE assigned_user_chat_id = $1
+            AND deleted_at IS NULL"#,
+            chat_id
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(task)
+    }
+
     pub async fn try_get_task_test_by_id(&self, id: Uuid) -> Result<Option<TaskTest>> {
         let task_test = sqlx::query_as!(
             TaskTest,
@@ -4502,6 +4520,26 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn update_chat_message_status(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: ChatMessageStatus,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as::<_, ChatMessage>(
+            "UPDATE chat_messages
+            SET status = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, suggested_simple_app_id, suggested_wasp_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, is_task_description, message, progress, response, simple_app_data, status, suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_message)
+    }
+
     pub async fn update_chat_message_llm_model(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -5060,6 +5098,26 @@ impl OctopusDatabase {
         .bind(title)
         .bind(r#type)
         .bind(use_task_book_generation)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn update_task_status(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: TaskStatus,
+    ) -> Result<Task> {
+        let task = sqlx::query_as::<_, Task>(
+            "UPDATE tasks
+            SET status = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
         .fetch_one(&mut **transaction)
         .await?;
 

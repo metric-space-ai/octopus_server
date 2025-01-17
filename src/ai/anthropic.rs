@@ -1,7 +1,7 @@
 use crate::{
-    ai::{self, function_call, internal_function_call, AiFunctionCall, ChatAuditTrail},
+    ai::{self, function_call, internal_function_call, tasks, AiFunctionCall, ChatAuditTrail},
     context::Context,
-    entity::{ChatMessage, ChatMessageStatus, User},
+    entity::{ChatMessage, ChatMessageStatus, ChatType, User},
     error::AppError,
     get_pwd, Result,
 };
@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Postgres, Transaction};
 use std::{fs::read_to_string, path::Path, sync::Arc};
 use tokio::time::Duration;
+use tracing::error;
 use uuid::Uuid;
 
 pub const ANTHROPIC: &str = "anthropic";
@@ -185,20 +186,39 @@ pub async fn get_messages(
                 chat_audit_trails.push(chat_audit_trail);
             }
 
-            let message = Message {
-                content: chat_message_tmp.message.clone(),
-                role: "user".to_string(),
-            };
+            if chat_message_tmp.is_task_description {
+                let is_task_description_message =
+                    format!("{} {}", tasks::PROMPT1, chat_message_tmp.message);
+                let message = Message {
+                    content: is_task_description_message.clone(),
+                    role: "system".to_string(),
+                };
 
-            messages.push(message);
+                messages.push(message);
 
-            let chat_audit_trail = ChatAuditTrail {
-                id: chat_message_tmp.id,
-                content: chat_message_tmp.message.clone(),
-                role: "user".to_string(),
-                created_at: chat_message_tmp.created_at,
-            };
-            chat_audit_trails.push(chat_audit_trail);
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: is_task_description_message,
+                    role: "system".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            } else {
+                let message = Message {
+                    content: chat_message_tmp.message.clone(),
+                    role: "user".to_string(),
+                };
+
+                messages.push(message);
+
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: chat_message_tmp.message.clone(),
+                    role: "user".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            }
 
             if let Some(response) = chat_message_tmp.response {
                 let message = Message {
@@ -464,7 +484,7 @@ pub async fn anthropic_request(
         )
         .await?;
 
-    ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
+    let chat = ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
 
     let chat_message = ai::check_sensitive_information_service(
         context.clone(),
@@ -598,6 +618,23 @@ pub async fn anthropic_request(
                                         .transaction_commit(transaction)
                                         .await?;
 
+                                    if let Some(chat) = chat {
+                                        if chat.r#type == ChatType::Task {
+                                            let cloned_context = context.clone();
+                                            tokio::spawn(async move {
+                                                let task = tasks::check_task_result(
+                                                    cloned_context,
+                                                    chat.id,
+                                                )
+                                                .await;
+
+                                                if let Err(e) = task {
+                                                    error!("Error: {:?}", e);
+                                                }
+                                            });
+                                        }
+                                    }
+
                                     return Ok(chat_message);
                                 }
                             } else if content.r#type == "tool_use" {
@@ -655,6 +692,23 @@ pub async fn anthropic_request(
                                             .octopus_database
                                             .transaction_commit(transaction)
                                             .await?;
+
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
 
                                         return Ok(chat_message);
                                     }
@@ -731,6 +785,23 @@ pub async fn anthropic_request(
                                                 .transaction_commit(transaction)
                                                 .await?;
 
+                                            if let Some(chat) = chat {
+                                                if chat.r#type == ChatType::Task {
+                                                    let cloned_context = context.clone();
+                                                    tokio::spawn(async move {
+                                                        let task = tasks::check_task_result(
+                                                            cloned_context,
+                                                            chat.id,
+                                                        )
+                                                        .await;
+
+                                                        if let Err(e) = task {
+                                                            error!("Error: {:?}", e);
+                                                        }
+                                                    });
+                                                }
+                                            }
+
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
@@ -781,6 +852,23 @@ pub async fn anthropic_request(
                                             .transaction_commit(transaction)
                                             .await?;
 
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
+
                                         return Ok(chat_message);
                                     }
 
@@ -820,6 +908,23 @@ pub async fn anthropic_request(
                                             .octopus_database
                                             .transaction_commit(transaction)
                                             .await?;
+
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
 
                                         return Ok(chat_message);
                                     }

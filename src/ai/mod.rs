@@ -2,7 +2,7 @@ use crate::{
     ai::{anthropic::ANTHROPIC, ollama::OLLAMA, open_ai::OPENAI},
     context::Context,
     entity::{
-        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
+        AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, Chat, ChatMessage,
         ChatMessageStatus, User,
     },
     Result,
@@ -175,20 +175,27 @@ pub async fn update_chat_name(
     context: Arc<Context>,
     transaction: &mut Transaction<'_, Postgres>,
     chat_message: &ChatMessage,
-) -> Result<()> {
+) -> Result<Option<Chat>> {
     let chat = context
         .octopus_database
         .try_get_chat_by_id(chat_message.chat_id)
         .await?;
 
-    if let Some(chat) = chat {
+    if let Some(ref chat) = chat {
         if chat.name.is_none() {
-            context
+            let chat = context
                 .octopus_database
-                .update_chat(transaction, chat.id, &chat_message.message, chat.r#type)
+                .update_chat(
+                    transaction,
+                    chat.id,
+                    &chat_message.message,
+                    chat.r#type.clone(),
+                )
                 .await?;
+
+            return Ok(Some(chat));
         }
     }
 
-    Ok(())
+    Ok(chat)
 }
