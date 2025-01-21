@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE assigned_user_chat_id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", test_result, title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE assigned_user_id = $1\n            AND workspace_id = $2\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -60,11 +60,16 @@
       },
       {
         "ordinal": 9,
-        "name": "title",
+        "name": "test_result",
         "type_info": "Text"
       },
       {
         "ordinal": 10,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -79,28 +84,29 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "use_task_book_generation",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Uuid"
       ]
     },
@@ -115,6 +121,7 @@
       true,
       false,
       true,
+      true,
       false,
       false,
       false,
@@ -122,5 +129,5 @@
       false
     ]
   },
-  "hash": "35d182352b22ef1b4fd2130d3e84e468b49ada30af6546763ed799d40bfcaaa7"
+  "hash": "5895224612c3073260f83f677d6343dd97ae111b20f0bcae3cb9a7a241b246f0"
 }

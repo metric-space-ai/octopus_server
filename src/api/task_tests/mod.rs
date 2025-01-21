@@ -1,4 +1,5 @@
 use crate::{
+    ai::tasks,
     context::Context,
     entity::{TaskTest, ROLE_SUPERVISOR},
     error::{AppError, ResponseError},
@@ -12,6 +13,7 @@ use axum::{
 };
 use serde::Deserialize;
 use std::sync::Arc;
+use tracing::error;
 use utoipa::{IntoParams, ToSchema};
 use uuid::Uuid;
 use validator::Validate;
@@ -107,6 +109,14 @@ pub async fn answer(
         .octopus_database
         .transaction_commit(transaction)
         .await?;
+
+    tokio::spawn(async move {
+        let task_test = tasks::check_task_test_result(context, task_test.id).await;
+
+        if let Err(e) = task_test {
+            error!("Error: {:?}", e);
+        }
+    });
 
     Ok((StatusCode::OK, Json(task_test)).into_response())
 }

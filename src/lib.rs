@@ -36,8 +36,8 @@ pub const SERVICES_SAMPLES_DIR: &str = "data/generate/services";
 pub const WASP_APPS_DIR: &str = "wasp_apps";
 pub const WASP_GENERATOR_DIR: &str = "wasp_generator";
 
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[derive(Debug, Parser)]
+#[command(about, author, long_about = None, version)]
 pub struct Args {
     /// Database url
     #[arg(short, long)]
