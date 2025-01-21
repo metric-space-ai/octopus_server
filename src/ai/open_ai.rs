@@ -1,7 +1,7 @@
 use crate::{
-    ai::{self, function_call, internal_function_call, AiFunctionCall, ChatAuditTrail},
+    ai::{self, function_call, internal_function_call, tasks, AiFunctionCall, ChatAuditTrail},
     context::Context,
-    entity::{ChatMessage, ChatMessageStatus, User},
+    entity::{ChatMessage, ChatMessageStatus, ChatType, User},
     error::AppError,
     get_pwd, Result,
 };
@@ -24,6 +24,7 @@ use std::{
     path::Path,
     sync::Arc,
 };
+use tracing::error;
 use uuid::Uuid;
 
 pub const AZURE_OPENAI: &str = "azure_openai";
@@ -200,21 +201,43 @@ pub async fn get_messages(
                 chat_audit_trails.push(chat_audit_trail);
             }
 
-            let chat_completion_request_message = ChatCompletionRequestUserMessageArgs::default()
-                .content(chat_message_tmp.message.clone())
-                .build()?;
+            if chat_message_tmp.is_task_description {
+                let is_task_description_message =
+                    format!("{} {}", tasks::PROMPT1, chat_message_tmp.message);
+                let chat_completion_request_message =
+                    ChatCompletionRequestSystemMessageArgs::default()
+                        .content(is_task_description_message.clone())
+                        .build()?;
 
-            messages.push(ChatCompletionRequestMessage::User(
-                chat_completion_request_message,
-            ));
+                messages.push(ChatCompletionRequestMessage::System(
+                    chat_completion_request_message,
+                ));
 
-            let chat_audit_trail = ChatAuditTrail {
-                id: chat_message_tmp.id,
-                content: chat_message_tmp.message.clone(),
-                role: "user".to_string(),
-                created_at: chat_message_tmp.created_at,
-            };
-            chat_audit_trails.push(chat_audit_trail);
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: is_task_description_message,
+                    role: "system".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            } else {
+                let chat_completion_request_message =
+                    ChatCompletionRequestUserMessageArgs::default()
+                        .content(chat_message_tmp.message.clone())
+                        .build()?;
+
+                messages.push(ChatCompletionRequestMessage::User(
+                    chat_completion_request_message,
+                ));
+
+                let chat_audit_trail = ChatAuditTrail {
+                    id: chat_message_tmp.id,
+                    content: chat_message_tmp.message.clone(),
+                    role: "user".to_string(),
+                    created_at: chat_message_tmp.created_at,
+                };
+                chat_audit_trails.push(chat_audit_trail);
+            }
 
             if let Some(response) = chat_message_tmp.response {
                 let chat_completion_request_message =
@@ -801,7 +824,7 @@ pub async fn open_ai_request(
         )
         .await?;
 
-    ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
+    let chat = ai::update_chat_name(context.clone(), &mut transaction, &chat_message).await?;
 
     let chat_message = ai::check_sensitive_information_service(
         context.clone(),
@@ -996,6 +1019,23 @@ pub async fn open_ai_request(
                                                 .await?;
                                         }
 
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
+
                                         return Ok(chat_message);
                                     }
 
@@ -1077,6 +1117,23 @@ pub async fn open_ai_request(
                                                     .await?;
                                             }
 
+                                            if let Some(chat) = chat {
+                                                if chat.r#type == ChatType::Task {
+                                                    let cloned_context = context.clone();
+                                                    tokio::spawn(async move {
+                                                        let task = tasks::check_task_result(
+                                                            cloned_context,
+                                                            chat.id,
+                                                        )
+                                                        .await;
+
+                                                        if let Err(e) = task {
+                                                            error!("Error: {:?}", e);
+                                                        }
+                                                    });
+                                                }
+                                            }
+
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
@@ -1131,6 +1188,23 @@ pub async fn open_ai_request(
                                             .transaction_commit(transaction)
                                             .await?;
 
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
+
                                         return Ok(chat_message);
                                     }
 
@@ -1175,6 +1249,23 @@ pub async fn open_ai_request(
                                             .transaction_commit(transaction)
                                             .await?;
 
+                                        if let Some(chat) = chat {
+                                            if chat.r#type == ChatType::Task {
+                                                let cloned_context = context.clone();
+                                                tokio::spawn(async move {
+                                                    let task = tasks::check_task_result(
+                                                        cloned_context,
+                                                        chat.id,
+                                                    )
+                                                    .await;
+
+                                                    if let Err(e) = task {
+                                                        error!("Error: {:?}", e);
+                                                    }
+                                                });
+                                            }
+                                        }
+
                                         return Ok(chat_message);
                                     }
                                 }
@@ -1214,6 +1305,23 @@ pub async fn open_ai_request(
                                         .octopus_database
                                         .transaction_commit(transaction)
                                         .await?;
+
+                                    if let Some(chat) = chat {
+                                        if chat.r#type == ChatType::Task {
+                                            let cloned_context = context.clone();
+                                            tokio::spawn(async move {
+                                                let task = tasks::check_task_result(
+                                                    cloned_context,
+                                                    chat.id,
+                                                )
+                                                .await;
+
+                                                if let Err(e) = task {
+                                                    error!("Error: {:?}", e);
+                                                }
+                                            });
+                                        }
+                                    }
 
                                     return Ok(chat_message);
                                 }

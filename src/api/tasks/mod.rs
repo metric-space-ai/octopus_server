@@ -1,7 +1,9 @@
 use crate::{
     ai::tasks,
     context::Context,
-    entity::{ChatType, Task, TaskStatus, TaskType, WorkspacesType, ROLE_SUPERVISOR},
+    entity::{
+        ChatMessageStatus, ChatType, Task, TaskStatus, TaskType, WorkspacesType, ROLE_SUPERVISOR,
+    },
     error::{AppError, ResponseError},
     session::{require_authenticated, ExtractedSession},
     util,
@@ -131,7 +133,7 @@ pub async fn create(
                     let estimated_response_at =
                         util::get_estimated_response_at(context.clone()).await?;
 
-                    context
+                    let chat_message = context
                         .octopus_database
                         .insert_chat_message(
                             &mut transaction,
@@ -147,6 +149,15 @@ pub async fn create(
                             false,
                             None,
                             None,
+                        )
+                        .await?;
+
+                    context
+                        .octopus_database
+                        .update_chat_message_status(
+                            &mut transaction,
+                            chat_message.id,
+                            ChatMessageStatus::Answered,
                         )
                         .await?;
                 }
@@ -729,7 +740,7 @@ pub async fn update(
                             let estimated_response_at =
                                 util::get_estimated_response_at(context.clone()).await?;
 
-                            context
+                            let chat_message = context
                                 .octopus_database
                                 .insert_chat_message(
                                     &mut transaction,
@@ -745,6 +756,15 @@ pub async fn update(
                                     false,
                                     None,
                                     None,
+                                )
+                                .await?;
+
+                            context
+                                .octopus_database
+                                .update_chat_message_status(
+                                    &mut transaction,
+                                    chat_message.id,
+                                    ChatMessageStatus::Answered,
                                 )
                                 .await?;
                         }
@@ -768,7 +788,7 @@ pub async fn update(
                                 let estimated_response_at =
                                     util::get_estimated_response_at(context.clone()).await?;
 
-                                context
+                                let chat_message = context
                                     .octopus_database
                                     .insert_chat_message(
                                         &mut transaction,
@@ -784,6 +804,15 @@ pub async fn update(
                                         false,
                                         None,
                                         None,
+                                    )
+                                    .await?;
+
+                                context
+                                    .octopus_database
+                                    .update_chat_message_status(
+                                        &mut transaction,
+                                        chat_message.id,
+                                        ChatMessageStatus::Answered,
                                     )
                                     .await?;
                             }
