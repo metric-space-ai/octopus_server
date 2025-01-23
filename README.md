@@ -143,3 +143,4 @@ If you want to hear more about how Octopus Software can improve the productivity
 * [Running manually (for developers)](doc/for_developers.md)
 * [Running on Kubernetes](doc/kubernetes.md)
 * [Short PostgreSQL installation guide](doc/postgresql.md)
+* [Short Docker Compose installation guide](doc/docker_compose.md)
