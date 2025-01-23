@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE assigned_user_id = $1\n            AND workspace_id = $2\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
+  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", test_result, title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE assigned_user_id = $1\n            AND workspace_id = $2\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
   "describe": {
     "columns": [
       {
@@ -60,11 +60,16 @@
       },
       {
         "ordinal": 9,
-        "name": "title",
+        "name": "test_result",
         "type_info": "Text"
       },
       {
         "ordinal": 10,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -79,22 +84,22 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "use_task_book_generation",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -116,6 +121,7 @@
       true,
       false,
       true,
+      true,
       false,
       false,
       false,
@@ -123,5 +129,5 @@
       false
     ]
   },
-  "hash": "aaffdd6f00300f321eb4c384c97ec13b4c96b0d313f8aa1d3e1c53acd4b24484"
+  "hash": "60d1425bf74329517035dbba6007134de4e307fe5a172cfca82523ef9ccf4975"
 }

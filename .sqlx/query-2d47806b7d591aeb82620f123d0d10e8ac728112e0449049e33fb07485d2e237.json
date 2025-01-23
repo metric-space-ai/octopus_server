@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, task_id, user_id, answer, question, created_at, deleted_at, updated_at\n            FROM task_tests\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "UPDATE task_tests\n            SET answer = $2, updated_at = current_timestamp(0)\n            WHERE id = $1\n            RETURNING id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at",
   "describe": {
     "columns": [
       {
@@ -25,28 +25,34 @@
       },
       {
         "ordinal": 4,
+        "name": "answer_is_correct",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
         "name": "question",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        "Text"
       ]
     },
     "nullable": [
@@ -56,9 +62,10 @@
       true,
       false,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "eac455860c6a91904417654e6f5568924246bd3372309da6e3253a3a53e8d08f"
+  "hash": "2d47806b7d591aeb82620f123d0d10e8ac728112e0449049e33fb07485d2e237"
 }

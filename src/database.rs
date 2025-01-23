@@ -792,7 +792,7 @@ impl OctopusDatabase {
     ) -> Result<Option<Task>> {
         let task = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE assigned_user_id = $1
             AND workspace_id = $2
@@ -814,7 +814,7 @@ impl OctopusDatabase {
     ) -> Result<Option<Task>> {
         let task = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE workspace_id = $1
             AND deleted_at IS NULL
@@ -831,7 +831,7 @@ impl OctopusDatabase {
     pub async fn get_task_tests_by_task_id(&self, task_id: Uuid) -> Result<Vec<TaskTest>> {
         let task_tests = sqlx::query_as!(
             TaskTest,
-            "SELECT id, task_id, user_id, answer, question, created_at, deleted_at, updated_at
+            "SELECT id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at
             FROM task_tests
             WHERE task_id = $1
             AND deleted_at IS NULL
@@ -851,7 +851,7 @@ impl OctopusDatabase {
     ) -> Result<Vec<Task>> {
         let tasks = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE assigned_user_id = $1
             AND workspace_id = $2
@@ -869,7 +869,7 @@ impl OctopusDatabase {
     pub async fn get_tasks_by_workspace_id(&self, workspace_id: Uuid) -> Result<Vec<Task>> {
         let tasks = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE workspace_id = $1
             AND deleted_at IS NULL
@@ -1709,7 +1709,7 @@ impl OctopusDatabase {
             "INSERT INTO task_tests
             (task_id, user_id, answer, question)
             VALUES ($1, $2, $3, $4)
-            RETURNING id, task_id, user_id, answer, question, created_at, deleted_at, updated_at",
+            RETURNING id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at",
             task_id,
             user_id,
             answer,
@@ -1741,7 +1741,7 @@ impl OctopusDatabase {
             "INSERT INTO tasks
             (assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, title, type, use_task_book_generation)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
+            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, test_result, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
         )
         .bind(assigned_user_chat_id)
         .bind(assigned_user_id)
@@ -3332,7 +3332,7 @@ impl OctopusDatabase {
     pub async fn try_get_task_by_id(&self, id: Uuid) -> Result<Option<Task>> {
         let task = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE id = $1
             AND deleted_at IS NULL"#,
@@ -3350,7 +3350,7 @@ impl OctopusDatabase {
     ) -> Result<Option<Task>> {
         let task = sqlx::query_as!(
             Task,
-            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
+            r#"SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS "status: _", test_result, title, type AS "type: _", use_task_book_generation, created_at, deleted_at, updated_at
             FROM tasks
             WHERE assigned_user_chat_id = $1
             AND deleted_at IS NULL"#,
@@ -3365,7 +3365,7 @@ impl OctopusDatabase {
     pub async fn try_get_task_test_by_id(&self, id: Uuid) -> Result<Option<TaskTest>> {
         let task_test = sqlx::query_as!(
             TaskTest,
-            "SELECT id, task_id, user_id, answer, question, created_at, deleted_at, updated_at
+            "SELECT id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at
             FROM task_tests
             WHERE id = $1
             AND deleted_at IS NULL",
@@ -5087,7 +5087,7 @@ impl OctopusDatabase {
             "UPDATE tasks
             SET assigned_user_chat_id = $2, assigned_user_id = $3, existing_task_id = $4, description = $5, status = $6, title = $7, type = $8, use_task_book_generation = $9, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
+            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, test_result, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(assigned_user_chat_id)
@@ -5114,10 +5114,32 @@ impl OctopusDatabase {
             "UPDATE tasks
             SET status = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
+            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, test_result, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
         )
         .bind(id)
         .bind(status)
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(task)
+    }
+
+    pub async fn update_task_status_and_test_result(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        status: TaskStatus,
+        test_result: &str,
+    ) -> Result<Task> {
+        let task = sqlx::query_as::<_, Task>(
+            "UPDATE tasks
+            SET status = $2, test_result = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status, test_result, title, type, use_task_book_generation, created_at, deleted_at, updated_at",
+        )
+        .bind(id)
+        .bind(status)
+        .bind(test_result)
         .fetch_one(&mut **transaction)
         .await?;
 
@@ -5136,7 +5158,7 @@ impl OctopusDatabase {
             "UPDATE task_tests
             SET answer = $2, question = $3, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, task_id, user_id, answer, question, created_at, deleted_at, updated_at",
+            RETURNING id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at",
             id,
             answer,
             question
@@ -5158,9 +5180,30 @@ impl OctopusDatabase {
             "UPDATE task_tests
             SET answer = $2, updated_at = current_timestamp(0)
             WHERE id = $1
-            RETURNING id, task_id, user_id, answer, question, created_at, deleted_at, updated_at",
+            RETURNING id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at",
             id,
             answer
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(task_test)
+    }
+
+    pub async fn update_task_test_answer_is_correct(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        answer_is_correct: bool,
+    ) -> Result<TaskTest> {
+        let task_test = sqlx::query_as!(
+            TaskTest,
+            "UPDATE task_tests
+            SET answer_is_correct = $2, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at",
+            id,
+            answer_is_correct
         )
         .fetch_one(&mut **transaction)
         .await?;

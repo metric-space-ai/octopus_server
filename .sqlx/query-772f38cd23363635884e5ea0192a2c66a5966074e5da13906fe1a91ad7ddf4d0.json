@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "INSERT INTO task_tests\n            (task_id, user_id, answer, question)\n            VALUES ($1, $2, $3, $4)\n            RETURNING id, task_id, user_id, answer, question, created_at, deleted_at, updated_at",
+  "query": "SELECT id, task_id, user_id, answer, answer_is_correct, question, created_at, deleted_at, updated_at\n            FROM task_tests\n            WHERE task_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -25,31 +25,33 @@
       },
       {
         "ordinal": 4,
+        "name": "answer_is_correct",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 5,
         "name": "question",
         "type_info": "Text"
       },
       {
-        "ordinal": 5,
+        "ordinal": 6,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 6,
+        "ordinal": 7,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        "Text",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -59,9 +61,10 @@
       true,
       false,
       false,
+      false,
       true,
       false
     ]
   },
-  "hash": "df8a51ea74fe4500aa150fb84f7fc5a2433ff0803a9e2bd5a269d8c5bcca3c63"
+  "hash": "772f38cd23363635884e5ea0192a2c66a5966074e5da13906fe1a91ad7ddf4d0"
 }

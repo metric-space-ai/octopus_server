@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE id = $1\n            AND deleted_at IS NULL",
+  "query": "SELECT id, assigned_user_chat_id, assigned_user_id, chat_id, existing_task_id, user_id, workspace_id, description, status AS \"status: _\", test_result, title, type AS \"type: _\", use_task_book_generation, created_at, deleted_at, updated_at\n            FROM tasks\n            WHERE workspace_id = $1\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC",
   "describe": {
     "columns": [
       {
@@ -60,11 +60,16 @@
       },
       {
         "ordinal": 9,
-        "name": "title",
+        "name": "test_result",
         "type_info": "Text"
       },
       {
         "ordinal": 10,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
         "name": "type: _",
         "type_info": {
           "Custom": {
@@ -79,22 +84,22 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "use_task_book_generation",
         "type_info": "Bool"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "deleted_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -115,6 +120,7 @@
       true,
       false,
       true,
+      true,
       false,
       false,
       false,
@@ -122,5 +128,5 @@
       false
     ]
   },
-  "hash": "edf594368228f05677526e63d371a21ffdbadac7cedd42e52aee69a9b262b391"
+  "hash": "18046545750d98da310a67ee8653a090f9bc4600fcbd677c5816f33d6c05fd1b"
 }
