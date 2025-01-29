@@ -1,5 +1,7 @@
 # Short Docker Compose installation guide
 
+This configuration doesn't allow you to run either Octopus AI Services or Octopus WASP Applications. It's caused by the fact that for isolation purposes Octopus Server is starting Python and WASP apps using Linux kernel control groups. At least on Ubuntu 22.04 it's not possible to properly run cgexec under docker-compose. That is why you need to use Kubernetes to use all features of the system. Please read [Running on Kubernetes](doc/kubernetes.md) guide.
+
 This configuration assumes that you have installed PostgreSQL on the base system. It was described in [Short PostgreSQL installation guide](postgresql.md).
 
 You need to make sure that information about packages in the system is updated.
