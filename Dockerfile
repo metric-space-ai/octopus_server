@@ -54,43 +54,43 @@ RUN set -eux; \
     rustc --version;
 # https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
 ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.10
+ENV GOLANG_VERSION 1.22.11
 RUN set -eux; \
     now="$(date '+%s')"; \
     arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
     url=; \
     case "$arch" in \
         'amd64') \
-            url='https://dl.google.com/go/go1.22.10.linux-amd64.tar.gz'; \
-            sha256='736ce492a19d756a92719a6121226087ccd91b652ed5caec40ad6dbfb2252092'; \
+            url='https://dl.google.com/go/go1.22.11.linux-amd64.tar.gz'; \
+            sha256='0fc88d966d33896384fbde56e9a8d80a305dc17a9f48f1832e061724b1719991'; \
             ;; \
         'armhf') \
-            url='https://dl.google.com/go/go1.22.10.linux-armv6l.tar.gz'; \
-            sha256='a7bbbc80fe736269820bbdf3555e91ada5d18a5cde2276aac3b559bc1d52fc70'; \
+            url='https://dl.google.com/go/go1.22.11.linux-armv6l.tar.gz'; \
+            sha256='ac3ba3e0433d96b041f683e9bbb791ca39e159b3d4bb948de4ab3a2c1af1b257'; \
             ;; \
         'arm64') \
-            url='https://dl.google.com/go/go1.22.10.linux-arm64.tar.gz'; \
-            sha256='5213c5e32fde3bd7da65516467b7ffbfe40d2bb5a5f58105e387eef450583eec'; \
+            url='https://dl.google.com/go/go1.22.11.linux-arm64.tar.gz'; \
+            sha256='9ebfcab26801fa4cf0627c6439db7a4da4d3c6766142a3dd83508240e4f21031'; \
             ;; \
         'i386') \
-            url='https://dl.google.com/go/go1.22.10.linux-386.tar.gz'; \
-            sha256='2ae9f00e9621489b75494fa2b8abfc5d09e0cae6effdd4c13867957ad2e4deba'; \
+            url='https://dl.google.com/go/go1.22.11.linux-386.tar.gz'; \
+            sha256='b40ee463437e8c8f2d6c9685a0e166eaecb36615afa362eaa58459d3369f3baf'; \
             ;; \
         'mips64el') \
-            url='https://dl.google.com/go/go1.22.10.linux-mips64le.tar.gz'; \
-            sha256='e66c440c03dd19bf8423034cbde7f6813321beb18d3fcf2ef234c13a25467952'; \
+            url='https://dl.google.com/go/go1.22.11.linux-mips64le.tar.gz'; \
+            sha256='d4ad600a7c6b3c113984b1c301afec67a696a598b0f0ed2841a52c3b9051cd2d'; \
             ;; \
         'ppc64el') \
-            url='https://dl.google.com/go/go1.22.10.linux-ppc64le.tar.gz'; \
-            sha256='db05b9838f69d741fb9a5301220b1a62014aee025b0baf341aba3d280087b981'; \
+            url='https://dl.google.com/go/go1.22.11.linux-ppc64le.tar.gz'; \
+            sha256='963a0ec973640b23ee8bb7a462cc415276fd8436111a03df8c34eb3b1ae29f12'; \
             ;; \
         'riscv64') \
-            url='https://dl.google.com/go/go1.22.10.linux-riscv64.tar.gz'; \
-            sha256='aef9b186c1b9b58c0472dbf54978f97682852a91b2e8d6bf354e59ba9c24438a'; \
+            url='https://dl.google.com/go/go1.22.11.linux-riscv64.tar.gz'; \
+            sha256='150fd528397622764285f807d3343c36d052ed8cfc390a95e6336738c53f68f4'; \
             ;; \
         's390x') \
-            url='https://dl.google.com/go/go1.22.10.linux-s390x.tar.gz'; \
-            sha256='4ab2286adb096576771801b5099760b1d625fd7b44080449151a4d9b21303672'; \
+            url='https://dl.google.com/go/go1.22.11.linux-s390x.tar.gz'; \
+            sha256='1a235afe650dee989fb37fef6aa520f35e4cd557c31453f3e82b553da3a90669'; \
             ;; \
         *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
     esac; \
@@ -143,7 +143,7 @@ RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 1777 "$GOPATH"
 # https://github.com/nodejs/docker-node/blob/main/18/bookworm/Dockerfile
 RUN groupadd --gid 1000 node \
     && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
-ENV NODE_VERSION 18.20.5
+ENV NODE_VERSION 18.20.6
 RUN ARCH= && dpkgArch="$(dpkg --print-architecture)" \
     && case "${dpkgArch##*-}" in \
         amd64) ARCH='x64';; \
@@ -231,7 +231,7 @@ ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 ENV GOARCH=amd64
 WORKDIR /
-RUN wget https://github.com/ollama/ollama/releases/download/v0.5.5/ollama-linux-amd64.tgz
+RUN wget -q https://github.com/ollama/ollama/releases/download/v0.5.7/ollama-linux-amd64.tgz
 RUN mkdir ollama
 RUN tar xzvf ollama-linux-amd64.tgz -C /ollama
 #RUN git clone https://github.com/ollama/ollama.git
