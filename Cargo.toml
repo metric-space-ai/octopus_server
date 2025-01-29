@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.14"
+version = "0.10.15"
 edition = "2021"
 rust-version = "1.80"
 
@@ -57,7 +57,7 @@ hex = "0.4.3"
 http = "1.2.0"
 http-body = "1.0.1"
 http-body-util = "0.1.2"
-hyper = { version = "1.5.2", features = ["full"] }
+hyper = { version = "1.6.0", features = ["full"] }
 infer = "0.16.0"
 mime = "0.3.17"
 num_cpus = "1.16.0"
@@ -78,7 +78,7 @@ rev_buf_reader = "0.3.0"
 serde = { version = "1.0.217", default-features = false, features = [
     "derive"
 ] }
-serde_json = "1.0.137"
+serde_json = "1.0.138"
 sha3 = { version = "0.10.8", default-features = false, features = [
     "std"
 ] }
@@ -92,7 +92,7 @@ sqlx = { version = "0.8.3", default-features = false, features = [
 ] }
 strum_macros = "0.26.4"
 systemstat = "0.2.4"
-tempfile = "3.15.0"
+tempfile = "3.16.0"
 tokio = { version = "1.43.0", default-features = false, features = [
     "rt-multi-thread",
     "time"
