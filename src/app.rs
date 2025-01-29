@@ -55,11 +55,11 @@ pub mod tests {
     pub async fn get_test_app() -> App {
         let args = Args {
             database_url: Some(String::from(
-                "postgres://admin:admin@db/octopus_server_test",
+                "postgres://postgres:postgres@127.0.0.1/octopus_server_test",
             )),
             port: None,
             test_mode: Some(true),
-            wasp_database_url: Some(String::from("postgres://admin:admin@db")),
+            wasp_database_url: Some(String::from("postgres://postgres:postgres@127.0.0.1")),
             ws_port: None,
         };
 

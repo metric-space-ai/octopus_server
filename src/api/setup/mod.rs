@@ -408,7 +408,8 @@ pub mod tests {
     pub fn get_setup_post_params() -> (String, String, String) {
         let company_name = Paragraph(1..2).fake::<String>();
         let email = format!(
-            "{}{}{}",
+            "{}{}{}{}",
+            Word().fake::<String>(),
             Word().fake::<String>(),
             Word().fake::<String>(),
             SafeEmail().fake::<String>()

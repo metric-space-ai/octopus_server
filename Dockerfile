@@ -1,4 +1,6 @@
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
+RUN sed -i "s/Pin-Priority: -1/Pin-Priority: 1001/g" /etc/apt/preferences.d/cuda-repository-pin-600
+RUN sed -i "s/Pin-Priority: 600/Pin-Priority: -1/g" /etc/apt/preferences.d/cuda-repository-pin-600
 RUN apt-get update --fix-missing && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
@@ -255,6 +257,7 @@ ENV LANG ${LANGUAGE}
 RUN apt-get update --fix-missing && \
     apt-get install -y --no-install-recommends \
         acl \
+        alsa-utils \
         bzip2 \
         cgroup-tools \
         davfs2 \
