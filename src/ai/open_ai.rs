@@ -849,23 +849,35 @@ pub async fn open_ai_request(
         let main_llm_openai_temperature = context
             .get_config()
             .await?
-            .get_parameter_main_llm_openai_temperature()
-            .unwrap_or(0.7);
+            .get_parameter_main_llm_openai_temperature();
 
         let tools = get_tools_all(context.clone(), user.id).await?;
         let request = if tools.is_empty() {
-            CreateChatCompletionRequestArgs::default()
-                .model(suggested_model.clone())
-                .messages(messages)
-                .temperature(main_llm_openai_temperature)
-                .build()
+            match main_llm_openai_temperature {
+                None => CreateChatCompletionRequestArgs::default()
+                    .model(suggested_model.clone())
+                    .messages(messages)
+                    .build(),
+                Some(main_llm_openai_temperature) => CreateChatCompletionRequestArgs::default()
+                    .model(suggested_model.clone())
+                    .messages(messages)
+                    .temperature(main_llm_openai_temperature)
+                    .build(),
+            }
         } else {
-            CreateChatCompletionRequestArgs::default()
-                .model(suggested_model.clone())
-                .messages(messages)
-                .temperature(main_llm_openai_temperature)
-                .tools(tools)
-                .build()
+            match main_llm_openai_temperature {
+                None => CreateChatCompletionRequestArgs::default()
+                    .model(suggested_model.clone())
+                    .messages(messages)
+                    .tools(tools)
+                    .build(),
+                Some(main_llm_openai_temperature) => CreateChatCompletionRequestArgs::default()
+                    .model(suggested_model.clone())
+                    .messages(messages)
+                    .temperature(main_llm_openai_temperature)
+                    .tools(tools)
+                    .build(),
+            }
         };
 
         match request {
