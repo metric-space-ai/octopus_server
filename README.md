@@ -2,6 +2,8 @@
 
 [Octopus Server](https://github.com/metric-space-ai/octopus_server) is a central part of the [Octopus Software](https://github.com/metric-space-ai/octopus). It provides basic infrastructure and communication interfaces for all parts of the software.
 
+![Octopus Client](/data/screenshot.png)
+
 ## Octopus Server's high-level features
 
 Octopus Server provides the following features:
