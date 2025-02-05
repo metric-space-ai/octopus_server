@@ -1,8 +1,8 @@
 import os
 
 dependencies = [
-    'pip install -q Flask==3.0.3',
-    'pip install -q openai==1.35.3',
+    'pip install -q Flask==3.1.0',
+    'pip install -q openai==1.61.0',
     'pip install -q requests==2.32.3',
 ]
 

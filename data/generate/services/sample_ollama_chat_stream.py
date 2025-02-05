@@ -1,9 +1,9 @@
 import os
 
 dependencies = [
-    "pip install -q Flask==3.0.3",
+    "pip install -q Flask==3.1.0",
     "pip install -q requests==2.32.3",
-    "pip install -q ollama==0.2.1",
+    "pip install -q ollama==0.4.7",
     "pip install -q python-dotenv==1.0.1"
 ]
 
@@ -27,8 +27,8 @@ config_str = '''{
     },
     "required_python_version": "cp312",
     "models": [
-        { "name": "ollama:llama3:8b" },
-        { "name": "ollama:qwen2:7b" }
+        { "name": "ollama:llama3.1:8b" },
+        { "name": "ollama:qwen2.5:7b" }
     ],
     "functions": [
         {

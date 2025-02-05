@@ -2,13 +2,13 @@ import os
 
 dependencies = [
     "pip install -q einops==0.8.0",
-    "pip install -q flash-attn==2.5.8",
-    "pip install -q timm==1.0.7",
-    "pip install -q Flask==3.0.3",
-    "pip install -q torch==2.3.1",
-    "pip install -q transformers==4.41.2",
+    "pip install -q flash-attn==2.7.3",
+    "pip install -q timm==1.0.14",
+    "pip install -q Flask==3.1.0",
+    "pip install -q torch==2.6.0",
+    "pip install -q transformers==4.48.2",
     "pip install -q requests==2.32.3",
-    "pip install -q Pillow==10.3.0"
+    "pip install -q Pillow==11.1.0"
 ]
 
 for command in dependencies:
