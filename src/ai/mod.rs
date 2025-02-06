@@ -41,6 +41,11 @@ pub struct ChatAuditTrail {
 }
 
 #[derive(Debug, Serialize)]
+pub struct FunctionLlmRouterPost {
+    pub text: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct FunctionSensitiveInformationPost {
     pub value1: String,
 }
@@ -50,13 +55,101 @@ pub async fn ai_request(
     chat_message: ChatMessage,
     user: User,
 ) -> Result<ChatMessage> {
+    let chat_message = if chat_message.suggested_llm.clone().is_none() {
+        let ai_function = context
+            .octopus_database
+            .try_get_ai_function_for_direct_call("llm_router")
+            .await?;
+
+        if let Some(ai_function) = ai_function {
+            let ai_service = context
+                .octopus_database
+                .try_get_ai_service_by_id(ai_function.ai_service_id)
+                .await?;
+
+            if let Some(ai_service) = ai_service {
+                if ai_function.is_enabled
+                    && ai_service.is_enabled
+                    && ai_service.health_check_status == AiServiceHealthCheckStatus::Ok
+                    && ai_service.setup_status == AiServiceSetupStatus::Performed
+                    && ai_service.status == AiServiceStatus::Running
+                {
+                    let function_llm_router_post = FunctionLlmRouterPost {
+                        text: chat_message.message.clone(),
+                    };
+                    let function_args = serde_json::to_value(function_llm_router_post)?;
+
+                    let function_llm_router_response = function_call::llm_router_function_call(
+                        &ai_function,
+                        &ai_service,
+                        &function_args,
+                    )
+                    .await;
+
+                    if let Ok(Some(function_llm_router_response)) = function_llm_router_response {
+                        let value = function_llm_router_response.response.parse::<i32>();
+
+                        if let Ok(value) = value {
+                            let (suggested_llm, suggested_model) = match value {
+                                ..=3 => (
+                                    ollama::OLLAMA.to_string(),
+                                    ollama::MAIN_LLM_OLLAMA_MODEL.to_string(),
+                                ),
+                                4..=6 => (
+                                    open_ai::OPENAI.to_string(),
+                                    open_ai::PRIMARY_MODEL.to_string(),
+                                ),
+                                7.. => (
+                                    open_ai::OPENAI.to_string(),
+                                    open_ai::SECONDARY_MODEL.to_string(),
+                                ),
+                            };
+
+                            let mut transaction =
+                                context.octopus_database.transaction_begin().await?;
+
+                            let chat_message = context
+                                .octopus_database
+                                .update_chat_message_suggested_llm_model(
+                                    &mut transaction,
+                                    chat_message.id,
+                                    &suggested_llm,
+                                    &suggested_model,
+                                )
+                                .await?;
+
+                            context
+                                .octopus_database
+                                .transaction_commit(transaction)
+                                .await?;
+
+                            chat_message
+                        } else {
+                            chat_message
+                        }
+                    } else {
+                        chat_message
+                    }
+                } else {
+                    chat_message
+                }
+            } else {
+                chat_message
+            }
+        } else {
+            chat_message
+        }
+    } else {
+        chat_message
+    };
+
     let main_llm = context
         .get_config()
         .await?
         .get_parameter_main_llm()
         .unwrap_or(OPENAI.to_string());
     let suggested_llm = chat_message.suggested_llm.clone().unwrap_or(main_llm);
-    tracing::info!("suggested_llm = {:?}", suggested_llm);
+
     let chat_message = if suggested_llm == *ANTHROPIC {
         Box::pin(anthropic::anthropic_request(context, chat_message, user)).await?
     } else if suggested_llm == *OLLAMA {

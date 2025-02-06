@@ -4540,6 +4540,29 @@ impl OctopusDatabase {
         Ok(chat_message)
     }
 
+    pub async fn update_chat_message_suggested_llm_model(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        suggested_llm: &str,
+        suggested_model: &str,
+    ) -> Result<ChatMessage> {
+        let chat_message = sqlx::query_as!(
+            ChatMessage,
+            r#"UPDATE chat_messages
+            SET suggested_llm = $2, suggested_model = $3, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, ai_function_id, ai_service_id, chat_id, scheduled_prompt_id, simple_app_id, suggested_ai_function_id, suggested_simple_app_id, suggested_wasp_app_id, user_id, wasp_app_id, ai_function_call, ai_function_error, bad_reply_comment, bad_reply_is_harmful, bad_reply_is_not_helpful, bad_reply_is_not_true, bypass_sensitive_information_filter, color, estimated_response_at, is_anonymized, is_marked_as_not_sensitive, is_not_checked_by_system, is_sensitive, is_task_description, message, progress, response, simple_app_data, status AS "status: _", suggested_llm, suggested_model, suggested_secondary_model, used_llm, used_model, created_at, deleted_at, updated_at"#,
+            id,
+            suggested_llm,
+            suggested_model,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(chat_message)
+    }
+
     pub async fn update_chat_message_llm_model(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
