@@ -63,10 +63,13 @@ def select_device_with_larger_free_memory(available_devices):
     for available_device in available_devices:
         id = available_device.split(":")
         id = id[-1]
-        free_memory = command_result_as_int(f"nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
-        if free_memory > memory:
-            memory = free_memory
-            device = available_device
+        try:
+            free_memory = self.command_result_as_int(f"nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
+            if free_memory > memory:
+                memory = free_memory
+                device = available_device
+        except:
+            print(f"problem with executing nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
 
     return device if device else "cpu"
 
