@@ -235,6 +235,8 @@ pub fn get_models() -> Vec<&'static str> {
         "qwen2.5:3b",
         "qwen2.5:7b",
         "qwen2.5:14b",
+        "qwen2.5:32b",
+        "qwen2.5:72b",
         "qwen2.5-coder:0.5b",
         "qwen2.5-coder:1.5b",
         "qwen2.5-coder:3b",

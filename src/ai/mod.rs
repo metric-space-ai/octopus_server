@@ -90,19 +90,30 @@ pub async fn ai_request(
                         let value = function_llm_router_response.response.parse::<i32>();
 
                         if let Ok(value) = value {
+                            let main_llm_ollama_model = context
+                                .get_config()
+                                .await?
+                                .get_parameter_main_llm_ollama_model()
+                                .unwrap_or(ollama::MAIN_LLM_OLLAMA_MODEL.to_string());
+                            let main_llm_openai_primary_model = context
+                                .get_config()
+                                .await?
+                                .get_parameter_main_llm_openai_primary_model()
+                                .unwrap_or(open_ai::PRIMARY_MODEL.to_string());
+                            let main_llm_openai_secondary_model = context
+                                .get_config()
+                                .await?
+                                .get_parameter_main_llm_openai_secondary_model()
+                                .unwrap_or(open_ai::SECONDARY_MODEL.to_string());
+
                             let (suggested_llm, suggested_model) = match value {
-                                ..=3 => (
-                                    ollama::OLLAMA.to_string(),
-                                    ollama::MAIN_LLM_OLLAMA_MODEL.to_string(),
-                                ),
-                                4..=6 => (
-                                    open_ai::OPENAI.to_string(),
-                                    open_ai::PRIMARY_MODEL.to_string(),
-                                ),
-                                7.. => (
-                                    open_ai::OPENAI.to_string(),
-                                    open_ai::SECONDARY_MODEL.to_string(),
-                                ),
+                                ..=3 => (ollama::OLLAMA.to_string(), main_llm_ollama_model),
+                                4..=6 => {
+                                    (open_ai::OPENAI.to_string(), main_llm_openai_primary_model)
+                                }
+                                7.. => {
+                                    (open_ai::OPENAI.to_string(), main_llm_openai_secondary_model)
+                                }
                             };
 
                             let mut transaction =
