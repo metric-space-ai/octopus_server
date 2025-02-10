@@ -1,3 +1,5 @@
+#ARG OLLAMA_VERSION=0.5.8
+
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
 RUN sed -i "s/Pin-Priority: -1/Pin-Priority: 1001/g" /etc/apt/preferences.d/cuda-repository-pin-600
 RUN sed -i "s/Pin-Priority: 600/Pin-Priority: -1/g" /etc/apt/preferences.d/cuda-repository-pin-600
@@ -30,7 +32,7 @@ RUN apt-get update --fix-missing && \
 ENV RUSTUP_HOME=/usr/local/rustup \
     CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUST_VERSION=1.84.0
+    RUST_VERSION=1.84.1
 RUN set -eux; \
     dpkgArch="$(dpkg --print-architecture)"; \
     case "${dpkgArch##*-}" in \
@@ -52,45 +54,45 @@ RUN set -eux; \
     rustup --version; \
     cargo --version; \
     rustc --version;
-# https://github.com/docker-library/golang/blob/master/1.22/bookworm/Dockerfile
+# https://github.com/docker-library/golang/blob/master/1.23/bookworm/Dockerfile
 ENV PATH /usr/local/go/bin:$PATH
-ENV GOLANG_VERSION 1.22.11
+ENV GOLANG_VERSION 1.23.6
 RUN set -eux; \
     now="$(date '+%s')"; \
     arch="$(dpkg --print-architecture)"; arch="${arch##*-}"; \
     url=; \
     case "$arch" in \
         'amd64') \
-            url='https://dl.google.com/go/go1.22.11.linux-amd64.tar.gz'; \
-            sha256='0fc88d966d33896384fbde56e9a8d80a305dc17a9f48f1832e061724b1719991'; \
+            url='https://dl.google.com/go/go1.23.6.linux-amd64.tar.gz'; \
+            sha256='9379441ea310de000f33a4dc767bd966e72ab2826270e038e78b2c53c2e7802d'; \
             ;; \
         'armhf') \
-            url='https://dl.google.com/go/go1.22.11.linux-armv6l.tar.gz'; \
-            sha256='ac3ba3e0433d96b041f683e9bbb791ca39e159b3d4bb948de4ab3a2c1af1b257'; \
+            url='https://dl.google.com/go/go1.23.6.linux-armv6l.tar.gz'; \
+            sha256='27a4611010c16b8c4f37ade3aada55bd5781998f02f348b164302fd5eea4eb74'; \
             ;; \
         'arm64') \
-            url='https://dl.google.com/go/go1.22.11.linux-arm64.tar.gz'; \
-            sha256='9ebfcab26801fa4cf0627c6439db7a4da4d3c6766142a3dd83508240e4f21031'; \
+            url='https://dl.google.com/go/go1.23.6.linux-arm64.tar.gz'; \
+            sha256='561c780e8f4a8955d32bf72e46af0b5ee5e0debe1e4633df9a03781878219202'; \
             ;; \
         'i386') \
-            url='https://dl.google.com/go/go1.22.11.linux-386.tar.gz'; \
-            sha256='b40ee463437e8c8f2d6c9685a0e166eaecb36615afa362eaa58459d3369f3baf'; \
+            url='https://dl.google.com/go/go1.23.6.linux-386.tar.gz'; \
+            sha256='e61f87693169c0bbcc43363128f1e929b9dff0b7f448573f1bdd4e4a0b9687ba'; \
             ;; \
         'mips64el') \
-            url='https://dl.google.com/go/go1.22.11.linux-mips64le.tar.gz'; \
-            sha256='d4ad600a7c6b3c113984b1c301afec67a696a598b0f0ed2841a52c3b9051cd2d'; \
+            url='https://dl.google.com/go/go1.23.6.linux-mips64le.tar.gz'; \
+            sha256='74ca7bc475bcc084c6718b74df024d7de9612932cea8a6dc75e29d3a5315a23a'; \
             ;; \
         'ppc64el') \
-            url='https://dl.google.com/go/go1.22.11.linux-ppc64le.tar.gz'; \
-            sha256='963a0ec973640b23ee8bb7a462cc415276fd8436111a03df8c34eb3b1ae29f12'; \
+            url='https://dl.google.com/go/go1.23.6.linux-ppc64le.tar.gz'; \
+            sha256='0f817201e83d78ddbfa27f5f78d9b72450b92cc21d5e045145efacd0d3244a99'; \
             ;; \
         'riscv64') \
-            url='https://dl.google.com/go/go1.22.11.linux-riscv64.tar.gz'; \
-            sha256='150fd528397622764285f807d3343c36d052ed8cfc390a95e6336738c53f68f4'; \
+            url='https://dl.google.com/go/go1.23.6.linux-riscv64.tar.gz'; \
+            sha256='f95f7f817ab22ecab4503d0704d6449ea1aa26a595f57bf9b9f94ddf2aa7c1f3'; \
             ;; \
         's390x') \
-            url='https://dl.google.com/go/go1.22.11.linux-s390x.tar.gz'; \
-            sha256='1a235afe650dee989fb37fef6aa520f35e4cd557c31453f3e82b553da3a90669'; \
+            url='https://dl.google.com/go/go1.23.6.linux-s390x.tar.gz'; \
+            sha256='321e7ed0d5416f731479c52fa7610b52b8079a8061967bd48cec6d66f671a60e'; \
             ;; \
         *) echo >&2 "error: unsupported architecture '$arch' (likely packaging update needed)"; exit 1 ;; \
     esac; \
@@ -209,6 +211,7 @@ COPY octopus_server /octopus_server/
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM octopus_server_base AS octopus_server_builder
+#ARG OLLAMA_VERSION
 ARG DATABASE_URL
 RUN cargo install sqlx-cli
 COPY --from=octopus_server_planner /octopus_server/recipe.json recipe.json
@@ -230,22 +233,45 @@ RUN npm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 ENV GOARCH=amd64
-WORKDIR /
-RUN wget -q https://github.com/ollama/ollama/releases/download/v0.5.7/ollama-linux-amd64.tgz
-RUN mkdir ollama
-RUN tar xzvf ollama-linux-amd64.tgz -C /ollama
+#WORKDIR /
+#RUN wget -q https://github.com/ollama/ollama/archive/refs/tags/v${OLLAMA_VERSION}.tar.gz
+#RUN mkdir ollama
+#RUN tar xzvf v${OLLAMA_VERSION}.tar.gz -C /ollama
+#WORKDIR /ollama/ollama-${OLLAMA_VERSION}
+#RUN ls
+#RUN wget -q https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tgz
+#RUN mkdir ollama
+#RUN tar xzvf ollama-linux-amd64.tgz -C /ollama
 #RUN git clone https://github.com/ollama/ollama.git
 #WORKDIR /ollama/
-#RUN git checkout v0.5.5
-#WORKDIR /ollama/llm/generate
-#ARG CGO_CFLAGS
-#RUN OLLAMA_SKIP_CPU_GENERATE=1 make -j 5 dist
+#RUN git checkout v0.5.7
+#RUN ls
+#COPY CMakeLists.txt CMakePresets.json ml/backend/ggml/ggml
+#WORKDIR /ollama/ml/backend/ggml/ggml
+#RUN cmake --preset 'CUDA 12' \
+#&& cmake --build --parallel --preset 'CUDA 12' \
+#&& cmake --install build --component CUDA --strip --parallel 8
+#RUN make -j 5 dist
+#RUN ls
+#RUN cmake --preset 'CUDA 12' \
+#    && cmake --build --parallel --preset 'CUDA 12' \
+#    && cmake --install build --component CUDA --strip --parallel 8
+#RUN cmake -B build \
+#    cmake --build build
+#RUN ls
 #WORKDIR /ollama/
+#ARG GOFLAGS="'-ldflags=-w -s'"
+#ENV CGO_ENABLED=1
+#RUN go build -trimpath -buildmode=pie -o /bin/ollama .
 #ENV CGO_ENABLED 1
 #ARG GOFLAGS
 #RUN go build -trimpath -o dist/linux-amd64/bin/ollama .
+#ARG GOFLAGS="'-ldflags=-w -s'"
+#ENV CGO_ENABLED=1
+#RUN go build -trimpath -buildmode=pie -o /bin/ollama .
 
 FROM octopus_server_base AS octopus_server_runtime
+ARG OLLAMA_VERSION
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true
@@ -549,12 +575,15 @@ RUN ./run build
 RUN ./run install
 ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
+#COPY --from=octopus_server_builder /bin/ollama /bin/ollama
+#COPY --from=octopus_server_builder /ollama/ollama-${OLLAMA_VERSION}/dist/linux-amd64/bin/ /bin/
 #COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
-COPY --from=octopus_server_builder /ollama/bin/* /bin/
-COPY --from=octopus_server_builder /ollama/lib/* /lib/
+#COPY --from=octopus_server_builder /ollama/bin/* /bin/
+#COPY --from=octopus_server_builder /ollama/lib/* /lib/
 ENV OLLAMA_HOST http://localhost:5050
 ENV OLLAMA_KEEP_ALIVE 2m
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
+RUN curl -fsSL https://ollama.com/install.sh | sh
 WORKDIR /octopus_client
 ARG NEXT_PUBLIC_SLACK_BOT_TOKEN
 ARG NEXT_PUBLIC_SLACK_CHANNEL_ID
