@@ -1,7 +1,7 @@
 import os
 
 dependencies = [
-    "pip install -q Flask==3.0.3"
+    "pip install -q Flask==3.1.0"
 ]
 
 for command in dependencies:

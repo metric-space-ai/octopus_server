@@ -1,8 +1,8 @@
 import os
 
 dependencies = [
-    "pip install -q Flask==3.0.3",
-    "pip install -q nc_py_api==0.13.0",
+    "pip install -q Flask==3.1.0",
+    "pip install -q nc_py_api==0.18.2",
     "pip install -q python-dotenv==1.0.1"
 ]
 

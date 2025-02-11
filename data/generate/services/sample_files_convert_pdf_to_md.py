@@ -1,9 +1,9 @@
 import os
 
 dependencies = [
-    "pip install -q Flask==3.0.3",
+    "pip install -q Flask==3.1.0",
     "pip install -q requests==2.32.3",
-    "pip install -q marker-pdf==0.2.14"
+    "pip install -q marker-pdf==1.3.4"
 ]
 
 for command in dependencies:
@@ -12,13 +12,14 @@ for command in dependencies:
 import json
 import requests
 from flask import Flask, request, jsonify
-from marker.convert import convert_single_pdf
+from marker.converters.pdf import PdfConverter
+from marker.models import create_model_dict
+from marker.config.parser import ConfigParser
+from marker.renderers.markdown import MarkdownOutput
 from marker.logger import configure_logging
-from marker.models import load_all_models
 
 app = Flask(__name__)
 configure_logging()
-model_lst = load_all_models()
 
 config_str = '''{
     "device_map": {
@@ -69,9 +70,22 @@ def convert_pdf_to_md():
     with open(temp_pdf_path, 'wb') as temp_pdf:
         temp_pdf.write(response.content)
 
+    config = {
+        "output_format": "markdown"
+    }
+
+    config_parser = ConfigParser(config)
+    converter = PdfConverter(
+        config=config_parser.generate_config_dict(),
+        artifact_dict=create_model_dict(),
+        processor_list=config_parser.get_processors(),
+        renderer=config_parser.get_renderer()
+    )
+
     try:
-        full_text, images, out_meta = convert_single_pdf(temp_pdf_path, model_lst)
-        markdown_content = full_text
+        markdown_output: MarkdownOutput = converter(temp_pdf_path)
+        markdown = markdown_output.markdown
+        markdown_content = markdown
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

@@ -295,6 +295,50 @@ pub async fn function_call(
 }
 
 #[derive(Debug, Deserialize)]
+pub struct FunctionLlmRouterResponse {
+    pub response: String,
+}
+
+pub async fn llm_router_function_call(
+    ai_function: &AiFunction,
+    ai_service: &AiService,
+    function_args: &Value,
+) -> Result<Option<FunctionLlmRouterResponse>> {
+    let url = format!(
+        "{BASE_AI_FUNCTION_URL}:{}/{}",
+        ai_service.port, ai_function.name
+    );
+
+    let response = reqwest::ClientBuilder::new()
+        .connect_timeout(Duration::from_secs(60))
+        .build()?
+        .post(url)
+        .json(&function_args)
+        .send()
+        .await;
+
+    match response {
+        Err(error) => {
+            tracing::error!("Function call error: {error:?}");
+        }
+        Ok(response) => {
+            if response.status() == StatusCode::CREATED {
+                let function_llm_router_response: std::result::Result<
+                    FunctionLlmRouterResponse,
+                    reqwest::Error,
+                > = response.json().await;
+
+                if let Ok(function_llm_router_response) = function_llm_router_response {
+                    return Ok(Some(function_llm_router_response));
+                }
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+#[derive(Debug, Deserialize)]
 pub struct FunctionSensitiveInformationResponse {
     pub is_sensitive: bool,
     #[allow(dead_code)]

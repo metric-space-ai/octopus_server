@@ -2,13 +2,13 @@ import os
 
 dependencies = [
     "pip install -q einops==0.8.0",
-    "pip install -q flash-attn==2.5.8",
-    "pip install -q timm==1.0.7",
-    "pip install -q Flask==3.0.3",
-    "pip install -q torch==2.3.1",
-    "pip install -q transformers==4.41.2",
+    "pip install -q flash-attn==2.7.3",
+    "pip install -q timm==1.0.14",
+    "pip install -q Flask==3.1.0",
+    "pip install -q torch==2.6.0",
+    "pip install -q transformers==4.48.2",
     "pip install -q requests==2.32.3",
-    "pip install -q Pillow==10.3.0"
+    "pip install -q Pillow==11.1.0"
 ]
 
 for command in dependencies:
@@ -63,10 +63,13 @@ def select_device_with_larger_free_memory(available_devices):
     for available_device in available_devices:
         id = available_device.split(":")
         id = id[-1]
-        free_memory = command_result_as_int(f"nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
-        if free_memory > memory:
-            memory = free_memory
-            device = available_device
+        try:
+            free_memory = self.command_result_as_int(f"nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
+            if free_memory > memory:
+                memory = free_memory
+                device = available_device
+        except:
+            print(f"problem with executing nvidia-smi --query-gpu=memory.free --format=csv,nounits,noheader --id={id}")
 
     return device if device else "cpu"
 
