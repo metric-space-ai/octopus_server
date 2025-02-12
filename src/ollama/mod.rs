@@ -176,6 +176,7 @@ pub fn get_models() -> Vec<&'static str> {
         "mistral-nemo:12b",
         "mistral-openorca:7b",
         "mistral-small:22b",
+        "mistral-small:24b",
         "mistrallite:7b",
         "mixtral:8x7b",
         "mixtral:8x22b",
