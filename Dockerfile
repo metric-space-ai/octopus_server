@@ -1,5 +1,3 @@
-#ARG OLLAMA_VERSION=0.5.8
-
 FROM nvidia/cuda:12.2.2-cudnn8-devel-ubuntu22.04 AS octopus_server_base
 RUN sed -i "s/Pin-Priority: -1/Pin-Priority: 1001/g" /etc/apt/preferences.d/cuda-repository-pin-600
 RUN sed -i "s/Pin-Priority: 600/Pin-Priority: -1/g" /etc/apt/preferences.d/cuda-repository-pin-600
@@ -211,7 +209,6 @@ COPY octopus_server /octopus_server/
 RUN cargo chef prepare --recipe-path recipe.json
 
 FROM octopus_server_base AS octopus_server_builder
-#ARG OLLAMA_VERSION
 ARG DATABASE_URL
 RUN cargo install sqlx-cli
 COPY --from=octopus_server_planner /octopus_server/recipe.json recipe.json
@@ -233,42 +230,6 @@ RUN npm install --frozen-lockfile
 ENV NEXT_TELEMETRY_DISABLED 1
 RUN npm run build
 ENV GOARCH=amd64
-#WORKDIR /
-#RUN wget -q https://github.com/ollama/ollama/archive/refs/tags/v${OLLAMA_VERSION}.tar.gz
-#RUN mkdir ollama
-#RUN tar xzvf v${OLLAMA_VERSION}.tar.gz -C /ollama
-#WORKDIR /ollama/ollama-${OLLAMA_VERSION}
-#RUN ls
-#RUN wget -q https://github.com/ollama/ollama/releases/download/v${OLLAMA_VERSION}/ollama-linux-amd64.tgz
-#RUN mkdir ollama
-#RUN tar xzvf ollama-linux-amd64.tgz -C /ollama
-#RUN git clone https://github.com/ollama/ollama.git
-#WORKDIR /ollama/
-#RUN git checkout v0.5.7
-#RUN ls
-#COPY CMakeLists.txt CMakePresets.json ml/backend/ggml/ggml
-#WORKDIR /ollama/ml/backend/ggml/ggml
-#RUN cmake --preset 'CUDA 12' \
-#&& cmake --build --parallel --preset 'CUDA 12' \
-#&& cmake --install build --component CUDA --strip --parallel 8
-#RUN make -j 5 dist
-#RUN ls
-#RUN cmake --preset 'CUDA 12' \
-#    && cmake --build --parallel --preset 'CUDA 12' \
-#    && cmake --install build --component CUDA --strip --parallel 8
-#RUN cmake -B build \
-#    cmake --build build
-#RUN ls
-#WORKDIR /ollama/
-#ARG GOFLAGS="'-ldflags=-w -s'"
-#ENV CGO_ENABLED=1
-#RUN go build -trimpath -buildmode=pie -o /bin/ollama .
-#ENV CGO_ENABLED 1
-#ARG GOFLAGS
-#RUN go build -trimpath -o dist/linux-amd64/bin/ollama .
-#ARG GOFLAGS="'-ldflags=-w -s'"
-#ENV CGO_ENABLED=1
-#RUN go build -trimpath -buildmode=pie -o /bin/ollama .
 
 FROM octopus_server_base AS octopus_server_runtime
 ARG OLLAMA_VERSION
@@ -304,11 +265,13 @@ RUN apt-get update --fix-missing && \
         libfreetype6 \
         libglib2.0-0 \
         libnss3-tools \
+        libnvidia-compute-550 \
         libsm6 \
         libxext6 \
         libxrender1 \
         locales \
         mercurial \
+        nvidia-firmware-550-550.120 \
         nvidia-utils-550 \
         openjdk-11-jre-headless \
         openssh-client \
@@ -332,6 +295,7 @@ RUN apt-get update --fix-missing && \
     && apt-get -qyy autoremove \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
+RUN apt-mark hold libnvidia-compute-550 nvidia-firmware-550-550.120 nvidia-utils-550
 RUN ubuntu-drivers install nvidia-driver-550
 # https://github.com/ContinuumIO/docker-images/blob/main/miniconda3/debian/Dockerfile
 ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
@@ -575,11 +539,6 @@ RUN ./run build
 RUN ./run install
 ENV PATH "$PATH:/root/.cabal/bin"
 RUN ln -s /root/.cabal/bin/wasp-cli /root/.cabal/bin/wasp
-#COPY --from=octopus_server_builder /bin/ollama /bin/ollama
-#COPY --from=octopus_server_builder /ollama/ollama-${OLLAMA_VERSION}/dist/linux-amd64/bin/ /bin/
-#COPY --from=octopus_server_builder /ollama/ollama /bin/ollama
-#COPY --from=octopus_server_builder /ollama/bin/* /bin/
-#COPY --from=octopus_server_builder /ollama/lib/* /lib/
 ENV OLLAMA_HOST http://localhost:5050
 ENV OLLAMA_KEEP_ALIVE 2m
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64
