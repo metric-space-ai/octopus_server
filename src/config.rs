@@ -200,10 +200,6 @@ impl Config {
             }
         }
 
-        if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-            return Some(val);
-        }
-
         None
     }
 
@@ -360,14 +356,13 @@ impl Config {
 
     pub fn get_parameter_sendgrid_api_key(&self) -> Option<String> {
         match self.get_parameter_value(PARAMETER_NAME_SENDGRID_API_KEY) {
-            None => {
-                if let Ok(val) = std::env::var("SENDGRID_API_KEY") {
-                    Some(val)
-                } else {
-                    None
+            None => None,
+            Some(sendgrid_api_key) => {
+                if sendgrid_api_key != *"default" {
+                    return Some(sendgrid_api_key);
                 }
+                None
             }
-            Some(sendgrid_api_key) => Some(sendgrid_api_key),
         }
     }
 

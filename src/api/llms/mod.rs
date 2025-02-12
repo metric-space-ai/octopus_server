@@ -90,7 +90,7 @@ mod tests {
     use tower::ServiceExt;
 
     #[tokio::test]
-    async fn proxy_200() {
+    async fn list_200() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
@@ -127,7 +127,6 @@ mod tests {
         let body: HashMap<String, Vec<String>> = serde_json::from_slice(&body).unwrap();
 
         assert!(body.contains_key("ollama"));
-        assert!(body.contains_key("openai"));
 
         let mut transaction = app
             .context
@@ -148,7 +147,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn proxy_401() {
+    async fn list_401() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
@@ -191,7 +190,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn proxy_403_deleted_user() {
+    async fn list_403_deleted_user() {
         let app = app::tests::get_test_app().await;
         let router = app.router;
 
