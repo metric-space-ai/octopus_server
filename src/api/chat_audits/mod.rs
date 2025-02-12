@@ -148,6 +148,27 @@ mod tests {
             )
             .await;
 
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .insert_chat_audit(
+                &mut transaction,
+                chat_id,
+                chat_message_id,
+                user_id,
+                serde_json::Value::Null,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
         sleep(Duration::from_secs(2)).await;
 
         let response = router
@@ -504,6 +525,27 @@ mod tests {
             )
             .await;
 
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .insert_chat_audit(
+                &mut transaction,
+                chat_id,
+                chat_message_id,
+                user_id,
+                serde_json::Value::Null,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
         sleep(Duration::from_secs(3)).await;
 
         let chat_audit = app
@@ -609,6 +651,27 @@ mod tests {
             )
             .await;
 
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .insert_chat_audit(
+                &mut transaction,
+                chat_id,
+                chat_message_id,
+                user_id,
+                serde_json::Value::Null,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
+
         sleep(Duration::from_secs(3)).await;
 
         let chat_audit = app
@@ -700,6 +763,27 @@ mod tests {
             api::auth::login::tests::login_post(router.clone(), &email, &password, second_user_id)
                 .await;
         let session_id = session_response.id;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .insert_chat_audit(
+                &mut transaction,
+                chat_id,
+                chat_message_id,
+                user_id,
+                serde_json::Value::Null,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         sleep(Duration::from_secs(2)).await;
 
@@ -796,6 +880,27 @@ mod tests {
                 &r#type,
             )
             .await;
+
+        let mut transaction = app
+            .context
+            .octopus_database
+            .transaction_begin()
+            .await
+            .unwrap();
+
+        app.context
+            .octopus_database
+            .insert_chat_audit(
+                &mut transaction,
+                chat_id,
+                chat_message_id,
+                user_id,
+                serde_json::Value::Null,
+            )
+            .await
+            .unwrap();
+
+        api::tests::transaction_commit(app.context.clone(), transaction).await;
 
         sleep(Duration::from_secs(3)).await;
 

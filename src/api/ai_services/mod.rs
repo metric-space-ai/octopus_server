@@ -1160,6 +1160,7 @@ pub mod tests {
         Router,
     };
     use http_body_util::BodyExt;
+    use std::collections::HashMap;
     use tokio::time::{sleep, Duration};
     use tower::ServiceExt;
     use uuid::Uuid;
@@ -1186,9 +1187,14 @@ pub mod tests {
             "application/octet-stream",
             "test.py",
             "data/test/test.py",
-            true,
+            false,
         )
         .unwrap();
+
+        let mut fields = HashMap::new();
+        fields.insert("bypass_code_check", "true");
+
+        let body = multipart::tests::text_field_data(&body, fields, true);
 
         let value = format!(
             "{}; boundary={}",
