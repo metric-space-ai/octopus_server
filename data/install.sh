@@ -606,19 +606,19 @@ installer_proceed() {
         echo "DATABASE_PASSWORD=$DATABASE_PASSWORD"
         echo "DOMAIN=$DOMAIN"
 
-        #install_base_utils
-        #install_nvidia_cuda
-        #install_nvidia_driver
-        #install_rust
-        #install_go
-        #install_node
-        #install_miniconda
-        #install_selenium
-        #install_ollama
-        #install_wasp
-        #install_postgresql
-        #install_octopus_client
-        #install_octopus_server
+        install_base_utils
+        install_nvidia_cuda
+        install_nvidia_driver
+        install_rust
+        install_go
+        install_node
+        install_miniconda
+        install_selenium
+        install_ollama
+        install_wasp
+        install_postgresql
+        install_octopus_client
+        install_octopus_server
         install_nginx
     fi
 }
