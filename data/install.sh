@@ -328,6 +328,10 @@ install_octopus_client() {
         && npm install --frozen-lockfile \
         && NEXT_PUBLIC_BASE_URL=\"https://api.$DOMAIN/\" NEXT_PUBLIC_THEME_NAME=\"default-dark\" NEXT_PUBLIC_DOMAIN=\"$DOMAIN/\" npm run build"
 
+    echo "NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL" > /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/.env.installer
+    echo "NEXT_PUBLIC_THEME_NAME=$NEXT_PUBLIC_THEME_NAME" >> /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/.env.installer
+    echo "NEXT_PUBLIC_DOMAIN=$NEXT_PUBLIC_DOMAIN" >> /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/.env.installer
+
     echo "#!/usr/bin/env bash" > /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/client-start.sh
     echo "cd /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/" >> /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/client-start.sh
     echo "npm install --frozen-lockfile" >> /opt/octopus_client_$OCTOPUS_CLIENT_VERSION/client-start.sh
@@ -338,7 +342,6 @@ install_octopus_client() {
     echo "[Unit]" > /etc/systemd/system/octopus_client.service
     echo "Description=Octopus Client systemd service unit file." >> /etc/systemd/system/octopus_client.service
     echo "[Service]" >> /etc/systemd/system/octopus_client.service
-    #echo "Type=simple" >> /etc/systemd/system/octopus_client.service
     echo "ExecStart=/bin/bash /opt/octopus_client/client-start.sh" >> /etc/systemd/system/octopus_client.service
     echo "[Install]" >> /etc/systemd/system/octopus_client.service
     echo "WantedBy=multi-user.target" >> /etc/systemd/system/octopus_client.service
@@ -426,6 +429,16 @@ install_octopus_server() {
 
     cp /opt/octopus_tmp/octopus_server/target/release/octopus_server /opt/octopus_server_$OCTOPUS_SERVER_VERSION/
     cp -R /opt/octopus_tmp/octopus_server/migrations /opt/octopus_server_$OCTOPUS_SERVER_VERSION/
+
+    echo "DATABASE_URL=$DATABASE_URL" > /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "NEXTCLOUD_SUBDIR=$NEXTCLOUD_SUBDIR" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "OCTOPUS_PEPPER=$OCTOPUS_PEPPER" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "OCTOPUS_PEPPER_ID=$OCTOPUS_PEPPER_ID" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "OCTOPUS_SERVER_PORT=$OCTOPUS_SERVER_PORT" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "OCTOPUS_WS_SERVER_PORT=$OCTOPUS_WS_SERVER_PORT" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "OLLAMA_HOST=$OLLAMA_HOST" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "WASP_DATABASE_URL=$WASP_DATABASE_URL" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
+    echo "WEB_DRIVER_URL=$WEB_DRIVER_URL" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
 
     echo "#!/usr/bin/env bash" > /opt/octopus_server_$OCTOPUS_SERVER_VERSION/server-start.sh
     echo "cd /opt/octopus_server_$OCTOPUS_SERVER_VERSION/" >> /opt/octopus_server_$OCTOPUS_SERVER_VERSION/server-start.sh
