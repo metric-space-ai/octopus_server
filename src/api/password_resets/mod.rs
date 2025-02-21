@@ -7,13 +7,13 @@ use crate::{
     error::{AppError, ResponseError},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::Utc;
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
@@ -235,9 +235,9 @@ mod tests {
         entity::{PasswordResetToken, User},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

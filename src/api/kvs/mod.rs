@@ -1,14 +1,14 @@
 use crate::{
     context::Context,
-    entity::{KVAccessType, KV, ROLE_COMPANY_ADMIN_USER},
+    entity::{KV, KVAccessType, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::{DateTime, Utc};
 use regex::Regex;
@@ -341,11 +341,11 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::KV};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

@@ -2,13 +2,13 @@ use crate::{
     context::Context,
     entity::{ChatTokenAudit, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::{DateTime, Datelike, NaiveDate, Utc};
 use serde::Deserialize;
@@ -187,7 +187,7 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use http_body_util::BodyExt;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tower::ServiceExt;
 
     #[tokio::test]

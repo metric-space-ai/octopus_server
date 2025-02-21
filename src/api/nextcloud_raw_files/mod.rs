@@ -1,18 +1,18 @@
 use crate::{
+    NEXTCLOUD_FILES_DIR,
     context::Context,
     entity::ROLE_COMPANY_ADMIN_USER,
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    NEXTCLOUD_FILES_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::{
-    fs::{read_dir, File},
+    fs::{File, read_dir},
     io::Write,
     sync::Arc,
 };
@@ -118,9 +118,9 @@ pub async fn list(
 mod tests {
     use crate::{api, app, multipart};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

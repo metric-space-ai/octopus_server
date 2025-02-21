@@ -1,10 +1,10 @@
 use crate::{
-    ai::open_ai::{open_ai_get_client, AiClient, PRIMARY_MODEL},
+    Result,
+    ai::open_ai::{AiClient, PRIMARY_MODEL, open_ai_get_client},
     context::Context,
     entity::ScheduledPrompt,
     error::AppError,
     parser::configuration::Configuration,
-    Result,
 };
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,

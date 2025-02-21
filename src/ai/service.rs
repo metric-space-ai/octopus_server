@@ -1,15 +1,15 @@
 use crate::{
+    Result,
     ai::BASE_AI_FUNCTION_URL,
     context::Context,
     entity::{AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus},
     error::AppError,
-    Result,
 };
 use chrono::Utc;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use uuid::Uuid;
 
 #[derive(Debug, Deserialize)]
@@ -60,17 +60,37 @@ pub async fn service_health_check(
 
             let mut transaction = context.octopus_database.transaction_begin().await?;
 
-            if let Ok(response) = response {
-                if response.status() == StatusCode::OK {
-                    let response: HealthCheckResponse = response.json().await?;
+            match response {
+                Ok(response) => {
+                    if response.status() == StatusCode::OK {
+                        let response: HealthCheckResponse = response.json().await?;
 
-                    let ai_service = context
+                        let ai_service = context
+                            .octopus_database
+                            .update_ai_service_health_check_status(
+                                &mut transaction,
+                                ai_service_id,
+                                health_check_execution_time,
+                                response.status,
+                            )
+                            .await?;
+
+                        context
+                            .octopus_database
+                            .transaction_commit(transaction)
+                            .await?;
+
+                        return Ok(ai_service);
+                    }
+                }
+                _ => {
+                    context
                         .octopus_database
                         .update_ai_service_health_check_status(
                             &mut transaction,
                             ai_service_id,
                             health_check_execution_time,
-                            response.status,
+                            AiServiceHealthCheckStatus::NotWorking,
                         )
                         .await?;
 
@@ -79,31 +99,14 @@ pub async fn service_health_check(
                         .transaction_commit(transaction)
                         .await?;
 
-                    return Ok(ai_service);
+                    failed_connection_attempts += 1;
+
+                    if failed_connection_attempts > failed_connection_attempts_limit {
+                        break;
+                    }
+
+                    sleep(Duration::from_secs(30)).await;
                 }
-            } else {
-                context
-                    .octopus_database
-                    .update_ai_service_health_check_status(
-                        &mut transaction,
-                        ai_service_id,
-                        health_check_execution_time,
-                        AiServiceHealthCheckStatus::NotWorking,
-                    )
-                    .await?;
-
-                context
-                    .octopus_database
-                    .transaction_commit(transaction)
-                    .await?;
-
-                failed_connection_attempts += 1;
-
-                if failed_connection_attempts > failed_connection_attempts_limit {
-                    break;
-                }
-
-                sleep(Duration::from_secs(30)).await;
             }
         }
 

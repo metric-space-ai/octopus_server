@@ -1,18 +1,18 @@
 use crate::{
-    ai::function_call::{function_call, AiFunctionResponse},
+    ai::function_call::{AiFunctionResponse, function_call},
     context::Context,
     entity::{
         AiFunction, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus,
         ROLE_COMPANY_ADMIN_USER,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -370,7 +370,7 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use http_body_util::BodyExt;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tower::ServiceExt;
     use uuid::Uuid;
 

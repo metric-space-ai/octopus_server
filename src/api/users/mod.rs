@@ -4,18 +4,18 @@ use crate::{
     context::Context,
     email_service::send_invitation_email,
     entity::{
-        UserExtended, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER, ROLE_SUPERVISOR,
+        ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER, ROLE_SUPERVISOR, UserExtended,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
-use rand::{distributions::Alphanumeric, Rng};
+use rand::{Rng, distributions::Alphanumeric};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
@@ -521,20 +521,20 @@ pub async fn update(
 pub mod tests {
     use crate::{
         api, app,
-        entity::{UserExtended, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+        entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER, UserExtended},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use fake::{
+        Fake,
         faker::{
             internet::en::SafeEmail,
             lorem::en::{Paragraph, Word},
             name::en::Name,
         },
-        Fake,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

@@ -1,18 +1,17 @@
 use crate::{
-    ai,
+    SERVICES_DIR, ai,
     context::Context,
     entity::{AiService, AiServiceStatus, AiServiceType, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
     get_pwd, parser, process_manager,
-    session::{require_authenticated, ExtractedSession},
-    SERVICES_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     body::Body,
     extract::{Multipart, Path, Query, State},
-    http::{header, HeaderValue, StatusCode},
+    http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
-    Json,
 };
 use chrono::{DateTime, Duration, Utc};
 use rev_buf_reader::RevBufReader;
@@ -1154,14 +1153,14 @@ pub mod tests {
         multipart,
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
         response::Response,
-        Router,
     };
     use http_body_util::BodyExt;
     use std::collections::HashMap;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tower::ServiceExt;
     use uuid::Uuid;
 
@@ -4820,10 +4819,11 @@ pub mod tests {
             .to_vec();
         let body: AiServiceOperationResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body
-            .estimated_operation_end_at
-            .to_string()
-            .starts_with("20"));
+        assert!(
+            body.estimated_operation_end_at
+                .to_string()
+                .starts_with("20")
+        );
 
         let mut transaction = app
             .context
@@ -4916,10 +4916,11 @@ pub mod tests {
             .to_vec();
         let body: AiServiceOperationResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body
-            .estimated_operation_end_at
-            .to_string()
-            .starts_with("20"));
+        assert!(
+            body.estimated_operation_end_at
+                .to_string()
+                .starts_with("20")
+        );
 
         let mut transaction = app
             .context
@@ -5012,10 +5013,11 @@ pub mod tests {
             .to_vec();
         let body: AiServiceOperationResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body
-            .estimated_operation_end_at
-            .to_string()
-            .starts_with("20"));
+        assert!(
+            body.estimated_operation_end_at
+                .to_string()
+                .starts_with("20")
+        );
 
         let mut transaction = app
             .context
@@ -5108,10 +5110,11 @@ pub mod tests {
             .to_vec();
         let body: AiServiceOperationResponse = serde_json::from_slice(&body).unwrap();
 
-        assert!(body
-            .estimated_operation_end_at
-            .to_string()
-            .starts_with("20"));
+        assert!(
+            body.estimated_operation_end_at
+                .to_string()
+                .starts_with("20")
+        );
 
         let mut transaction = app
             .context

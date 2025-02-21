@@ -1,19 +1,19 @@
 use crate::{
-    ai::{service::service_health_check, BASE_AI_FUNCTION_URL},
+    PUBLIC_DIR, Result,
+    ai::{BASE_AI_FUNCTION_URL, service::service_health_check},
     context::Context,
     entity::{
         AiFunction, AiFunctionResponseContentType, AiService, ChatMessage, ChatMessageStatus,
     },
     error::AppError,
-    Result, PUBLIC_DIR,
 };
 use async_recursion::async_recursion;
-use base64::{alphabet, engine, Engine};
-use reqwest::{header::CONTENT_TYPE, StatusCode};
+use base64::{Engine, alphabet, engine};
+use reqwest::{StatusCode, header::CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use serde_json::value::Value;
 use std::{fs::File, io::Write, sync::Arc};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use utoipa::ToSchema;
 use uuid::Uuid;
 

@@ -1,18 +1,18 @@
 use crate::{
+    WASP_GENERATOR_DIR,
     context::Context,
-    entity::{WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
+    entity::{ROLE_COMPANY_ADMIN_USER, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus},
     error::{AppError, ResponseError},
     get_pwd, process_manager,
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
     wasp_app::{self, generator},
-    WASP_GENERATOR_DIR,
 };
 use axum::{
+    Json,
     body::Body,
     extract::{Path, Request, State, WebSocketUpgrade},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use rev_buf_reader::RevBufReader;
 use serde::Deserialize;

@@ -1,6 +1,6 @@
 use crate::{
-    api, config, context::Context, database::OctopusDatabase, process_manager::ProcessManager,
-    Args, Result,
+    Args, Result, api, config, context::Context, database::OctopusDatabase,
+    process_manager::ProcessManager,
 };
 use axum::Router;
 use sqlx::postgres::PgPoolOptions;
@@ -50,7 +50,7 @@ pub async fn get_context(args: Args) -> Result<Arc<Context>> {
 
 #[cfg(test)]
 pub mod tests {
-    use crate::{app, app::App, Args};
+    use crate::{Args, app, app::App};
 
     pub async fn get_test_app() -> App {
         let args = Args {

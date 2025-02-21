@@ -4,13 +4,13 @@ use crate::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, InspectionDisabling,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::{Duration, Utc};
 use serde::Deserialize;
@@ -257,9 +257,9 @@ fn get_temporaty_inspection_disabling(user_id: Uuid) -> Result<InspectionDisabli
 mod tests {
     use crate::{api, app, entity::InspectionDisabling};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

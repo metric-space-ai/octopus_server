@@ -1,9 +1,10 @@
 use crate::{
-    ai::{self, function_call, internal_function_call, tasks, AiFunctionCall, ChatAuditTrail},
+    Result,
+    ai::{self, AiFunctionCall, ChatAuditTrail, function_call, internal_function_call, tasks},
     context::Context,
     entity::{ChatMessage, ChatMessageStatus, ChatType, User},
     error::AppError,
-    get_pwd, Result,
+    get_pwd,
 };
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
@@ -109,7 +110,10 @@ pub async fn get_messages(
                 };
 
             if let Some(suggested_ai_function) = suggested_ai_function {
-                let suggested_ai_function_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_ai_function.name);
+                let suggested_ai_function_message = format!(
+                    "User wants to trigger {} function for the next request. Try to match the arguments and make a function call.",
+                    suggested_ai_function.name
+                );
 
                 let message = Message {
                     content: suggested_ai_function_message.clone(),
@@ -139,7 +143,10 @@ pub async fn get_messages(
                 };
 
             if let Some(suggested_simple_app) = suggested_simple_app {
-                let suggested_simple_app_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_simple_app.name);
+                let suggested_simple_app_message = format!(
+                    "User wants to trigger {} function for the next request. Try to match the arguments and make a function call.",
+                    suggested_simple_app.name
+                );
 
                 let message = Message {
                     content: suggested_simple_app_message.clone(),
@@ -168,7 +175,10 @@ pub async fn get_messages(
             };
 
             if let Some(suggested_wasp_app) = suggested_wasp_app {
-                let suggested_wasp_app_message = format!("User wants to trigger {} function for the next request. Try to match the arguments and make a function call.", suggested_wasp_app.name);
+                let suggested_wasp_app_message = format!(
+                    "User wants to trigger {} function for the next request. Try to match the arguments and make a function call.",
+                    suggested_wasp_app.name
+                );
 
                 let message = Message {
                     content: suggested_wasp_app_message.clone(),
@@ -808,7 +818,8 @@ pub async fn anthropic_request(
                                             return Ok(chat_message);
                                         } else {
                                             tracing::error!(
-                                                "Function call error: AI Service not available {:?}", ai_function.ai_service_id
+                                                "Function call error: AI Service not available {:?}",
+                                                ai_function.ai_service_id
                                             );
                                         }
                                     } else {

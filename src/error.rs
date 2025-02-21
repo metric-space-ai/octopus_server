@@ -1,9 +1,9 @@
 use async_openai::error::OpenAIError;
 use axum::{
+    Json,
     extract::multipart::MultipartError,
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use http::{header::ToStrError, status::InvalidStatusCode};
 use serde::Serialize;
@@ -118,7 +118,10 @@ impl IntoResponse for AppError {
             AppError::Utf8(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Utf8 error."),
             AppError::Uuid(_error) => (StatusCode::BAD_REQUEST, "Invalid API key."),
             AppError::Validation(_error) => (StatusCode::BAD_REQUEST, "Validation problem."),
-            AppError::WaspAppCommunicationProblem => (StatusCode::INTERNAL_SERVER_ERROR, "There is a problem in communication with WASP application. Please check WASP application logs."),
+            AppError::WaspAppCommunicationProblem => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "There is a problem in communication with WASP application. Please check WASP application logs.",
+            ),
             AppError::Zip(_error) => (StatusCode::INTERNAL_SERVER_ERROR, "Zip error."),
         };
 

@@ -1,23 +1,23 @@
 use crate::{
+    Result, WASP_GENERATOR_DIR,
     context::Context,
     entity::WaspGenerator,
     error::AppError,
     get_pwd,
     process_manager::{
-        try_get_pid, try_kill_cgroup, try_kill_process, Process, ProcessState, ProcessType,
+        Process, ProcessState, ProcessType, try_get_pid, try_kill_cgroup, try_kill_process,
     },
-    Result, WASP_GENERATOR_DIR,
 };
 use chrono::{Duration as ChronoDuration, Utc};
-use port_selector::{select_free_port, Selector};
+use port_selector::{Selector, select_free_port};
 use std::{
-    fs::{create_dir, remove_dir_all, remove_file, File, OpenOptions},
+    fs::{File, OpenOptions, create_dir, remove_dir_all, remove_file},
     io::Write,
     path::Path,
     process::Command,
     sync::Arc,
 };
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use uuid::Uuid;
 
 pub async fn create_environment(

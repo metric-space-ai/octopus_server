@@ -1,8 +1,8 @@
 use crate::{
-    ai::function_call::{function_call, AiFunctionResponse},
+    Result,
+    ai::function_call::{AiFunctionResponse, function_call},
     context::Context,
     entity::{AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus},
-    Result,
 };
 use fantoccini::ClientBuilder;
 use serde::{Deserialize, Serialize};

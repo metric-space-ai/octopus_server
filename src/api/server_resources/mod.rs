@@ -3,9 +3,9 @@ use crate::{
     entity::ROLE_COMPANY_ADMIN_USER,
     error::{AppError, ResponseError},
     server_resources::{self, ServerResources},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use std::sync::Arc;
 
 #[axum_macros::debug_handler]

@@ -2,13 +2,13 @@ use crate::{
     context::Context,
     entity::{ChatAudit, ROLE_ADMIN},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -103,7 +103,7 @@ mod tests {
         http::{self, Request, StatusCode},
     };
     use http_body_util::BodyExt;
-    use tokio::time::{sleep, Duration};
+    use tokio::time::{Duration, sleep};
     use tower::ServiceExt;
 
     #[tokio::test]

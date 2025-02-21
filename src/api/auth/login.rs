@@ -5,7 +5,7 @@ use crate::{
     error::{AppError, ResponseError},
     session::{SessionResponse, SessionResponseData},
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use chrono::{Duration, Utc};
 use serde::Deserialize;
 use std::sync::Arc;
@@ -93,9 +93,9 @@ pub async fn login(
 pub mod tests {
     use crate::{api, app, session::SessionResponse};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

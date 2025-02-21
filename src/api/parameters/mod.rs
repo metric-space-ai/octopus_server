@@ -1,7 +1,7 @@
 use crate::{
     context::Context,
     entity::{
-        Parameter, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
+        PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
         PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
@@ -16,16 +16,16 @@ use crate::{
         PARAMETER_NAME_SENDGRID_API_KEY, PARAMETER_NAME_SUPERPROXY_ISP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_ISP_USER, PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_SERP_USER, PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD,
-        PARAMETER_NAME_SUPERPROXY_ZONE_USER, ROLE_COMPANY_ADMIN_USER,
+        PARAMETER_NAME_SUPERPROXY_ZONE_USER, Parameter, ROLE_COMPANY_ADMIN_USER,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -376,11 +376,11 @@ pub async fn update(
 mod tests {
     use crate::{api, app, entity::Parameter};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
     use uuid::Uuid;

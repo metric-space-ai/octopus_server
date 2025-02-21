@@ -1,4 +1,4 @@
-use crate::{config::Config, database::OctopusDatabase, process_manager::ProcessManager, Result};
+use crate::{Result, config::Config, database::OctopusDatabase, process_manager::ProcessManager};
 use tokio::sync::RwLock;
 use tokio_cron_scheduler::JobScheduler;
 

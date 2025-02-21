@@ -2,17 +2,17 @@ use crate::{
     ai::tasks,
     context::Context,
     entity::{
-        ChatMessageStatus, ChatType, Task, TaskStatus, TaskType, WorkspacesType, ROLE_SUPERVISOR,
+        ChatMessageStatus, ChatType, ROLE_SUPERVISOR, Task, TaskStatus, TaskType, WorkspacesType,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
     util,
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -918,12 +918,12 @@ pub mod tests {
     use crate::{
         api, app,
         context::Context,
-        entity::{Task, TaskStatus, ROLE_SUPERVISOR},
+        entity::{ROLE_SUPERVISOR, Task, TaskStatus},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};

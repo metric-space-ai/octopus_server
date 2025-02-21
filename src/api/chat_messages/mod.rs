@@ -6,18 +6,18 @@ use crate::{
     context::Context,
     entity::{
         AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus, ChatMessage,
-        ChatMessageExtended, ChatMessageStatus, WorkspacesType, ROLE_COMPANY_ADMIN_USER,
-        ROLE_PRIVATE_USER,
+        ChatMessageExtended, ChatMessageStatus, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
+        WorkspacesType,
     },
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
     util,
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -1179,11 +1179,11 @@ pub mod tests {
         entity::{ChatMessage, ChatMessageStatus},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

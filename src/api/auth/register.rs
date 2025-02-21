@@ -2,10 +2,10 @@ use crate::{
     api::auth,
     canon,
     context::Context,
-    entity::{User, ROLE_PRIVATE_USER, ROLE_PUBLIC_USER},
+    entity::{ROLE_PRIVATE_USER, ROLE_PUBLIC_USER, User},
     error::{AppError, ResponseError},
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;

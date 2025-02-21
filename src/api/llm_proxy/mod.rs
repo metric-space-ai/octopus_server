@@ -2,7 +2,7 @@ use crate::{
     context::Context,
     error::{AppError, ResponseError},
     ollama::proxy,
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
     body::Body,

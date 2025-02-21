@@ -4,13 +4,13 @@ use crate::{
     context::Context,
     entity::{AiServiceGenerator, AiServiceGeneratorStatus, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;

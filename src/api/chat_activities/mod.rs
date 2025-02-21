@@ -2,13 +2,13 @@ use crate::{
     context::Context,
     entity::ChatActivity,
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -128,9 +128,9 @@ pub async fn list(
 mod tests {
     use crate::{api, app, entity::ChatActivity};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use tower::ServiceExt;

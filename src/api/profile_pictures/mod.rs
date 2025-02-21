@@ -1,18 +1,18 @@
 use crate::{
+    PUBLIC_DIR,
     context::Context,
     entity::{Profile, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    PUBLIC_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::{
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::Write,
     sync::Arc,
 };

@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     context::Context,
     entity::{OllamaModel, OllamaModelStatus},
-    Result,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;

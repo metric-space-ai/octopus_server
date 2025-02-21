@@ -1,7 +1,7 @@
 use crate::{context::Context, entity::Session, error::AppError};
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::{request::Parts, HeaderMap},
+    http::{HeaderMap, request::Parts},
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
