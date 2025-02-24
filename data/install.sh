@@ -2,8 +2,8 @@
 
 DATABASE_PASSWORD=""
 DOMAIN=""
-OCTOPUS_CLIENT_VERSION="v0.7.6"
-OCTOPUS_SERVER_VERSION="v0.10.17"
+OCTOPUS_CLIENT_VERSION="v0.7.7"
+OCTOPUS_SERVER_VERSION="v0.10.19"
 PROCEED="true"
 
 save_env() {
@@ -14,6 +14,7 @@ install_base_utils() {
     echo "Installing base utils..."
 
     apt-get update && apt-get install -y \
+        cgroup-tools \
         curl \
         gcc \
         git \
