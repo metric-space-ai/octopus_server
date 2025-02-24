@@ -1,15 +1,15 @@
 use crate::{
     api::auth,
     context::Context,
-    entity::{User, ROLE_COMPANY_ADMIN_USER},
+    entity::{ROLE_COMPANY_ADMIN_USER, User},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;

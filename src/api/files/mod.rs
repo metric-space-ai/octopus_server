@@ -1,19 +1,19 @@
 use crate::{
+    PUBLIC_DIR,
     context::Context,
     entity::{FileAccessType, FileType, FileWithUrl, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    PUBLIC_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::{
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::Write,
     str::FromStr,
     sync::Arc,
@@ -497,9 +497,9 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::File, multipart};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};

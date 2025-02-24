@@ -1,14 +1,15 @@
 use crate::{
+    Result, SERVICES_SAMPLES_DIR,
     ai::{
         code_tools,
-        function_call::{function_call, AiFunctionResponse},
+        function_call::{AiFunctionResponse, function_call},
     },
     context::Context,
     entity::{
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
         AiServiceSetupStatus, AiServiceStatus,
     },
-    get_pwd, parser, Result, SERVICES_SAMPLES_DIR,
+    get_pwd, parser,
 };
 use serde::Serialize;
 use std::{
@@ -100,7 +101,10 @@ pub async fn generate(
             && !skip_regenerate_internet_research_results))
         && !skip_internet_research_results
     {
-        let prompt = format!("Provide internet research that will be needed to create a Python, Flask based service aplication named: {} with the following description: {}", ai_service_generator.name, ai_service_generator.description);
+        let prompt = format!(
+            "Provide internet research that will be needed to create a Python, Flask based service aplication named: {} with the following description: {}",
+            ai_service_generator.name, ai_service_generator.description
+        );
         let mut internet_research_results = None;
 
         let ai_function = context

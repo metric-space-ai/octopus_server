@@ -1,24 +1,25 @@
 use crate::{
-    ai::code_tools::{open_ai_wasp_app_advanced_meta_extraction, WaspAppMeta},
+    WASP_APPS_DIR,
+    ai::code_tools::{WaspAppMeta, open_ai_wasp_app_advanced_meta_extraction},
     context::Context,
-    entity::{WaspApp, WaspAppInstanceType, ROLE_COMPANY_ADMIN_USER},
+    entity::{ROLE_COMPANY_ADMIN_USER, WaspApp, WaspAppInstanceType},
     error::{AppError, ResponseError},
     get_pwd, process_manager,
-    session::{require_authenticated, ExtractedSession},
-    wasp_app, WASP_APPS_DIR,
+    session::{ExtractedSession, require_authenticated},
+    wasp_app,
 };
 use axum::{
+    Json,
     body::Body,
     extract::{Multipart, Path, Request, State, WebSocketUpgrade},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use rev_buf_reader::RevBufReader;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_512};
 use std::{
-    fs::{read_to_string, File},
+    fs::{File, read_to_string},
     io::{BufRead, Write},
     path,
     str::FromStr,
@@ -1043,9 +1044,9 @@ mod tests {
         multipart,
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use chrono::{DateTime, Utc};
     use http_body_util::BodyExt;

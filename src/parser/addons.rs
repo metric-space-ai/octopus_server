@@ -1,4 +1,4 @@
-use crate::{entity::AiService, get_pwd, Result, SERVICES_DIR};
+use crate::{Result, SERVICES_DIR, entity::AiService, get_pwd};
 
 pub fn add_argparse(code_lines: Vec<String>) -> Vec<String> {
     let mut argparse_present = false;

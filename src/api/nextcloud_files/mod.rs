@@ -1,18 +1,18 @@
 use crate::{
+    NEXTCLOUD_FILES_DIR,
     context::Context,
     entity::{NextcloudFile, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    NEXTCLOUD_FILES_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use std::{
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::Write,
     sync::Arc,
 };
@@ -369,9 +369,9 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::NextcloudFile, multipart};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};

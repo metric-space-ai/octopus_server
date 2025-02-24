@@ -1,4 +1,5 @@
 use crate::{
+    Result,
     ai::{
         code_tools::WaspAppMeta,
         function_call::{
@@ -49,23 +50,22 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, ExamplePrompt, ExamplePromptCategory, FileAccessType, FileType, FileWithUrl,
-        InspectionDisabling, KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus,
+        InspectionDisabling, KV, KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus,
         Parameter, PasswordResetToken, Profile, ScheduledPrompt, SimpleApp, Task, TaskStatus,
         TaskTest, TaskType, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType, KV,
+        WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
     server_resources::{Gpu, ServerResources},
     session::{SessionResponse, SessionResponseData},
-    Result,
 };
 use axum::{
+    Router,
     error_handling::HandleErrorLayer,
     extract::DefaultBodyLimit,
-    http::{header, Method, StatusCode},
+    http::{Method, StatusCode, header},
     routing::{delete, get, post, put},
-    Router,
 };
 use std::{sync::Arc, time::Duration};
 use tower::{BoxError, ServiceBuilder};
@@ -76,8 +76,8 @@ use tower_http::{
     trace::TraceLayer,
 };
 use utoipa::{
-    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
     Modify, OpenApi,
+    openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
 };
 use utoipa_swagger_ui::SwaggerUi;
 

@@ -1,5 +1,5 @@
 use crate::{config::Config, context::Context, error::AppError};
-use argon2::{password_hash::SaltString, Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
 use rand_core::OsRng;
 use std::sync::Arc;
 

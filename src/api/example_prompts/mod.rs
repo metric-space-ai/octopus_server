@@ -2,13 +2,13 @@ use crate::{
     context::Context,
     entity::{ExamplePrompt, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -336,11 +336,11 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::ExamplePrompt};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

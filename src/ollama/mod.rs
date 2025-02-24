@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     context::Context,
     entity::{OllamaModel, OllamaModelStatus},
-    Result,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -71,6 +71,7 @@ pub fn get_models() -> Vec<&'static str> {
         "command-r7b:7b",
         "dbrx:132b",
         "dbrx:instruct",
+        "deepscaler:1.5b",
         "deepseek-coder:1.3b",
         "deepseek-coder:6.7b",
         "deepseek-coder:33b",
@@ -176,6 +177,7 @@ pub fn get_models() -> Vec<&'static str> {
         "mistral-nemo:12b",
         "mistral-openorca:7b",
         "mistral-small:22b",
+        "mistral-small:24b",
         "mistrallite:7b",
         "mixtral:8x7b",
         "mixtral:8x22b",
@@ -202,6 +204,8 @@ pub fn get_models() -> Vec<&'static str> {
         "opencoder:8b",
         "openhermes:v2.5",
         "openhermes:7b-v2.5",
+        "openthinker:7b",
+        "openthinker:32b",
         "open-orca-platypus2:13b",
         "orca-mini:3b",
         "orca-mini:7b",

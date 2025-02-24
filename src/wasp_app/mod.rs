@@ -1,18 +1,18 @@
-use crate::{context::Context, error::AppError, Result};
+use crate::{Result, context::Context, error::AppError};
 use axum::{
     body::Body,
     extract::{
-        ws::{Message as AxumMessage, WebSocket},
         Request,
+        ws::{Message as AxumMessage, WebSocket},
     },
-    http::{header, HeaderValue, Method, StatusCode},
+    http::{HeaderValue, Method, StatusCode, header},
     response::{Html, IntoResponse, Json, Response},
 };
 use futures::{sink::SinkExt, stream::StreamExt};
 use http_body_util::BodyExt;
 use regex::Regex;
 use std::{str::FromStr, sync::Arc};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use tokio_tungstenite::{connect_async, tungstenite::protocol::Message};
 use uuid::Uuid;
 
@@ -125,10 +125,11 @@ pub async fn request(
     let body = String::from_utf8(body.clone())?;
 
     let request_builder = if headers.get("authorization").is_some() {
-        if let Some(authorization) = headers.get("authorization") {
-            request_builder.header(reqwest::header::AUTHORIZATION, authorization.as_ref())
-        } else {
-            request_builder
+        match headers.get("authorization") {
+            Some(authorization) => {
+                request_builder.header(reqwest::header::AUTHORIZATION, authorization.as_ref())
+            }
+            _ => request_builder,
         }
     } else {
         request_builder

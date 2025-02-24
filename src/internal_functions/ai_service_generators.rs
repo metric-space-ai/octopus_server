@@ -1,4 +1,5 @@
 use crate::{
+    Result,
     ai::{
         function_call::{AiFunctionResponse, AiFunctionTextResponse},
         generator,
@@ -6,7 +7,6 @@ use crate::{
     api::ai_service_generators::AiServiceGeneratorPost,
     context::Context,
     entity::AiServiceGeneratorStatus,
-    Result,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::value::Value;

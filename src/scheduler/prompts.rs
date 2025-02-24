@@ -1,8 +1,9 @@
 use crate::{
+    Result,
     ai::{self, code_tools},
     context::Context,
     entity::ScheduledPrompt,
-    util, Result,
+    util,
 };
 use std::sync::Arc;
 use tokio_cron_scheduler::Job;

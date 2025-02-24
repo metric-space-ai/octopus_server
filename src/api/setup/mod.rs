@@ -3,7 +3,7 @@ use crate::{
     canon,
     context::Context,
     entity::{
-        User, WorkspacesType, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
+        PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
         PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
@@ -19,11 +19,11 @@ use crate::{
         PARAMETER_NAME_SUPERPROXY_ISP_USER, PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_SERP_USER, PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_ZONE_USER, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER,
-        ROLE_PUBLIC_USER, ROLE_SUPERVISOR,
+        ROLE_PUBLIC_USER, ROLE_SUPERVISOR, User, WorkspacesType,
     },
     error::{AppError, ResponseError},
 };
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 use sqlx::{Postgres, Transaction};
 use std::sync::Arc;
@@ -388,16 +388,16 @@ pub async fn create_missing_parameters(
 pub mod tests {
     use crate::{api, api::setup::SetupInfoResponse, app, context::Context, entity::User};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use fake::{
+        Fake,
         faker::{
             internet::en::SafeEmail,
             lorem::en::{Paragraph, Word},
         },
-        Fake,
     };
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};

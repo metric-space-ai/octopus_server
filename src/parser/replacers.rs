@@ -1,4 +1,4 @@
-use crate::{error::AppError, Result};
+use crate::{Result, error::AppError};
 use uuid::Uuid;
 
 pub fn cut_code(code_lines: &[String], line: usize) -> Vec<String> {

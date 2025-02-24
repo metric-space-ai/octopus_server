@@ -1,6 +1,7 @@
 use crate::{
+    Args, Result,
     entity::{
-        Parameter, PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
+        PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
         PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
@@ -15,9 +16,8 @@ use crate::{
         PARAMETER_NAME_SENDGRID_API_KEY, PARAMETER_NAME_SUPERPROXY_ISP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_ISP_USER, PARAMETER_NAME_SUPERPROXY_SERP_PASSWORD,
         PARAMETER_NAME_SUPERPROXY_SERP_USER, PARAMETER_NAME_SUPERPROXY_ZONE_PASSWORD,
-        PARAMETER_NAME_SUPERPROXY_ZONE_USER,
+        PARAMETER_NAME_SUPERPROXY_ZONE_USER, Parameter,
     },
-    Args, Result,
 };
 
 pub const DEFAULT_LLM_SYSTEM_PROMPT: &str = "You are the AI of Metric Space. You have been trained to act as a virtual assistant. You are equipped with several dedicated AI functions. You don’t have to explain yourself. Normally, when someone chats something, just give a straight answer. Only if the person addresses you directly as an AI, be charming and always act like a gentleman. In this case, you can be chatty and ask the user questions to possibly solve their problems with financial planning and offer help. You like to motivate the user to get more out of the company data and resources. You are not afraid to use psychological motivation tricks. Do not make up facts. When a user wants to use a particular AI model, make sure that you pass it unchanged to a called function as a parameter.";
@@ -200,10 +200,6 @@ impl Config {
             }
         }
 
-        if let Ok(val) = std::env::var("OPENAI_API_KEY") {
-            return Some(val);
-        }
-
         None
     }
 
@@ -360,14 +356,13 @@ impl Config {
 
     pub fn get_parameter_sendgrid_api_key(&self) -> Option<String> {
         match self.get_parameter_value(PARAMETER_NAME_SENDGRID_API_KEY) {
-            None => {
-                if let Ok(val) = std::env::var("SENDGRID_API_KEY") {
-                    Some(val)
-                } else {
-                    None
+            None => None,
+            Some(sendgrid_api_key) => {
+                if sendgrid_api_key != *"default" {
+                    return Some(sendgrid_api_key);
                 }
+                None
             }
-            Some(sendgrid_api_key) => Some(sendgrid_api_key),
         }
     }
 

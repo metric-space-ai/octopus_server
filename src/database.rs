@@ -1,4 +1,5 @@
 use crate::{
+    PUBLIC_DIR, Result,
     entity::{
         AiFunction, AiFunctionRequestContentType, AiFunctionResponseContentType, AiService,
         AiServiceGenerator, AiServiceGeneratorStatus, AiServiceHealthCheckStatus,
@@ -6,13 +7,13 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         ChatType, Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File,
-        FileAccessType, FileType, InspectionDisabling, KVAccessType, NextcloudFile, OllamaModel,
-        OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile, ScheduledPrompt, Session,
-        SimpleApp, Task, TaskStatus, TaskTest, TaskType, User, UserExtended, WaspApp,
-        WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType, KV,
+        FileAccessType, FileType, InspectionDisabling, KV, KVAccessType, NextcloudFile,
+        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile,
+        ScheduledPrompt, Session, SimpleApp, Task, TaskStatus, TaskTest, TaskType, User,
+        UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
+        WorkspacesType,
     },
     error::AppError,
-    Result, PUBLIC_DIR,
 };
 use chrono::{DateTime, Utc};
 use sqlx::{PgPool, Postgres, Transaction};

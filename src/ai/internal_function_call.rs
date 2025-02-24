@@ -1,15 +1,16 @@
 use crate::{
+    PUBLIC_DIR, Result,
     ai::function_call::AiFunctionResponse,
     context::Context,
     entity::{ChatMessage, ChatMessageStatus},
     error::AppError,
-    internal_functions, Result, PUBLIC_DIR,
+    internal_functions,
 };
 use async_recursion::async_recursion;
-use base64::{alphabet, engine, Engine};
+use base64::{Engine, alphabet, engine};
 use serde_json::value::Value;
 use std::{fs::File, io::Write, sync::Arc};
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use uuid::Uuid;
 
 pub const COLOR: &str = "#b7b7b7";

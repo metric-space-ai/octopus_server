@@ -1,15 +1,15 @@
 use crate::{
     ai,
     context::Context,
-    entity::{SimpleApp, ROLE_COMPANY_ADMIN_USER},
+    entity::{ROLE_COMPANY_ADMIN_USER, SimpleApp},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, Path, State},
     http::StatusCode,
     response::{Html, IntoResponse},
-    Json,
 };
 use std::sync::Arc;
 use uuid::Uuid;
@@ -409,9 +409,9 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::SimpleApp, multipart};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};

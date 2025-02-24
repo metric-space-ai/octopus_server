@@ -1,14 +1,14 @@
 use crate::{
     context::Context,
-    entity::{Workspace, WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
+    entity::{ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, Workspace, WorkspacesType},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -344,14 +344,14 @@ pub mod tests {
     use crate::{
         api, app,
         context::Context,
-        entity::{Workspace, ROLE_PUBLIC_USER},
+        entity::{ROLE_PUBLIC_USER, Workspace},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

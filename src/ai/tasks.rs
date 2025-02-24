@@ -1,9 +1,9 @@
 use crate::{
-    ai::open_ai::{open_ai_get_client, AiClient, PRIMARY_MODEL},
+    Result,
+    ai::open_ai::{AiClient, PRIMARY_MODEL, open_ai_get_client},
     context::Context,
     entity::{Task, TaskStatus, TaskTest, TaskType},
     error::AppError,
-    Result,
 };
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestUserMessageArgs,
@@ -283,8 +283,6 @@ pub async fn get_chat_info_result(
     context: Arc<Context>,
     all_messages: &str,
 ) -> Result<Option<ChatInfoResult>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let mut text = String::new();
@@ -303,6 +301,8 @@ pub async fn get_chat_info_result(
     if context.get_config().await?.test_mode {
         return Ok(None);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -596,8 +596,6 @@ pub async fn get_chat_task_info_result(
     context: Arc<Context>,
     all_messages: &str,
 ) -> Result<Option<ChatTaskInfoResult>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let mut text = String::new();
@@ -616,6 +614,8 @@ pub async fn get_chat_task_info_result(
     if context.get_config().await?.test_mode {
         return Ok(None);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -699,8 +699,6 @@ pub async fn get_chat_test_info_result(
     context: Arc<Context>,
     all_messages: &str,
 ) -> Result<Option<ChatTestInfoResult>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let mut text = String::new();
@@ -719,6 +717,8 @@ pub async fn get_chat_test_info_result(
     if context.get_config().await?.test_mode {
         return Ok(None);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()

@@ -1,4 +1,4 @@
-use crate::{context::Context, error::AppError, Result};
+use crate::{Result, context::Context, error::AppError};
 use axum::{
     body::Body,
     extract::Request,

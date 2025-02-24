@@ -51,7 +51,7 @@ Save the following config as a docker-compose.yml file.
 version: '3.8'
 services:
   octopus_server:
-    image: metricspaceai/octopus_server:v0.10.14
+    image: metricspaceai/octopus_server:latest
     restart: always
     cap_add:
       - SYS_ADMIN
@@ -172,7 +172,7 @@ services:
       - "./letsencrypt:/letsencrypt"
 
   octopus_server:
-    image: metricspaceai/octopus_server:v0.10.14
+    image: metricspaceai/octopus_server:latest
     container_name: octopus_server
     restart: always
     cap_add:

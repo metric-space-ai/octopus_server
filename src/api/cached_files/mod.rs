@@ -1,19 +1,19 @@
 use crate::{
+    PUBLIC_DIR,
     context::Context,
     entity::{CachedFile, ROLE_COMPANY_ADMIN_USER},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    PUBLIC_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Multipart, Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use chrono::{Duration, Utc};
 use std::{
-    fs::{remove_file, File},
+    fs::{File, remove_file},
     io::Write,
     sync::Arc,
 };
@@ -399,11 +399,11 @@ pub async fn update(
 mod tests {
     use crate::{api, app, context::Context, entity::CachedFile, multipart};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::{collections::HashMap, sync::Arc};

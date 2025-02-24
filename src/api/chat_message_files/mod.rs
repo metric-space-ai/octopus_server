@@ -1,15 +1,15 @@
 use crate::{
+    PUBLIC_DIR,
     context::Context,
     entity::ChatMessageFile,
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
-    PUBLIC_DIR,
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::{Html, IntoResponse},
-    Json,
 };
 use serde::Deserialize;
 use std::{

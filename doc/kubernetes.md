@@ -278,7 +278,7 @@ spec:
     spec:
       containers:
         - name: octopus-server
-          image: metricspaceai/octopus_server:v0.10.10
+          image: metricspaceai/octopus_server:latest
           env:
           - name: DATABASE_URL
             valueFrom:

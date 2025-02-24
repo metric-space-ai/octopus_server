@@ -1,5 +1,5 @@
 use crate::{
-    ai,
+    Result, ai,
     context::Context,
     entity::{
         AiFunctionRequestContentType, AiFunctionResponseContentType, AiService, AiServiceStatus,
@@ -7,7 +7,7 @@ use crate::{
     error::AppError,
     ollama,
     parser::configuration::{Configuration, Model},
-    server_resources, Result,
+    server_resources,
 };
 use std::{collections::HashMap, str::FromStr, sync::Arc};
 

@@ -1,11 +1,12 @@
 use crate::{
+    Result, WASP_GENERATOR_DIR,
     context::Context,
     entity::{WaspGenerator, WaspGeneratorStatus},
     error::AppError,
-    get_pwd, Result, WASP_GENERATOR_DIR,
+    get_pwd,
 };
 use std::{
-    fs::{self, create_dir, remove_dir_all, File},
+    fs::{self, File, create_dir, remove_dir_all},
     io::{Read, Seek, Write},
     iter::Iterator,
     path::Path,

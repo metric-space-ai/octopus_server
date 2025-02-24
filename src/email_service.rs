@@ -1,4 +1,4 @@
-use crate::{context::Context, Result};
+use crate::{Result, context::Context};
 use reqwest::header::AUTHORIZATION;
 use serde::Serialize;
 use std::sync::Arc;
@@ -77,7 +77,9 @@ pub async fn send_invitation_email(
     email: &str,
     password: &str,
 ) -> Result<()> {
-    let text = format!("<p>Hi,</p><p>We are pleased to inform you that you have been invited to Octopus. Below is a password that you need to use to login.</p><p>{password}</p>");
+    let text = format!(
+        "<p>Hi,</p><p>We are pleased to inform you that you have been invited to Octopus. Below is a password that you need to use to login.</p><p>{password}</p>"
+    );
     let subject = "Invitation";
 
     send_email(context, email, subject, &text).await?;
@@ -90,7 +92,9 @@ pub async fn send_password_reset_request_email(
     email: &str,
     token: &str,
 ) -> Result<()> {
-    let text = format!("<p>Hi,</p><p>We received your request for a password reset. Below is a token that you need to use to validate your request.</p><p>{token}</p>");
+    let text = format!(
+        "<p>Hi,</p><p>We received your request for a password reset. Below is a token that you need to use to validate your request.</p><p>{token}</p>"
+    );
     let subject = "Password reset request";
 
     send_email(context, email, subject, &text).await?;

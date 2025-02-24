@@ -1,15 +1,15 @@
 use crate::{
     context::Context,
-    entity::{Chat, ChatType, WorkspacesType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER},
+    entity::{Chat, ChatType, ROLE_COMPANY_ADMIN_USER, ROLE_PRIVATE_USER, WorkspacesType},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     body::Body,
     extract::{Path, Query, State},
     http::{Request, StatusCode},
     response::IntoResponse,
-    Json,
 };
 use http_body_util::BodyExt;
 use serde::Deserialize;
@@ -529,11 +529,11 @@ pub async fn update(
 pub mod tests {
     use crate::{api, app, context::Context, entity::Chat};
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

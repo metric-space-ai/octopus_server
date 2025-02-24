@@ -1,15 +1,15 @@
 use crate::{
     ai::tasks,
     context::Context,
-    entity::{TaskTest, ROLE_SUPERVISOR},
+    entity::{ROLE_SUPERVISOR, TaskTest},
     error::{AppError, ResponseError},
-    session::{require_authenticated, ExtractedSession},
+    session::{ExtractedSession, require_authenticated},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;
@@ -471,14 +471,14 @@ pub mod tests {
     use crate::{
         api, app,
         context::Context,
-        entity::{TaskTest, ROLE_SUPERVISOR},
+        entity::{ROLE_SUPERVISOR, TaskTest},
     };
     use axum::{
+        Router,
         body::Body,
         http::{self, Request, StatusCode},
-        Router,
     };
-    use fake::{faker::lorem::en::Word, Fake};
+    use fake::{Fake, faker::lorem::en::Word};
     use http_body_util::BodyExt;
     use sqlx::{Postgres, Transaction};
     use std::sync::Arc;

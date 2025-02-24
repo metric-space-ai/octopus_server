@@ -1,5 +1,5 @@
 use crate::{
-    ai,
+    Result, SERVICES_DIR, ai,
     context::Context,
     entity::{
         AiService, AiServiceHealthCheckStatus, AiServiceSetupStatus, AiServiceStatus,
@@ -8,19 +8,18 @@ use crate::{
     error::AppError,
     get_pwd, parser,
     process_manager::{
-        try_get_pid, try_kill_cgroup, try_kill_process, Process, ProcessState, ProcessType,
+        Process, ProcessState, ProcessType, try_get_pid, try_kill_cgroup, try_kill_process,
     },
-    Result, SERVICES_DIR,
 };
 use chrono::{Duration as ChronoDuration, Utc};
 use std::{
-    fs::{create_dir, remove_dir_all, File, OpenOptions},
+    fs::{File, OpenOptions, create_dir, remove_dir_all},
     io::Write,
     path::Path,
     process::Command,
     sync::Arc,
 };
-use tokio::time::{sleep, Duration};
+use tokio::time::{Duration, sleep};
 use uuid::Uuid;
 
 pub async fn create_environment(ai_service: &AiService, context: Arc<Context>) -> Result<bool> {

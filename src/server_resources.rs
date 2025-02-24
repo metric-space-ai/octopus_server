@@ -1,8 +1,8 @@
-use crate::{error::AppError, Result};
+use crate::{Result, error::AppError};
 use bytesize::MIB;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, process::Command};
-use systemstat::{saturating_sub_bytes, ByteSize, Platform, System};
+use systemstat::{ByteSize, Platform, System, saturating_sub_bytes};
 use utoipa::ToSchema;
 
 #[derive(Clone, Debug, Deserialize, Serialize, ToSchema)]
@@ -49,14 +49,14 @@ pub fn get() -> Result<ServerResources> {
         Ok(nvidia_smi_list) => String::from_utf8(nvidia_smi_list.stdout.clone())?,
     };
     /*
-            let nvidia_smi_list =
-                r#"GPU 0: Tesla T4 (UUID: GPU-d0da269e-9437-3293-6816-e4d91bb0be32)
+    let nvidia_smi_list =
+        r#"GPU 0: Tesla T4 (UUID: GPU-d0da269e-9437-3293-6816-e4d91bb0be32)
     GPU 1: Tesla T4 (UUID: GPU-f8b923b3-4843-f15a-89ab-bec1cde0935d)
     GPU 2: Tesla T4 (UUID: GPU-6b1bbbc2-9afe-ca0f-101e-4663159db831)
     GPU 3: Tesla T4 (UUID: GPU-b0868300-4848-d1e3-8c55-7054206bdddd)
     "#
-                    .to_string();
-            */
+            .to_string();
+    */
     if nvidia_smi_list.starts_with("GPU") {
         for (i, line) in nvidia_smi_list.lines().enumerate() {
             let mut name = String::new();

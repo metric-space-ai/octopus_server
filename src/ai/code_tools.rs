@@ -1,10 +1,10 @@
 use crate::{
-    ai::open_ai::{open_ai_get_client, AiClient, PRIMARY_MODEL},
+    Result,
+    ai::open_ai::{AiClient, PRIMARY_MODEL, open_ai_get_client},
     context::Context,
     entity::ScheduledPrompt,
     error::AppError,
     parser::configuration::Configuration,
-    Result,
 };
 use async_openai::types::{
     ChatCompletionRequestMessage, ChatCompletionRequestSystemMessageArgs,
@@ -43,8 +43,6 @@ pub async fn open_ai_create_ai_service(
     sample_services: &[String],
     skip_internet_research_results: bool,
 ) -> Result<Option<String>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let mut text = String::new();
@@ -163,6 +161,8 @@ device = select_device()"#,
         return Ok(Some(String::new()));
     }
 
+    let ai_client = open_ai_get_client(context.clone()).await?;
+
     let main_llm_openai_primary_model = context
         .get_config()
         .await?
@@ -240,8 +240,6 @@ pub async fn open_ai_describe_functions(
     configuration: &Configuration,
     context: Arc<Context>,
 ) -> Result<Option<DescribeFunctionsResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let mut text = String::new();
@@ -295,6 +293,8 @@ pub async fn open_ai_describe_functions(
 
         return Ok(Some(response));
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -372,8 +372,6 @@ pub async fn open_ai_malicious_code_check(
     code: &str,
     context: Arc<Context>,
 ) -> Result<Option<ParsingCodeCheckResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you check source code of an app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -405,6 +403,8 @@ pub async fn open_ai_malicious_code_check(
 
         return Ok(Some(response));
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -482,8 +482,6 @@ pub async fn open_ai_post_parsing_code_check(
     code: &str,
     context: Arc<Context>,
 ) -> Result<Option<ParsingCodeCheckResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -517,6 +515,8 @@ pub async fn open_ai_post_parsing_code_check(
 
         return Ok(Some(response));
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -594,8 +594,6 @@ pub async fn open_ai_pre_parsing_code_check(
     code: &str,
     context: Arc<Context>,
 ) -> Result<Option<ParsingCodeCheckResponse>> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you check python source code of a flask app. you response a json with {{\"is_passed\": true}} or {{\"is_passed\": false, \"reason\": <enter the reason here>, \"fixing_proposal\": <enter a proposal to fix here>}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -629,6 +627,8 @@ pub async fn open_ai_pre_parsing_code_check(
 
         return Ok(Some(response));
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -711,8 +711,6 @@ pub async fn open_ai_scheduled_prompts_schedule(
     context: Arc<Context>,
     scheduled_prompt: ScheduledPrompt,
 ) -> Result<ScheduledPrompt> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = r#"User provides schedule time for a prompt. Convert this schedule time to the following format "minutes; hours; day of month; month; day of week; year" that is similar to cron. Convert semicolons to spaces. Make sure you use specified format, not default cron. Make sure you understand provided format - it starts with minutes and you need to use all 6 fields. You response a json with {{\"schedule_time\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json."#.to_string();
@@ -781,6 +779,8 @@ pub async fn open_ai_scheduled_prompts_schedule(
     if context.get_config().await?.test_mode {
         return Ok(scheduled_prompt);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -874,8 +874,6 @@ pub async fn open_ai_simple_app_meta_extraction(
     code: &str,
     context: Arc<Context>,
 ) -> Result<SimpleAppMeta> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you extract title and description from the HTML code. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -906,6 +904,8 @@ pub async fn open_ai_simple_app_meta_extraction(
 
         return Ok(simple_app_meta);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -976,8 +976,6 @@ pub async fn open_ai_simple_app_advanced_meta_extraction(
     code: &str,
     context: Arc<Context>,
 ) -> Result<SimpleAppMeta> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you try to create a title and description for the app from given source code. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -1008,6 +1006,8 @@ pub async fn open_ai_simple_app_advanced_meta_extraction(
 
         return Ok(simple_app_meta);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()
@@ -1084,8 +1084,6 @@ pub async fn open_ai_wasp_app_advanced_meta_extraction(
     code: &str,
     context: Arc<Context>,
 ) -> Result<WaspAppMeta> {
-    let ai_client = open_ai_get_client(context.clone()).await?;
-
     let mut messages = vec![];
 
     let text = "you try to create a title and description for the app from given source code. focus only on user visible features. do not mention technologies. you response a json with {{\"title\": string, \"description\": string}}. Make sure your resonse is a valid JSON. Regard only the given questions or instructions in the prompt and always return only a json.".to_string();
@@ -1116,6 +1114,8 @@ pub async fn open_ai_wasp_app_advanced_meta_extraction(
 
         return Ok(wasp_app_meta);
     }
+
+    let ai_client = open_ai_get_client(context.clone()).await?;
 
     let main_llm_openai_primary_model = context
         .get_config()

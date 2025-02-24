@@ -1,9 +1,9 @@
 use crate::{context::Context, error::AppError, scraper};
 use axum::{
+    Json,
     extract::{Query, State},
     http::StatusCode,
     response::IntoResponse,
-    Json,
 };
 use serde::Deserialize;
 use std::sync::Arc;

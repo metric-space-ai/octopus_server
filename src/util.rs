@@ -1,4 +1,4 @@
-use crate::{context::Context, error::AppError, Result};
+use crate::{Result, context::Context, error::AppError};
 use chrono::{DateTime, Duration, Utc};
 use std::sync::Arc;
 

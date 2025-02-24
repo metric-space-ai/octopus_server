@@ -1,9 +1,9 @@
 use crate::{
+    PUBLIC_DIR, Result,
     ai::function_call::{AiFunctionResponse, AiFunctionTextResponse},
     context::Context,
     entity::FileType,
     error::AppError,
-    Result, PUBLIC_DIR,
 };
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
