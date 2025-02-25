@@ -305,6 +305,12 @@ impl Config {
             if octopus_api_url == *"default" {
                 return Some("http://localhost:8080".to_string());
             } else {
+                let octopus_api_url = if octopus_api_url.ends_with('/') {
+                    octopus_api_url.strip_suffix('/')?.to_string()
+                } else {
+                    octopus_api_url
+                };
+
                 return Some(octopus_api_url);
             }
         }
