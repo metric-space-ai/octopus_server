@@ -1,5 +1,5 @@
 OCTOPUS_CLIENT_VERSION="v0.7.7"
-OCTOPUS_SERVER_VERSION="v0.10.19"
+OCTOPUS_SERVER_VERSION="v0.10.20"
 
 update_octopus_client() {
     echo "Updating Octopus Client..."
