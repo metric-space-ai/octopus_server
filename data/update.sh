@@ -4,6 +4,13 @@ OCTOPUS_SERVER_VERSION="v0.10.19"
 update_octopus_client() {
     echo "Updating Octopus Client..."
 
+    if [ -d /opt/octopus_client_$OCTOPUS_CLIENT_VERSION ]
+    then
+        echo "This version is already installed in /opt/octopus_client_$OCTOPUS_CLIENT_VERSION"
+
+        return
+    fi
+
     if [ -f /etc/systemd/system/octopus_client.service ]
     then
         systemctl stop octopus_client
@@ -13,12 +20,6 @@ update_octopus_client() {
     then
         echo "Deleting old /opt/octopus_tmp"
         rm -rf /opt/octopus_tmp
-    fi
-
-    if [ -d /opt/octopus_client_$OCTOPUS_CLIENT_VERSION ]
-    then
-        echo "Deleting old /opt/octopus_client_$OCTOPUS_CLIENT_VERSION"
-        rm -rf /opt/octopus_client_$OCTOPUS_CLIENT_VERSION
     fi
 
     . /opt/octopus_client/.env.installer
@@ -88,6 +89,13 @@ update_octopus_client() {
 update_octopus_server() {
     echo "Updating Octopus Server..."
 
+    if [ -d /opt/octopus_server_$OCTOPUS_SERVER_VERSION ]
+    then
+        echo "This version is already installed in /opt/octopus_server_$OCTOPUS_SERVER_VERSION"
+
+        return
+    fi
+
     if [ -f /etc/systemd/system/octopus_server.service ]
     then
         systemctl stop octopus_server
@@ -97,12 +105,6 @@ update_octopus_server() {
     then
         echo "Deleting old /opt/octopus_tmp"
         rm -rf /opt/octopus_tmp
-    fi
-
-    if [ -d /opt/octopus_server_$OCTOPUS_SERVER_VERSION ]
-    then
-        echo "Deleting old /opt/octopus_server_$OCTOPUS_SERVER_VERSION"
-        rm -rf /opt/octopus_server_$OCTOPUS_SERVER_VERSION
     fi
 
     sh -c "mkdir /opt/octopus_tmp \
