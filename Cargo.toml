@@ -61,10 +61,12 @@ infer = "0.19"
 mime = "0.3"
 num_cpus = "1.16"
 port-selector = "0.1"
-rand = { version = "0.8", default-features = false, features = [
-    "std"
+rand = { version = "0.9", default-features = false, features = [
+    "std",
+    "thread_rng"
 ] }
-rand_core = { version = "0.6", default-features = false, features = [
+rand_core = { version = "0.9", default-features = false, features = [
+    "os_rng",
     "std"
 ] }
 regex = { version = "1.11", default-features = false, features = [

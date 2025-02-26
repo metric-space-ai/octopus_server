@@ -15,7 +15,7 @@ use axum::{
     http::StatusCode,
     response::IntoResponse,
 };
-use rand::{Rng, distributions::Alphanumeric};
+use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
@@ -252,7 +252,7 @@ pub async fn invitation(
 
     match user_exists {
         None => {
-            let password = rand::thread_rng()
+            let password = rand::rng()
                 .sample_iter(&Alphanumeric)
                 .take(12)
                 .map(char::from)

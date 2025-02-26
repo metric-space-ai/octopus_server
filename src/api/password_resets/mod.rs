@@ -13,7 +13,7 @@ use axum::{
     response::IntoResponse,
 };
 use chrono::Utc;
-use rand::{Rng, distributions::Alphanumeric};
+use rand::{Rng, distr::Alphanumeric};
 use serde::Deserialize;
 use std::sync::Arc;
 use utoipa::ToSchema;
@@ -162,7 +162,7 @@ pub async fn request(
         return Err(AppError::Gone);
     }
 
-    let mut token: String = rand::thread_rng()
+    let mut token: String = rand::rng()
         .sample_iter(&Alphanumeric)
         .take(8)
         .map(char::from)
