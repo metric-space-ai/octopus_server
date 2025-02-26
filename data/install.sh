@@ -429,6 +429,8 @@ install_octopus_server() {
     DATABASE_URL=$DATABASE_URL sh -c "cd /opt/octopus_tmp/octopus_server && sqlx database create && sqlx migrate run && cargo build --release"
 
     cp /opt/octopus_tmp/octopus_server/target/release/octopus_server /opt/octopus_server_$OCTOPUS_SERVER_VERSION/
+    mkdir -p /opt/octopus_server_$OCTOPUS_SERVER_VERSION/data/generate
+    cp -R /opt/octopus_tmp/octopus_server/data/generate/services /opt/octopus_server_$OCTOPUS_SERVER_VERSION/data/generate
     cp -R /opt/octopus_tmp/octopus_server/migrations /opt/octopus_server_$OCTOPUS_SERVER_VERSION/
 
     echo "DATABASE_URL=$DATABASE_URL" > /opt/octopus_server_$OCTOPUS_SERVER_VERSION/.env.installer
