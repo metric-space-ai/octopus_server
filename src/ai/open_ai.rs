@@ -471,7 +471,7 @@ pub fn get_tools_internal_functions() -> Result<Vec<ChatCompletionTool>> {
         .function(
             FunctionObjectArgs::default()
                 .name("os_internal_list_user_files".to_string())
-                .description("List user files function returns a JSON structured list of the files that belong to the user.".to_string())
+                .description("List user files function. It lists only files created by the user. It doesn't have access to nextcloud. Returns a JSON structured list of the files that belong to the user.".to_string())
                 .parameters(json!({
                     "type": "object",
                     "properties": {},
