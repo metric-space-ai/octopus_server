@@ -7,9 +7,9 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         ChatType, Company, EstimatedSeconds, ExamplePrompt, ExamplePromptCategory, File,
-        FileAccessType, FileType, InspectionDisabling, KV, KVAccessType, NextcloudFile,
-        OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port, Profile,
-        ScheduledPrompt, Session, SimpleApp, Task, TaskStatus, TaskTest, TaskType, User,
+        FileAccessType, FileType, InspectionDisabling, KV, KVAccessType, LlmRouterConfig,
+        NextcloudFile, OllamaModel, OllamaModelStatus, Parameter, PasswordResetToken, Port,
+        Profile, ScheduledPrompt, Session, SimpleApp, Task, TaskStatus, TaskTest, TaskType, User,
         UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator, WaspGeneratorStatus, Workspace,
         WorkspacesType,
     },
@@ -666,6 +666,24 @@ impl OctopusDatabase {
         .await?;
 
         Ok(kvs)
+    }
+
+    pub async fn get_llm_router_configs_by_company_id(
+        &self,
+        company_id: Uuid,
+    ) -> Result<Vec<LlmRouterConfig>> {
+        let llm_router_configs = sqlx::query_as!(
+            LlmRouterConfig,
+            "SELECT id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at
+            FROM llm_router_configs
+            WHERE company_id = $1
+            AND deleted_at IS NULL",
+            company_id
+        )
+        .fetch_all(&*self.pool)
+        .await?;
+
+        Ok(llm_router_configs)
     }
 
     pub async fn get_nextcloud_files(&self) -> Result<Vec<NextcloudFile>> {
@@ -1513,6 +1531,33 @@ impl OctopusDatabase {
         Ok(kv)
     }
 
+    pub async fn insert_llm_router_config(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        company_id: Uuid,
+        user_id: Option<Uuid>,
+        complexity: i32,
+        suggested_llm: &str,
+        suggested_model: &str,
+    ) -> Result<LlmRouterConfig> {
+        let llm_router_config = sqlx::query_as!(
+            LlmRouterConfig,
+            "INSERT INTO llm_router_configs
+            (company_id, user_id, complexity, suggested_llm, suggested_model)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at",
+            company_id,
+            user_id,
+            complexity,
+            suggested_llm,
+            suggested_model,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(llm_router_config)
+    }
+
     pub async fn insert_nextcloud_file(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -2309,6 +2354,25 @@ impl OctopusDatabase {
         Ok(kv)
     }
 
+    pub async fn try_delete_llm_router_config_by_id(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+    ) -> Result<Option<Uuid>> {
+        let llm_router_config = sqlx::query_scalar::<_, Uuid>(
+            "UPDATE llm_router_configs
+                SET deleted_at = current_timestamp(0)
+                WHERE id = $1
+                AND deleted_at IS NULL
+                RETURNING id",
+        )
+        .bind(id)
+        .fetch_optional(&mut **transaction)
+        .await?;
+
+        Ok(llm_router_config)
+    }
+
     pub async fn try_delete_nextcloud_file_by_id(
         &self,
         transaction: &mut Transaction<'_, Postgres>,
@@ -3057,6 +3121,52 @@ impl OctopusDatabase {
         .await?;
 
         Ok(kv)
+    }
+
+    pub async fn try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+        &self,
+        company_id: Uuid,
+        user_id: Option<Uuid>,
+        complexity: i32,
+    ) -> Result<Option<LlmRouterConfig>> {
+        let llm_router_config = sqlx::query_as!(
+            LlmRouterConfig,
+            "SELECT id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at
+            FROM llm_router_configs
+            WHERE company_id = $1
+            AND user_id = $2
+            AND complexity = $3
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
+            company_id,
+            user_id,
+            complexity
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(llm_router_config)
+    }
+
+    pub async fn try_get_llm_router_config_by_id(
+        &self,
+        id: Uuid,
+    ) -> Result<Option<LlmRouterConfig>> {
+        let llm_router_config = sqlx::query_as!(
+            LlmRouterConfig,
+            "SELECT id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at
+            FROM llm_router_configs
+            WHERE id = $1
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
+            id,
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(llm_router_config)
     }
 
     pub async fn try_get_nextcloud_file_by_id(&self, id: Uuid) -> Result<Option<NextcloudFile>> {
@@ -4813,6 +4923,33 @@ impl OctopusDatabase {
         .await?;
 
         Ok(kv)
+    }
+
+    pub async fn update_llm_router_config(
+        &self,
+        transaction: &mut Transaction<'_, Postgres>,
+        id: Uuid,
+        user_id: Option<Uuid>,
+        complexity: i32,
+        suggested_llm: &str,
+        suggested_model: &str,
+    ) -> Result<LlmRouterConfig> {
+        let llm_router_config = sqlx::query_as!(
+            LlmRouterConfig,
+            "UPDATE llm_router_configs
+            SET user_id = $2, complexity = $3, suggested_llm = $4, suggested_model = $5, updated_at = current_timestamp(0)
+            WHERE id = $1
+            RETURNING id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at",
+            id,
+            user_id,
+            complexity,
+            suggested_llm,
+            suggested_model,
+        )
+        .fetch_one(&mut **transaction)
+        .await?;
+
+        Ok(llm_router_config)
     }
 
     pub async fn update_nextcloud_file(

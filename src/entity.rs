@@ -425,6 +425,19 @@ pub struct Company {
     pub updated_at: DateTime<Utc>,
 }
 
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct LlmRouterConfig {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub complexity: i32,
+    pub suggested_llm: String,
+    pub suggested_model: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
 pub struct EstimatedSeconds {
     pub ceiling: Option<i64>,
@@ -631,13 +644,14 @@ pub struct OllamaModel {
 pub const PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS: &str = "HUGGING_FACE_TOKEN_ACCESS";
 pub const PARAMETER_NAME_MAIN_LLM: &str = "MAIN_LLM";
 pub const PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY: &str = "MAIN_LLM_ANTHROPIC_API_KEY";
-pub const PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL: &str = "MAIN_LLM_ANTHROPIC_MODEL";
+pub const PARAMETER_NAME_MAIN_LLM_ANTHROPIC_PRIMARY_MODEL: &str =
+    "MAIN_LLM_ANTHROPIC_PRIMARY_MODEL";
 pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY: &str = "MAIN_LLM_AZURE_OPENAI_API_KEY";
 pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID: &str =
     "MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID";
 pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED: &str = "MAIN_LLM_AZURE_OPENAI_ENABLED";
 pub const PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL: &str = "MAIN_LLM_AZURE_OPENAI_URL";
-pub const PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL: &str = "MAIN_LLM_OLLAMA_MODEL";
+pub const PARAMETER_NAME_MAIN_LLM_OLLAMA_PRIMARY_MODEL: &str = "MAIN_LLM_OLLAMA_PRIMARY_MODEL";
 pub const PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY: &str = "MAIN_LLM_OPENAI_API_KEY";
 pub const PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL: &str = "MAIN_LLM_OPENAI_PRIMARY_MODEL";
 pub const PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL: &str = "MAIN_LLM_OPENAI_SECONDARY_MODEL";

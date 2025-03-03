@@ -24,6 +24,9 @@ pub mod service;
 pub mod tasks;
 
 pub const BASE_AI_FUNCTION_URL: &str = "http://127.0.0.1";
+pub const PRIMARY_MODEL: &str = "PRIMARY_MODEL";
+pub const SECONDARY_MODEL: &str = "SECONDARY_MODEL";
+pub const TERTIARY_MODEL: &str = "TERTIARY_MODEL";
 
 #[allow(clippy::module_name_repetitions)]
 #[derive(Debug, Deserialize, Serialize)]
@@ -91,52 +94,37 @@ pub async fn ai_request(
                             let value = function_llm_router_response.response.parse::<i32>();
 
                             if let Ok(value) = value {
-                                let main_llm_ollama_model = context
-                                    .get_config()
-                                    .await?
-                                    .get_parameter_main_llm_ollama_model()
-                                    .unwrap_or(ollama::MAIN_LLM_OLLAMA_MODEL.to_string());
-                                let main_llm_openai_primary_model = context
-                                    .get_config()
-                                    .await?
-                                    .get_parameter_main_llm_openai_primary_model()
-                                    .unwrap_or(open_ai::PRIMARY_MODEL.to_string());
-                                let main_llm_openai_secondary_model = context
-                                    .get_config()
-                                    .await?
-                                    .get_parameter_main_llm_openai_secondary_model()
-                                    .unwrap_or(open_ai::SECONDARY_MODEL.to_string());
+                                let suggested = get_suggested_llm_and_suggested_model(
+                                    context.clone(),
+                                    user.company_id,
+                                    user.id,
+                                    value,
+                                )
+                                .await?;
 
-                                let (suggested_llm, suggested_model) = match value {
-                                    ..=3 => (ollama::OLLAMA.to_string(), main_llm_ollama_model),
-                                    4..=6 => {
-                                        (open_ai::OPENAI.to_string(), main_llm_openai_primary_model)
-                                    }
-                                    7.. => (
-                                        open_ai::OPENAI.to_string(),
-                                        main_llm_openai_secondary_model,
-                                    ),
-                                };
+                                if let Some(suggested) = suggested {
+                                    let mut transaction =
+                                        context.octopus_database.transaction_begin().await?;
 
-                                let mut transaction =
-                                    context.octopus_database.transaction_begin().await?;
+                                    let chat_message = context
+                                        .octopus_database
+                                        .update_chat_message_suggested_llm_model(
+                                            &mut transaction,
+                                            chat_message.id,
+                                            &suggested.llm,
+                                            &suggested.model,
+                                        )
+                                        .await?;
 
-                                let chat_message = context
-                                    .octopus_database
-                                    .update_chat_message_suggested_llm_model(
-                                        &mut transaction,
-                                        chat_message.id,
-                                        &suggested_llm,
-                                        &suggested_model,
-                                    )
-                                    .await?;
+                                    context
+                                        .octopus_database
+                                        .transaction_commit(transaction)
+                                        .await?;
 
-                                context
-                                    .octopus_database
-                                    .transaction_commit(transaction)
-                                    .await?;
-
-                                chat_message
+                                    chat_message
+                                } else {
+                                    chat_message
+                                }
                             } else {
                                 chat_message
                             }
@@ -275,6 +263,116 @@ pub async fn check_sensitive_information_service(
     };
 
     Ok(chat_message)
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Suggested {
+    pub llm: String,
+    pub model: String,
+}
+
+pub async fn get_suggested_llm_and_suggested_model(
+    context: Arc<Context>,
+    company_id: Uuid,
+    user_id: Uuid,
+    complexity: i32,
+) -> Result<Option<Suggested>> {
+    let mut llm_router_config = context
+        .octopus_database
+        .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+            company_id,
+            Some(user_id),
+            complexity,
+        )
+        .await?;
+
+    if llm_router_config.is_none() {
+        llm_router_config = context
+            .octopus_database
+            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+                company_id, None, complexity,
+            )
+            .await?;
+    }
+
+    if let Some(llm_router_config) = llm_router_config {
+        let mut suggested_llm = llm_router_config.suggested_llm.clone();
+        let suggested_model = match llm_router_config.suggested_model.as_str() {
+            PRIMARY_MODEL => match llm_router_config.suggested_llm.as_str() {
+                ollama::OLLAMA => context
+                    .get_config()
+                    .await?
+                    .get_parameter_main_llm_ollama_primary_model()
+                    .unwrap_or(ollama::PRIMARY_MODEL.to_string()),
+                open_ai::OPENAI => context
+                    .get_config()
+                    .await?
+                    .get_parameter_main_llm_openai_primary_model()
+                    .unwrap_or(open_ai::PRIMARY_MODEL.to_string()),
+                &_ => {
+                    suggested_llm = open_ai::OPENAI.to_string();
+
+                    context
+                        .get_config()
+                        .await?
+                        .get_parameter_main_llm_openai_primary_model()
+                        .unwrap_or(open_ai::PRIMARY_MODEL.to_string())
+                }
+            },
+            SECONDARY_MODEL => match llm_router_config.suggested_llm.as_str() {
+                ollama::OLLAMA => ollama::SECONDARY_MODEL.to_string(),
+                open_ai::OPENAI => context
+                    .get_config()
+                    .await?
+                    .get_parameter_main_llm_openai_secondary_model()
+                    .unwrap_or(open_ai::SECONDARY_MODEL.to_string()),
+                &_ => {
+                    suggested_llm = open_ai::OPENAI.to_string();
+
+                    context
+                        .get_config()
+                        .await?
+                        .get_parameter_main_llm_openai_secondary_model()
+                        .unwrap_or(open_ai::SECONDARY_MODEL.to_string())
+                }
+            },
+            TERTIARY_MODEL => match llm_router_config.suggested_llm.as_str() {
+                ollama::OLLAMA => ollama::TERTIARY_MODEL.to_string(),
+                open_ai::OPENAI => context
+                    .get_config()
+                    .await?
+                    .get_parameter_main_llm_openai_secondary_model()
+                    .unwrap_or(open_ai::SECONDARY_MODEL.to_string()),
+                &_ => {
+                    suggested_llm = open_ai::OPENAI.to_string();
+
+                    context
+                        .get_config()
+                        .await?
+                        .get_parameter_main_llm_openai_secondary_model()
+                        .unwrap_or(open_ai::SECONDARY_MODEL.to_string())
+                }
+            },
+            &_ => {
+                suggested_llm = open_ai::OPENAI.to_string();
+
+                context
+                    .get_config()
+                    .await?
+                    .get_parameter_main_llm_openai_secondary_model()
+                    .unwrap_or(open_ai::SECONDARY_MODEL.to_string())
+            }
+        };
+
+        let suggested = Suggested {
+            llm: suggested_llm,
+            model: suggested_model,
+        };
+
+        return Ok(Some(suggested));
+    }
+
+    Ok(None)
 }
 
 pub async fn update_chat_name(

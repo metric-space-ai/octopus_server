@@ -2,11 +2,11 @@ use crate::{
     Args, Result,
     entity::{
         PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
-        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
+        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
-        PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_OLLAMA_PRIMARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE,
         PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
@@ -107,13 +107,13 @@ impl Config {
         None
     }
 
-    pub fn get_parameter_main_llm_anthropic_model(&self) -> Option<String> {
-        let main_llm_anthropic_model =
-            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL);
+    pub fn get_parameter_main_llm_anthropic_primary_model(&self) -> Option<String> {
+        let main_llm_anthropic_primary_model =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_ANTHROPIC_PRIMARY_MODEL);
 
-        if let Some(main_llm_anthropic_model) = main_llm_anthropic_model {
-            if main_llm_anthropic_model != *"default" {
-                return Some(main_llm_anthropic_model);
+        if let Some(main_llm_anthropic_primary_model) = main_llm_anthropic_primary_model {
+            if main_llm_anthropic_primary_model != *"default" {
+                return Some(main_llm_anthropic_primary_model);
             }
         }
 
@@ -178,12 +178,13 @@ impl Config {
         None
     }
 
-    pub fn get_parameter_main_llm_ollama_model(&self) -> Option<String> {
-        let main_llm_ollama_model = self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL);
+    pub fn get_parameter_main_llm_ollama_primary_model(&self) -> Option<String> {
+        let main_llm_ollama_primary_model =
+            self.get_parameter_value(PARAMETER_NAME_MAIN_LLM_OLLAMA_PRIMARY_MODEL);
 
-        if let Some(main_llm_ollama_model) = main_llm_ollama_model {
-            if main_llm_ollama_model != *"default" {
-                return Some(main_llm_ollama_model);
+        if let Some(main_llm_ollama_primary_model) = main_llm_ollama_primary_model {
+            if main_llm_ollama_primary_model != *"default" {
+                return Some(main_llm_ollama_primary_model);
             }
         }
 

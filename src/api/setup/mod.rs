@@ -1,14 +1,15 @@
 use crate::{
+    ai::{self, ollama, open_ai},
     api::auth,
     canon,
     context::Context,
     entity::{
         PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS, PARAMETER_NAME_MAIN_LLM,
-        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
+        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY, PARAMETER_NAME_MAIN_LLM_ANTHROPIC_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED, PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
-        PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
+        PARAMETER_NAME_MAIN_LLM_OLLAMA_PRIMARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL, PARAMETER_NAME_MAIN_LLM_OPENAI_TEMPERATURE,
         PARAMETER_NAME_MAIN_LLM_SYSTEM_PROMPT, PARAMETER_NAME_NEXTCLOUD_PASSWORD,
@@ -28,6 +29,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{Postgres, Transaction};
 use std::sync::Arc;
 use utoipa::ToSchema;
+use uuid::Uuid;
 use validator::Validate;
 
 #[derive(Clone, Debug)]
@@ -90,6 +92,10 @@ pub async fn info(State(context): State<Arc<Context>>) -> Result<impl IntoRespon
     let mut transaction = context.octopus_database.transaction_begin().await?;
 
     create_missing_data(context.clone(), &mut transaction).await?;
+
+    for company in companies {
+        create_missing_llm_router_configs(context.clone(), &mut transaction, company.id).await?;
+    }
 
     context
         .octopus_database
@@ -181,6 +187,8 @@ pub async fn setup(
                 .await?;
 
             create_missing_data(context.clone(), &mut transaction).await?;
+            create_missing_llm_router_configs(context.clone(), &mut transaction, company.id)
+                .await?;
 
             context
                 .octopus_database
@@ -332,6 +340,52 @@ pub fn get_example_prompt_categories() -> Vec<ExamplePromptCategory> {
     ]
 }
 
+pub async fn create_missing_llm_router_configs(
+    context: Arc<Context>,
+    transaction: &mut Transaction<'_, Postgres>,
+    company_id: Uuid,
+) -> Result<(), AppError> {
+    let llm_router_configs = vec![
+        (1, ollama::OLLAMA, ai::PRIMARY_MODEL),
+        (2, ollama::OLLAMA, ai::PRIMARY_MODEL),
+        (3, ollama::OLLAMA, ai::PRIMARY_MODEL),
+        (4, open_ai::OPENAI, ai::PRIMARY_MODEL),
+        (5, open_ai::OPENAI, ai::PRIMARY_MODEL),
+        (6, open_ai::OPENAI, ai::PRIMARY_MODEL),
+        (7, open_ai::OPENAI, ai::SECONDARY_MODEL),
+        (8, open_ai::OPENAI, ai::SECONDARY_MODEL),
+        (9, open_ai::OPENAI, ai::SECONDARY_MODEL),
+        (10, open_ai::OPENAI, ai::SECONDARY_MODEL),
+    ];
+
+    for llm_router_config_tmp in llm_router_configs {
+        let llm_router_config = context
+            .octopus_database
+            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+                company_id,
+                None,
+                llm_router_config_tmp.0,
+            )
+            .await?;
+
+        if llm_router_config.is_none() {
+            context
+                .octopus_database
+                .insert_llm_router_config(
+                    transaction,
+                    company_id,
+                    None,
+                    llm_router_config_tmp.0,
+                    llm_router_config_tmp.1,
+                    llm_router_config_tmp.2,
+                )
+                .await?;
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn create_missing_parameters(
     context: Arc<Context>,
     transaction: &mut Transaction<'_, Postgres>,
@@ -340,12 +394,12 @@ pub async fn create_missing_parameters(
         PARAMETER_NAME_HUGGING_FACE_TOKEN_ACCESS,
         PARAMETER_NAME_MAIN_LLM,
         PARAMETER_NAME_MAIN_LLM_ANTHROPIC_API_KEY,
-        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_MODEL,
+        PARAMETER_NAME_MAIN_LLM_ANTHROPIC_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_DEPLOYMENT_ID,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_ENABLED,
         PARAMETER_NAME_MAIN_LLM_AZURE_OPENAI_URL,
-        PARAMETER_NAME_MAIN_LLM_OLLAMA_MODEL,
+        PARAMETER_NAME_MAIN_LLM_OLLAMA_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_OPENAI_API_KEY,
         PARAMETER_NAME_MAIN_LLM_OPENAI_PRIMARY_MODEL,
         PARAMETER_NAME_MAIN_LLM_OPENAI_SECONDARY_MODEL,
