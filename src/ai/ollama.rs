@@ -14,8 +14,11 @@ use tokio::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-pub const MAIN_LLM_OLLAMA_MODEL: &str = "qwen2.5:32b";
+pub const PRIMARY_MODEL: &str = "qwen2.5:32b";
 pub const OLLAMA: &str = "ollama";
+//pub const PRIMARY_MODEL: &str = "phi4-mini:3.8b";
+pub const SECONDARY_MODEL: &str = "mistral-small:24b";
+pub const TERTIARY_MODEL: &str = "deepseek-r1:70b";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChatRequest {
@@ -474,8 +477,8 @@ pub async fn ollama_request(
     let main_llm_ollama_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_ollama_model()
-        .unwrap_or(MAIN_LLM_OLLAMA_MODEL.to_string());
+        .get_parameter_main_llm_ollama_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
 
     let suggested_model = chat_message
         .suggested_model

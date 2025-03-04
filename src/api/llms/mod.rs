@@ -1,9 +1,5 @@
 use crate::{
-    ai::{
-        anthropic::{ANTHROPIC, MAIN_LLM_ANTHROPIC_MODEL},
-        ollama::OLLAMA,
-        open_ai::{OPENAI, PRIMARY_MODEL, SECONDARY_MODEL},
-    },
+    ai::{anthropic, ollama as ollama_ai, open_ai},
     context::Context,
     error::{AppError, ResponseError},
     ollama,
@@ -51,8 +47,11 @@ pub async fn list(
 
     if main_llm_openai_api_key.is_some() || main_llm_azure_openai_api_key.is_some() {
         llms.insert(
-            OPENAI.to_string(),
-            vec![PRIMARY_MODEL.to_string(), SECONDARY_MODEL.to_string()],
+            open_ai::OPENAI.to_string(),
+            vec![
+                open_ai::PRIMARY_MODEL.to_string(),
+                open_ai::SECONDARY_MODEL.to_string(),
+            ],
         );
     }
 
@@ -63,8 +62,8 @@ pub async fn list(
 
     if main_llm_anthropic_api_key.is_some() {
         llms.insert(
-            ANTHROPIC.to_string(),
-            vec![MAIN_LLM_ANTHROPIC_MODEL.to_string()],
+            anthropic::ANTHROPIC.to_string(),
+            vec![anthropic::PRIMARY_MODEL.to_string()],
         );
     }
 
@@ -73,7 +72,7 @@ pub async fn list(
         .map(std::string::ToString::to_string)
         .collect::<Vec<String>>();
 
-    llms.insert(OLLAMA.to_string(), ollama_models);
+    llms.insert(ollama_ai::OLLAMA.to_string(), ollama_models);
 
     Ok((StatusCode::OK, Json(llms)).into_response())
 }

@@ -15,7 +15,7 @@ use tracing::error;
 use uuid::Uuid;
 
 pub const ANTHROPIC: &str = "anthropic";
-pub const MAIN_LLM_ANTHROPIC_MODEL: &str = "claude-3-opus-20240229";
+pub const PRIMARY_MODEL: &str = "claude-3-opus-20240229";
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct ChatRequest {
@@ -475,8 +475,8 @@ pub async fn anthropic_request(
     let main_llm_anthropic_model = context
         .get_config()
         .await?
-        .get_parameter_main_llm_anthropic_model()
-        .unwrap_or(MAIN_LLM_ANTHROPIC_MODEL.to_string());
+        .get_parameter_main_llm_anthropic_primary_model()
+        .unwrap_or(PRIMARY_MODEL.to_string());
     let suggested_model = chat_message
         .suggested_model
         .clone()

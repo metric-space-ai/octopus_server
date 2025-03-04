@@ -28,6 +28,7 @@ use crate::{
         example_prompts::{ExamplePromptPost, ExamplePromptPut},
         inspection_disablings::InspectionDisablingPost,
         kvs::{KVPost, KVPut},
+        llm_router_configs::{LlmRouterConfigPost, LlmRouterConfigPut},
         ollama_models::{OllamaModelPost, OllamaModelPut},
         parameters::{ParameterPost, ParameterPut},
         password_resets::{PasswordResetPost, PasswordResetPut},
@@ -50,10 +51,10 @@ use crate::{
         CachedFile, Chat, ChatActivity, ChatAudit, ChatMessage, ChatMessageExtended,
         ChatMessageFile, ChatMessagePicture, ChatMessageStatus, ChatPicture, ChatTokenAudit,
         Company, ExamplePrompt, ExamplePromptCategory, FileAccessType, FileType, FileWithUrl,
-        InspectionDisabling, KV, KVAccessType, NextcloudFile, OllamaModel, OllamaModelStatus,
-        Parameter, PasswordResetToken, Profile, ScheduledPrompt, SimpleApp, Task, TaskStatus,
-        TaskTest, TaskType, User, UserExtended, WaspApp, WaspAppInstanceType, WaspGenerator,
-        WaspGeneratorStatus, Workspace, WorkspacesType,
+        InspectionDisabling, KV, KVAccessType, LlmRouterConfig, NextcloudFile, OllamaModel,
+        OllamaModelStatus, Parameter, PasswordResetToken, Profile, ScheduledPrompt, SimpleApp,
+        Task, TaskStatus, TaskTest, TaskType, User, UserExtended, WaspApp, WaspAppInstanceType,
+        WaspGenerator, WaspGeneratorStatus, Workspace, WorkspacesType,
     },
     error::ResponseError,
     process_manager::{Process, ProcessState, ProcessType},
@@ -101,6 +102,7 @@ mod files;
 mod inspection_disablings;
 mod kvs;
 mod llm_proxy;
+mod llm_router_configs;
 mod llms;
 mod nextcloud_files;
 mod nextcloud_raw_files;
@@ -192,6 +194,9 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 KVAccessType,
                 KVPost,
                 KVPut,
+                LlmRouterConfig,
+                LlmRouterConfigPost,
+                LlmRouterConfigPut,
                 LoginPost,
                 NextcloudFile,
                 OllamaModel,
@@ -349,6 +354,11 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             kvs::list,
             kvs::read,
             kvs::update,
+            llm_router_configs::create,
+            llm_router_configs::delete,
+            llm_router_configs::list,
+            llm_router_configs::read,
+            llm_router_configs::update,
             llm_proxy::proxy,
             llms::list,
             login::login,
@@ -470,6 +480,7 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
             (name = "inspection_disablings", description = "Inspection disablings API."),
             (name = "kvs", description = "KVs API."),
             (name = "llm_proxy", description = "LLM proxy API."),
+            (name = "llm_router_configs", description = "LLM router configs API."),
             (name = "llms", description = "LLMs API."),
             (name = "login", description = "Login API."),
             (name = "logout", description = "Logout API."),
@@ -745,6 +756,16 @@ pub fn router(context: Arc<Context>) -> Result<Router> {
                 .get(llm_proxy::proxy)
                 .post(llm_proxy::proxy)
                 .put(llm_proxy::proxy),
+        )
+        .route(
+            "/api/v1/llm-router-configs",
+            get(llm_router_configs::list).post(llm_router_configs::create),
+        )
+        .route(
+            "/api/v1/llm-router-configs/{id}",
+            delete(llm_router_configs::delete)
+                .get(llm_router_configs::read)
+                .put(llm_router_configs::update),
         )
         .route("/api/v1/llms", get(llms::list))
         .route(
