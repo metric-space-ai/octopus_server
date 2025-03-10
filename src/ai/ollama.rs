@@ -14,9 +14,8 @@ use tokio::time::Duration;
 use tracing::error;
 use uuid::Uuid;
 
-pub const PRIMARY_MODEL: &str = "qwen2.5:32b";
 pub const OLLAMA: &str = "ollama";
-//pub const PRIMARY_MODEL: &str = "phi4-mini:3.8b";
+pub const PRIMARY_MODEL: &str = "phi4-mini:3.8b";
 pub const SECONDARY_MODEL: &str = "mistral-small:24b";
 pub const TERTIARY_MODEL: &str = "deepseek-r1:70b";
 

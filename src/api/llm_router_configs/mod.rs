@@ -69,14 +69,24 @@ pub async fn create(
 
     input.validate()?;
 
-    let llm_router_config_exists = context
-        .octopus_database
-        .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
-            session_user.company_id,
-            input.user_id,
-            input.complexity,
-        )
-        .await?;
+    let llm_router_config_exists = if let Some(user_id) = input.user_id {
+        context
+            .octopus_database
+            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+                session_user.company_id,
+                Some(user_id),
+                input.complexity,
+            )
+            .await?
+    } else {
+        context
+            .octopus_database
+            .try_get_llm_router_config_by_company_id_and_complexity(
+                session_user.company_id,
+                input.complexity,
+            )
+            .await?
+    };
 
     match llm_router_config_exists {
         None => {
@@ -311,14 +321,24 @@ pub async fn update(
     }
 
     if input.complexity != llm_router_config.complexity {
-        let llm_router_config_exists = context
-            .octopus_database
-            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
-                session_user.company_id,
-                input.user_id,
-                input.complexity,
-            )
-            .await?;
+        let llm_router_config_exists = if let Some(user_id) = input.user_id {
+            context
+                .octopus_database
+                .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+                    session_user.company_id,
+                    Some(user_id),
+                    input.complexity,
+                )
+                .await?
+        } else {
+            context
+                .octopus_database
+                .try_get_llm_router_config_by_company_id_and_complexity(
+                    session_user.company_id,
+                    input.complexity,
+                )
+                .await?
+        };
 
         if llm_router_config_exists.is_some() {
             return Err(AppError::Conflict);

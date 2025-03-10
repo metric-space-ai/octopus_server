@@ -361,9 +361,8 @@ pub async fn create_missing_llm_router_configs(
     for llm_router_config_tmp in llm_router_configs {
         let llm_router_config = context
             .octopus_database
-            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
+            .try_get_llm_router_config_by_company_id_and_complexity(
                 company_id,
-                None,
                 llm_router_config_tmp.0,
             )
             .await?;
