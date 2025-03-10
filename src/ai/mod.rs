@@ -289,9 +289,7 @@ pub async fn get_suggested_llm_and_suggested_model(
     if llm_router_config.is_none() {
         llm_router_config = context
             .octopus_database
-            .try_get_llm_router_config_by_company_id_and_user_id_and_complexity(
-                company_id, None, complexity,
-            )
+            .try_get_llm_router_config_by_company_id_and_complexity(company_id, complexity)
             .await?;
     }
 

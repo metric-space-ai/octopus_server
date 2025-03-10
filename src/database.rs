@@ -3149,6 +3149,29 @@ impl OctopusDatabase {
         Ok(llm_router_config)
     }
 
+    pub async fn try_get_llm_router_config_by_company_id_and_complexity(
+        &self,
+        company_id: Uuid,
+        complexity: i32,
+    ) -> Result<Option<LlmRouterConfig>> {
+        let llm_router_config = sqlx::query_as!(
+            LlmRouterConfig,
+            "SELECT id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at
+            FROM llm_router_configs
+            WHERE company_id = $1
+            AND complexity = $2
+            AND deleted_at IS NULL
+            ORDER BY created_at DESC
+            LIMIT 1",
+            company_id,
+            complexity
+        )
+        .fetch_optional(&*self.pool)
+        .await?;
+
+        Ok(llm_router_config)
+    }
+
     pub async fn try_get_llm_router_config_by_id(
         &self,
         id: Uuid,

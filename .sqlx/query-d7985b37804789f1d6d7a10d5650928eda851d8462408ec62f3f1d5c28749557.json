@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, company_id, user_id, complexity, suggested_llm, suggested_model, created_at, deleted_at, updated_at\n            FROM llm_router_configs\n            WHERE company_id = $1\n            AND user_id = $2\n            AND complexity = $3\n            AND deleted_at IS NULL\n            ORDER BY created_at DESC\n            LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "company_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "complexity",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "suggested_llm",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 5,
+        "name": "suggested_model",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "deleted_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "d7985b37804789f1d6d7a10d5650928eda851d8462408ec62f3f1d5c28749557"
+}
