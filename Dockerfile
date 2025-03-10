@@ -281,6 +281,7 @@ RUN apt-get update --fix-missing && \
         subversion \
         sudo \
         supervisor \
+        texlive-xetex \
         tzdata \
         ubuntu-drivers-common \
         unzip \

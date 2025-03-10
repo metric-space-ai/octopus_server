@@ -481,6 +481,27 @@ pub fn get_tools_internal_functions() -> Result<Vec<ChatCompletionTool>> {
         )
         .build()?;
     tools.push(tool);
+
+    let tool = ChatCompletionToolArgs::default()
+        .r#type(ChatCompletionToolType::Function)
+        .function(
+            FunctionObjectArgs::default()
+                .name("os_internal_markdown_converter".to_string())
+                .description("Converts Markdown from JSON file to PDF.".to_string())
+                .parameters(json!({
+                    "type": "object",
+                    "properties": {
+                        "url": {
+                            "type": "string",
+                            "description": "URL of JSON file with Markdown.",
+                        },
+                    },
+                    "required": ["url"],
+                }))
+                .build()?,
+        )
+        .build()?;
+    tools.push(tool);
     /*
     let tool = ChatCompletionToolArgs::default()
         .r#type(ChatCompletionToolType::Function)

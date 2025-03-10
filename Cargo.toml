@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.24"
+version = "0.10.25"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -42,6 +42,9 @@ clap = { version = "4.5", default-features = false, features = [
 chrono = { version = "0.4", default-features = false, features = [
     "serde"
 ] }
+crowbook = { version = "0.16", default-features = false, features = [
+    "syntect"
+] }
 diff = "0.1"
 fake = { version = "4.0", default-features = false }
 fantoccini = { version = "0.21", default-features = false, features = [
@@ -53,7 +56,7 @@ futures-util = { version = "0.3", default-features = false, features = [
     "std"
 ] }
 hex = "0.4"
-http = "1.2"
+http = "1.3"
 http-body = "1.0"
 http-body-util = "0.1"
 hyper = { version = "1.6", features = ["full"] }

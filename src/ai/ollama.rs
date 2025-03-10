@@ -396,9 +396,27 @@ pub fn get_tools_internal_functions() -> Result<Vec<Tool>> {
         "required": []
     }"#;
     let tool = Tool {
-        description: "List user files function returns a comma-separated list of the files that belong to the user.".to_string(),
+        description: "List user files function. It lists only files created by the user. It doesn't have access to nextcloud. Returns a JSON structured list of the files that belong to the user.".to_string(),
         parameters: serde_json::from_str(parameters)?,
         name: "os_internal_list_user_files".to_string(),
+    };
+
+    tools.push(tool);
+
+    let parameters = r#"{
+        "type": "object",
+        "properties": {
+            "url": {
+                "type": "string",
+                "description": "URL of JSON file with Markdown.",
+            }
+        },
+        "required": ["url"]
+    }"#;
+    let tool = Tool {
+        description: "Converts Markdown from JSON file to PDF.".to_string(),
+        parameters: serde_json::from_str(parameters)?,
+        name: "os_internal_markdown_converter".to_string(),
     };
 
     tools.push(tool);
