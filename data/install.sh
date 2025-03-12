@@ -2,8 +2,8 @@
 
 DATABASE_PASSWORD=""
 DOMAIN=""
-OCTOPUS_CLIENT_VERSION="v0.7.8"
-OCTOPUS_SERVER_VERSION="v0.10.24"
+OCTOPUS_CLIENT_VERSION="v0.7.9"
+OCTOPUS_SERVER_VERSION="v0.10.25"
 PROCEED="true"
 
 save_env() {
@@ -19,6 +19,7 @@ install_base_utils() {
         gcc \
         git \
         librust-openssl-dev \
+        texlive-xetex \
         unzip \
         wget
 }

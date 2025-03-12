@@ -119,6 +119,15 @@ pub async fn internal_function_call(
 
             Some(ai_function_response)
         }
+        "os_internal_markdown_converter" => {
+            let ai_function_response =
+                internal_functions::markdown_converter::os_internal_markdown_converter(
+                    function_args,
+                )
+                .await?;
+
+            Some(ai_function_response)
+        }
         "os_internal_show_ai_service" => {
             let ai_function_response =
                 internal_functions::ai_service_generators::os_internal_show_ai_service(
