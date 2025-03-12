@@ -408,7 +408,7 @@ pub fn get_tools_internal_functions() -> Result<Vec<Tool>> {
         "properties": {
             "url": {
                 "type": "string",
-                "description": "URL of JSON file with Markdown.",
+                "description": "URL of JSON file with Markdown."
             }
         },
         "required": ["url"]
