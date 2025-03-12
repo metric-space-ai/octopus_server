@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.25"
+version = "0.10.26"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
