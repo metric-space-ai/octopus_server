@@ -1,6 +1,6 @@
 [package]
 name = "octopus_server"
-version = "0.10.26"
+version = "0.10.27"
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -94,7 +94,7 @@ sqlx = { version = "0.8", default-features = false, features = [
 ] }
 strum_macros = "0.27"
 systemstat = "0.2"
-tempfile = "3.18"
+tempfile = "3.19"
 tokio = { version = "1.44", default-features = false, features = [
     "rt-multi-thread",
     "time"
@@ -128,7 +128,7 @@ utoipa = { version = "5.3", default-features = false, features = [
 utoipa-swagger-ui = { version = "9.0", default-features = false, features = [
     "axum"
 ] }
-uuid = { version = "1.15", default-features = false, features = [
+uuid = { version = "1.16", default-features = false, features = [
     "serde",
     "v4"
 ] }
