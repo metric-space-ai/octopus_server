@@ -425,19 +425,6 @@ pub struct Company {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
-pub struct LlmRouterConfig {
-    pub id: Uuid,
-    pub company_id: Uuid,
-    pub user_id: Option<Uuid>,
-    pub complexity: i32,
-    pub suggested_llm: String,
-    pub suggested_model: String,
-    pub created_at: DateTime<Utc>,
-    pub deleted_at: Option<DateTime<Utc>>,
-    pub updated_at: DateTime<Utc>,
-}
-
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
 pub struct EstimatedSeconds {
     pub ceiling: Option<i64>,
@@ -603,6 +590,19 @@ pub struct KV {
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct LlmRouterConfig {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub complexity: i32,
+    pub suggested_llm: String,
+    pub suggested_model: String,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
 pub struct NextcloudFile {
     pub id: Uuid,
     pub file_name: String,
@@ -721,6 +721,17 @@ pub struct ScheduledPrompt {
     pub job_id: Option<Uuid>,
     pub prompt: String,
     pub schedule: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize, ToSchema)]
+pub struct SensitivityLevelConfig {
+    pub id: Uuid,
+    pub company_id: Uuid,
+    pub user_id: Option<Uuid>,
+    pub level: i32,
     pub created_at: DateTime<Utc>,
     pub deleted_at: Option<DateTime<Utc>>,
     pub updated_at: DateTime<Utc>,
